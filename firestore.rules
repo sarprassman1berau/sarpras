@@ -59,6 +59,22 @@ service cloud.firestore {
         && request.resource.data.teks is string
         && request.resource.data.teks.size() <= 2000;
     }
+    // hak yang harus dicentang khusus (akun tanpa centang = tidak boleh)
+    function izinKhusus(k) {
+      return isMaster() || (isOperator() && ('izin' in akunData()) && akunData().izin.get(k, false) == true);
+    }
+    // jadwal ruang (Aula & Multimedia): semua akun membaca; mengajukan dan menyetujui sesuai centang
+    match /pinjam/{id} {
+      allow create: if izinKhusus('jadwal_ajukan')
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.st == 'Diajukan'
+        && request.resource.data.kegiatan is string
+        && request.resource.data.kegiatan.size() < 300;
+      allow update: if izinKhusus('jadwal_setuju')
+        || (resource.data.by == request.auth.uid && isMember()
+            && request.resource.data.st == 'Dibatalkan'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 'okBy', 'okAt']));
+    }
     // catatan temuan: ditulis langsung oleh operator yang punya hak "catatan"
     match /catatan/{id} {
       allow create: if izin('catatan')

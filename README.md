@@ -99,6 +99,7 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 | `foto` | Foto (JPEG dikompres, disimpan sebagai data URL, maks. ±420 KB per foto) |
 | `akun` | Akun aplikasi: nama, jabatan, email, peran, aktif, hak akses (`izin`) |
 | `catatan` | Catatan temuan (lihat di atas) |
+| `pinjam` | Peminjaman Aula dan Ruang Multimedia (Jadwal Ruang) |
 | `online`, `chat` | Status terkini dan chat tim (lihat di atas) |
 | `usulan`, `keputusan`, `log` | Alur validasi dan riwayat perubahan |
 | `meta/config` | Pengaturan surat (penandatangan, pola nomor surat) |
@@ -108,6 +109,8 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 **Nama aplikasi:** aplikasi pertama bernama **Aset & Persediaan** (di kode `app_sarpras`, `id:"sarpras"`). Halaman login dan Beranda memakai nama portal "Aplikasi SMAN 1 Berau".
 
 **Pemeliharaan & Perbaikan** (`#pelihara`, `vPelihara`, `plRows`): aset dan ruang berkondisi Rusak Sedang otomatis masuk; ruang Rusak Berat juga masuk sebagai perlu rehabilitasi (ruang tidak bisa dihapus); aset Rusak Berat/Hilang tetap ke Usulan Penghapusan. Data perbaikan disimpan di field `pl` aset (lewat `saveUpd`) atau dokumen `ruang` (`pl: {st, tgl, oleh, biaya, sumber, ket, selesai}`); status: Belum ditangani, Dijadwalkan, Sedang diperbaiki, Menunggu dana / suku cadang, Selesai. "Selesai diperbaiki" mengubah kondisi menjadi Baik. Hak akses edit: kunci `pelihara`.
+
+**Jadwal Ruang** (aplikasi tersendiri, `#jadwal`, `vJadwal`, koleksi `pinjam`): kalender mingguan Aula dan Ruang Multimedia berdampingan, form pengajuan dengan cek bentrok otomatis (dan saran pindah ke ruang lain yang kosong), daftar pengajuan, setujui/tolak (dengan alasan)/batalkan, unduh Excel. Status: Diajukan, Disetujui, Ditolak, Dibatalkan. Semua akun terdaftar bisa melihat (kunci aplikasi `app_jadwal`, aktif secara bawaan). Mengajukan butuh centang `jadwal_ajukan`, menyetujui butuh `jadwal_setuju` (keduanya harus dicentang khusus; akun lama tidak otomatis punya). Pengajuan langsung tersimpan tanpa validasi master; aturan Firebase `pinjam` membatasi siapa yang boleh membuat dan mengubah.
 
 **Aset tidak tercatat:** kartu "Aset tidak tercatat" di deretan golongan (alamat `#aset-tak`) menampilkan semua aset yang `sip` = false dari semua golongan. Di detail aset ada pilihan **Status pencatatan** (Tidak tercatat / Sudah tercatat di SIPBMD); mengubah ke tercatat wajib mengisi kode aset dan no. register SIPBMD (tersimpan di `sip`, `kode`, `noreg`, lewat validasi master seperti perubahan lain), atau pasangkan ke data impor SIPBMD lewat "Padanan di SIPBMD".
 
