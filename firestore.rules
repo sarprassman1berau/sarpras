@@ -79,6 +79,7 @@ service cloud.firestore {
     match /catatan/{id} {
       allow create: if izin('catatan')
         && request.resource.data.by == request.auth.uid
+        && (isMaster() || request.resource.data.val == false)
         && request.resource.data.teks is string
         && request.resource.data.teks.size() < 5000;
       allow update: if izin('catatan')
