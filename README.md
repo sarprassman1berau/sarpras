@@ -1,4 +1,4 @@
-# Sarpras SMAN 1 Berau
+# Aset & Persediaan SMAN 1 Berau (Aplikasi SMAN 1 Berau)
 
 Aplikasi pencatatan sarana dan prasarana SMAN 1 Berau: aset SIPBMD (KIB A–F dan ATB), kondisi ruangan untuk Dapodik, BAST penyerahan dan penarikan, aset per pemegang, usulan penghapusan, persediaan (masuk, keluar, mutasi), kertas kerja aset tetap (modal), surat keluar, dan rekon.
 
@@ -104,6 +104,10 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 | `meta/config` | Pengaturan surat (penandatangan, pola nomor surat) |
 
 **Beranda (ruang aplikasi):** halaman pertama setelah login (`#home`, fungsi `vHome`, daftar `APPS`). Kartu aplikasi Sarpras (aktif), Keuangan dan Waka Sarpras (sedang disiapkan). Akses per aplikasi disimpan di `akun/{uid}.izin` dengan kunci `app_sarpras`, `app_keuangan`, `app_waka` (akun tanpa kunci ini tetap boleh membuka Sarpras); fungsi `appAccess(id)`. Akun tanpa akses Sarpras hanya melihat Beranda dan Pengaturan.
+
+**Nama aplikasi:** aplikasi pertama bernama **Aset & Persediaan** (di kode `app_sarpras`, `id:"sarpras"`). Halaman login dan Beranda memakai nama portal "Aplikasi SMAN 1 Berau".
+
+**Pemeliharaan & Perbaikan** (`#pelihara`, `vPelihara`, `plRows`): aset dan ruang berkondisi Rusak Sedang otomatis masuk; ruang Rusak Berat juga masuk sebagai perlu rehabilitasi (ruang tidak bisa dihapus); aset Rusak Berat/Hilang tetap ke Usulan Penghapusan. Data perbaikan disimpan di field `pl` aset (lewat `saveUpd`) atau dokumen `ruang` (`pl: {st, tgl, oleh, biaya, sumber, ket, selesai}`); status: Belum ditangani, Dijadwalkan, Sedang diperbaiki, Menunggu dana / suku cadang, Selesai. "Selesai diperbaiki" mengubah kondisi menjadi Baik. Hak akses edit: kunci `pelihara`.
 
 **Aset tidak tercatat:** kartu "Aset tidak tercatat" di deretan golongan (alamat `#aset-tak`) menampilkan semua aset yang `sip` = false dari semua golongan. Di detail aset ada pilihan **Status pencatatan** (Tidak tercatat / Sudah tercatat di SIPBMD); mengubah ke tercatat wajib mengisi kode aset dan no. register SIPBMD (tersimpan di `sip`, `kode`, `noreg`, lewat validasi master seperti perubahan lain), atau pasangkan ke data impor SIPBMD lewat "Padanan di SIPBMD".
 
