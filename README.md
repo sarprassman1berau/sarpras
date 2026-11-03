@@ -103,6 +103,10 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 | `usulan`, `keputusan`, `log` | Alur validasi dan riwayat perubahan |
 | `meta/config` | Pengaturan surat (penandatangan, pola nomor surat) |
 
+**Aset tidak tercatat:** kartu "Aset tidak tercatat" di deretan golongan (alamat `#aset-tak`) menampilkan semua aset yang `sip` = false dari semua golongan. Di detail aset ada pilihan **Status pencatatan** (Tidak tercatat / Sudah tercatat di SIPBMD); mengubah ke tercatat wajib mengisi kode aset dan no. register SIPBMD (tersimpan di `sip`, `kode`, `noreg`, lewat validasi master seperti perubahan lain), atau pasangkan ke data impor SIPBMD lewat "Padanan di SIPBMD".
+
+**Logo:** logo SMAN 1 Berau dan logo Pemprov Kaltim disimpan di `index.html` sebagai gambar PNG ringan (konstanta `LOGO`). Dipakai sebagai ikon aplikasi, di halaman login, di menu kiri, dan di kop surat (Kaltim kiri, sekolah kanan, tinggi sama) pada pratinjau dan PDF (`pdfKop`). Untuk mengganti logo, ganti isi `LOGO` dan dua tag `<link rel="icon">`.
+
 **Keputusan penting:**
 - Kondisi aset: Baik, Rusak Sedang, Rusak Berat, Hilang. Rusak Berat/Hilang otomatis masuk usulan penghapusan kecuali dicentang "Jangan usulkan hapus".
 - Kondisi ruang (Dapodik): Baik, Rusak Ringan, Rusak Sedang, Rusak Berat.
