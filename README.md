@@ -33,7 +33,7 @@ Aplikasi pencatatan sarana dan prasarana SMAN 1 Berau: aset SIPBMD (KIB A–F da
 ### 5. Buat akun operator
 Login sebagai master → **Pengaturan → Akun & akses → Buat akun operator** (nama, jabatan, **nama pengguna atau email**, password awal). Sampaikan login dan password awal kepada operator; operator bisa mengganti passwordnya sendiri di halaman yang sama.
 
-- **Nama pengguna** (mis. `jamir`): tidak perlu email. Di Firebase tersimpan sebagai `jamir@pengguna.sarpras-sman1berau.firebaseapp.com` (alamat tanpa kotak surat). Tidak bisa memakai "Lupa password"; jika lupa, master menonaktifkan akun itu lalu membuat akun baru.
+- **Nama pengguna** (mis. `ika`): tidak perlu email. Di Firebase tersimpan sebagai `ika@pengguna.sarpras-sman1berau.firebaseapp.com` (alamat tanpa kotak surat). Tidak bisa memakai "Lupa password"; jika lupa, master menonaktifkan akun itu lalu membuat akun baru.
 - **Email**: bisa memakai "Lupa password" dan tombol "Kirim reset password".
 
 ---
