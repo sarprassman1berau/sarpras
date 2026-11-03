@@ -580,9 +580,10 @@ function vRingkasan() {
   const stock = psdSaldo(today());
   return `
   <h2>Rekap Data Sarpras</h2>
-  <p class="lead">Ringkasan aset SIPBMD, kondisi ruangan, persediaan, dan hal-hal yang biasa ditanyakan saat pemeriksaan. Angka di halaman ini langsung berubah setiap ada isian baru yang disimpan.</p>
-  ${kibStrip("ringkasan")}
-  ${ruangRekapPanel()}
+  <p class="lead">Tulis catatan temuan, lihat rekap aset dan kondisi ruangan, serta siapa saja yang terakhir mengubah data. Angka di halaman ini langsung berubah setiap ada isian baru yang disimpan.</p>
+  ${ctQuickPanel()}
+  ${asetRekapPanel()}
+  ${ruangRekapPanel(true)}
   <div class="grid kpis">
     <div class="kpi"><span class="l">Peralatan & Mesin dicek fisik</span><span class="v">${pct(cekPM, pm.length)}%</span><span class="s">${fmt(cekPM)} dari ${fmt(pm.length)} barang SIPBMD</span><div class="bar"><i style="width:${pct(cekPM, pm.length)}%"></i></div></div>
     <div class="kpi"><span class="l">Intrakomptabel ada pemegang/posisi</span><span class="v">${pct(intra.length - intraNoPJ.length, intra.length)}%</span><span class="s">${fmt(intra.length - intraNoPJ.length)} dari ${fmt(intra.length)} barang</span><div class="bar"><i style="width:${pct(intra.length - intraNoPJ.length, intra.length)}%"></i></div></div>
@@ -597,7 +598,8 @@ function vRingkasan() {
     ${F("warn","Dokumen perolehan hanya \"Data KIB\"","Tidak ada nomor kontrak/SPK/kuitansi di SIPBMD. Siapkan bukti perolehan untuk barang yang nilainya besar.", kib.length, sv(kib), "#aset-pm")}
     ${F(S.catatan.some(c => c.st !== "Selesai") ? "warn" : "ok","Catatan temuan belum selesai","Temuan di lapangan (kerusakan, kehilangan, perlu perbaikan) yang belum ditindaklanjuti sampai selesai.", S.catatan.filter(c => c.st !== "Selesai").length, null, "#catatan")}
     ${F("info","Aset tak tercatat di SIPBMD","Barang di catatan sekolah yang belum dipasangkan ke SIPBMD. Pasangkan jika sebenarnya sudah ada, atau usulkan pencatatan.", tak.length, sv(tak), "#aset-pm")}
-  </section>`;
+  </section>
+  ${riwayatRekapPanel()}`;
 }
 function katCounts() {
   const c = Object.fromEntries(KAT.map(k => [k.id, { n:0, v:0, sip:0, tak:0 }]));
@@ -656,7 +658,7 @@ function vAset() {
     <tbody>${slice.map(x => `<tr class="rowlink" tabindex="0" data-key="${esc(x.key)}">
       <td>${(x.fotos || []).length ? `<img class="thumb" src="${fotoSrc(x.fotos[0])}" data-foto="${esc(x.fotos[0])}" alt="" loading="lazy">` : `<span class="thumb" aria-hidden="true"></span>`}</td>
       <td><span class="mono">${esc(x.sip ? x.kode : (x.reg || x.kode || "—"))}</span><div class="sm mono">${x.sip ? "No. " + esc(x.noreg) + (x.reg ? " · " + esc(x.reg) : "") : esc(x.srcSheet ? x.srcSheet.join(", ") : x.gedung || "")}</div></td>
-      <td><div class="nm">${esc(itemNama(x))}</div><div class="sm">${esc([x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div></td>
+      <td><div class="nm">${esc(itemNama(x))}${ntBadge("aset", x.key)}</div><div class="sm">${esc([x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div></td>
       <td>${statusPill(x)}</td>
       <td class="hide-sm">${x.pj ? esc(x.pj) + `<div class="sm">${esc([x.jab, x.untuk].filter(Boolean).join(" · "))}</div>` : '<span class="pill line">belum diserahkan</span>'}</td>
       <td class="hide-sm">${esc(x.lokasi) || '<span class="faint">—</span>'}</td>
@@ -1151,8 +1153,26 @@ function kondBar(rooms) {
   const seg = [["Baik", "var(--ok)"], ["Rusak Ringan", "var(--info)"], ["Rusak Sedang", "var(--warn)"], ["Rusak Berat", "var(--bad)"], ["", "var(--line-strong)"]];
   return `<div class="bar" style="display:flex;height:8px" title="${seg.map(([k]) => (k || "Belum dicek") + ": " + c(k)).join(", ")}">${seg.map(([k, col]) => c(k) ? `<i style="width:${c(k) / n * 100}%;background:${col}"></i>` : "").join("")}</div>`;
 }
-function ruangRekapPanel() {
-  if (!S.ruang.length) return "";
+function asetRekapPanel() {
+  const all = allItems().visible, kc = (a, k) => a.filter(x => (x.kond || "") === k).length;
+  const row = (label, a, href) => `<tr${href ? ` class="rowlink" tabindex="0" data-go="${href}"` : ""}><td>${label}</td><td class="num">${fmt(a.length)}<div class="sm">${fmt(a.filter(x => x.sip).length)} SIPBMD · ${fmt(a.filter(x => !x.sip).length)} tak tercatat</div></td><td class="num hide-sm">${rp(a.reduce((t, x) => t + itemNilai(x), 0))}</td>${KOND.map(k => `<td class="num">${kc(a, k) || '<span class="faint">0</span>'}</td>`).join("")}<td class="num">${kc(a, "") || '<span class="faint">0</span>'}</td></tr>`;
+  return `<section class="panel" style="margin-bottom:14px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">Aset dan kondisinya</h3><span class="muted">${fmt(all.length)} aset · ${rp(all.reduce((t, x) => t + itemNilai(x), 0))}</span><span class="sp" style="flex:1"></span><a href="#aset-pm">Buka Aset SIPBMD</a></div>
+    <div class="chips" style="margin-top:10px">${KOND.map(k => `<span class="pill ${k === "Baik" ? "ok" : k === "Rusak Sedang" ? "warn" : "bad"}">${k} ${fmt(kc(all, k))}</span>`).join("")}<span class="pill">Belum dicek ${fmt(kc(all, ""))}</span></div>
+    <div class="tablebox" style="margin-top:10px"><table><thead><tr><th>Golongan</th><th class="num">Jumlah</th><th class="num hide-sm">Nilai</th>${KOND.map(k => `<th class="num">${k}</th>`).join("")}<th class="num">Belum dicek</th></tr></thead><tbody>
+    ${KAT.map(k => row(`<b style="font-weight:500">${k.kib}</b> ${esc(k.nama)}`, all.filter(x => x.kat === k.id), "#aset-" + k.id)).join("")}
+    </tbody><tfoot>${row("<b>Jumlah</b>", all)}</tfoot></table></div></section>`;
+}
+function riwayatRekapPanel() {
+  const logs = S.log.flatMap(d => d.items || []).sort((a, b) => String(b.t).localeCompare(String(a.t))).slice(0, 12);
+  const pend = pendingList(), mine = isMaster() ? pend : pend.filter(p => p.by === S.me);
+  return `<section class="panel" style="margin-top:14px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">Riwayat perubahan terbaru</h3><span class="sp" style="flex:1"></span><a href="#validasi">Lihat semua riwayat</a></div>
+    ${mine.length ? `<div class="note" style="margin-top:10px">${fmt(mine.length)} perubahan ${isMaster() ? "dari operator" : "Anda"} menunggu validasi master. <a href="#validasi">Buka Validasi</a></div>` : ""}
+    <div class="tablebox" style="margin-top:10px"><table><thead><tr><th>Waktu</th><th>Perubahan</th><th>Oleh</th><th class="hide-sm">Validasi</th></tr></thead><tbody>
+    ${logs.map(e => `<tr><td class="mono sm" style="white-space:nowrap">${esc(tglJam(e.t))}</td><td>${esc(e.ring)}</td><td>${esc(nameOf(e.by))}</td><td class="hide-sm">${e.st === "ditolak" ? '<span class="pill bad">ditolak</span>' : e.st === "disetujui" ? `<span class="pill ok">disetujui</span> <span class="sm">${esc(nameOf(e.ok))}</span>` : '<span class="pill">langsung (master)</span>'}</td></tr>`).join("") || '<tr><td colspan="4"><div class="empty"><b>Belum ada riwayat</b>Setiap perubahan yang tersimpan akan tercatat di sini beserta nama akunnya.</div></td></tr>'}
+    </tbody></table></div><p class="hint">Catatan temuan tidak masuk riwayat ini karena sudah mencatat nama penulis dan waktunya sendiri.</p></section>`;
+}
+function ruangRekapPanel(always) {
+  if (!S.ruang.length) return always ? `<section class="panel" style="margin-bottom:14px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">Kondisi ruangan (Dapodik)</h3><span class="sp" style="flex:1"></span><a href="#ruang">Buka Kondisi Ruangan</a></div><p class="muted" style="margin:8px 0 0">Belum ada data gedung dan ruang.</p></section>` : "";
   const c = k => S.ruang.filter(r => (r.kond || "") === k).length;
   return `<section class="panel" style="margin-bottom:14px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">Kondisi ruangan (Dapodik)</h3><span class="muted">${fmt(S.gdg.length)} gedung · ${fmt(S.ruang.length)} ruang</span><span class="sp" style="flex:1"></span><a href="#ruang">Buka Kondisi Ruangan</a></div>
     <div style="margin-top:10px">${kondBar(S.ruang)}</div>
@@ -1176,7 +1196,7 @@ function vRuang() {
       <div class="chips"><button class="chip" data-rkond="" aria-pressed="${!f.kond}">Semua</button>${RKOND.map(k => `<button class="chip" data-rkond="${k}" aria-pressed="${f.kond === k}">${k}</button>`).join("")}<button class="chip" data-rkond="-" aria-pressed="${f.kond === "-"}">Belum dicek</button></div></div>
     ${Object.keys(byLt).sort((a, b) => +a - +b).map(lt => `<p class="sectionlabel" style="margin-top:14px">Lantai ${esc(lt)} · ${byLt[lt].length} ruang</p>
       <div class="tablebox"><table><thead><tr><th></th><th>Kode ruang</th><th>Nama / peruntukan</th><th class="hide-sm">Jenis prasarana</th><th class="hide-sm num">Ukuran</th><th>Kondisi</th><th class="hide-sm">Keterangan</th></tr></thead><tbody>
-      ${byLt[lt].map(r => `<tr class="rowlink" tabindex="0" data-ruang="${esc(r._id)}"><td>${(r.fotos || []).length ? `<img class="thumb" src="${fotoSrc(r.fotos[0])}" data-foto="${esc(r.fotos[0])}" alt="" loading="lazy">` : '<span class="thumb" aria-hidden="true"></span>'}</td><td class="mono">${esc(r.kode)}</td><td class="nm">${esc(r.nama)}</td><td class="hide-sm">${esc(r.jenis || "")}</td><td class="hide-sm num">${r.panjang && r.lebar ? `${fmt(r.panjang)} × ${fmt(r.lebar)} m<div class="sm">${fmt(r.panjang * r.lebar)} m²</div>` : '<span class="faint">—</span>'}</td><td>${rkPill(r.kond)}</td><td class="hide-sm sm">${esc(r.ket || "")}</td></tr>`).join("")}
+      ${byLt[lt].map(r => `<tr class="rowlink" tabindex="0" data-ruang="${esc(r._id)}"><td>${(r.fotos || []).length ? `<img class="thumb" src="${fotoSrc(r.fotos[0])}" data-foto="${esc(r.fotos[0])}" alt="" loading="lazy">` : '<span class="thumb" aria-hidden="true"></span>'}</td><td class="mono">${esc(r.kode)}</td><td class="nm">${esc(r.nama)}${ntBadge("ruang", r._id)}</td><td class="hide-sm">${esc(r.jenis || "")}</td><td class="hide-sm num">${r.panjang && r.lebar ? `${fmt(r.panjang)} × ${fmt(r.lebar)} m<div class="sm">${fmt(r.panjang * r.lebar)} m²</div>` : '<span class="faint">—</span>'}</td><td>${rkPill(r.kond)}</td><td class="hide-sm sm">${esc(r.ket || "")}</td></tr>`).join("")}
       </tbody></table></div>`).join("") || `<div class="empty"><b>${ruangOf(g._id).length ? "Tidak ada ruang yang cocok" : "Belum ada ruang di gedung ini"}</b>${ruangOf(g._id).length ? "Ubah filter." : "Klik Tambah ruang."}</div>`}
   </section>` : ""}`;
 }
@@ -2152,7 +2172,7 @@ document.addEventListener("keydown", e => {
 document.addEventListener("click", async e => {
   const t = e.target.closest("button, tr.rowlink, a[data-gsel]"); if (!t) return;
   const d = t.dataset;
-  if (t.matches("tr.rowlink")) { if (e.target.closest("a")) return; if (d.ruang) { openRuang(d.ruang); }
+  if (t.matches("tr.rowlink")) { if (e.target.closest("a")) return; if (d.go) { location.hash = d.go; return; } if (d.ruang) { openRuang(d.ruang); }
     else if (d.kk) { openKK(d.kk); }
     else if (d.pem != null) { UI.pem.sel = d.pem; UI.pem.kat = ""; render(); }
     else if (d.kartu) { drawer = { mode:"psd", id:d.kartu, fresh:true }; renderDrawer(); } else if (d.lap) { drawer = { mode:"lap", id:d.lap, fresh:true }; renderDrawer(); } else openItem(d.key); return; }
@@ -2669,25 +2689,48 @@ function catatanSection(target) {
 UI.ct = { st:"open", kat:"", jenis:"", q:"", tq:"", target:null };
 function ctTargets(q) {
   const out = [];
-  for (const x of allItems().visible) if (matches(q, [x.nama, x.merek, x.kode, x.noreg, x.reg, x.lokasi, x.pj])) { out.push({ t:"aset", id:x.key, label:itemNama(x), sub:idLabel(x) }); if (out.length > 12) break; }
-  for (const r of S.ruang) if (matches(q, [r.kode, r.nama, r.jenis])) out.push({ t:"ruang", id:r._id, label:(r.kode ? r.kode + " · " : "") + r.nama, sub:"Ruang" });
+  for (const x of allItems().visible) if (matches(q, [x.nama, x.merek, x.kode, x.noreg, x.reg, x.lokasi, x.pj])) { out.push({ t:"aset", id:x.key, label:itemNama(x), sub:[idLabel(x), x.lokasi, x.pj].filter(Boolean).join(" · ") }); if (out.length > 12) break; }
+  for (const r of S.ruang) { const gd = S.gdg.find(z => z._id === r.gid); if (matches(q, [r.kode, r.nama, r.jenis, gd && gd.nama])) out.push({ t:"ruang", id:r._id, label:(r.kode ? r.kode + " · " : "") + r.nama, sub:[gd && gd.nama, r.kond].filter(Boolean).join(" · ") }); }
   for (const b of S.psdBarang) if (matches(q, [b.nama, b.kategori])) out.push({ t:"barang", id:b._id, label:b.nama, sub:"Barang persediaan" });
   return out.slice(0, 25);
+}
+function ntOpen(t, id) { return S.catatan.filter(c => c.st !== "Selesai" && c.target && c.target.t === t && c.target.id === id).length; }
+function ntBadge(t, id) { const n = ntOpen(t, id); return n ? ` <span class="pill warn" title="Catatan temuan yang belum selesai">${n} temuan</span>` : ""; }
+// details of the chosen record, so the writer can confirm the note goes to the right one
+function ctTargetInfo(g) {
+  if (g.t === "aset") { const x = allItems().byKey.get(g.id); if (!x) return ""; return [idLabel(x) && `<span class="mono">${esc(idLabel(x))}</span>`, esc(KATMAP[x.kat] ? KATMAP[x.kat].kib : ""), x.sip ? "SIPBMD" : "tak tercatat", "kondisi " + (x.kond ? esc(x.kond) : "belum dicek"), x.lokasi && "di " + esc(x.lokasi), x.pj && "dipegang " + esc(x.pj)].filter(Boolean).join(" · "); }
+  if (g.t === "ruang") { const r = S.ruang.find(z => z._id === g.id); if (!r) return ""; const gd = S.gdg.find(z => z._id === r.gid); return `${gd ? esc(gd.nama) + " · " : ""}lantai ${esc(r.lantai || "-")} · kondisi ${r.kond ? esc(r.kond) : "belum dicek"}`; }
+  if (g.t === "barang") { const b = S.psdBarang.find(z => z._id === g.id); return b ? esc([b.kategori, b.satuan].filter(Boolean).join(" · ")) : ""; }
+  return "";
+}
+function ctWriter() {
+  const f = UI.ct, g = f.target;
+  if (g) {
+    const prev = g.t !== "umum" ? notesFor(g.t, g.id) : [];
+    return `<div class="note info" style="margin-bottom:8px;display:flex;flex-direction:column;gap:2px"><span>Catatan untuk ${esc(NT_JENIS[g.t])}: <b>${esc(g.label)}</b></span>${g.t !== "umum" ? `<span class="sm">${ctTargetInfo(g)}</span>` : ""}
+      <span class="sm">${g.t !== "umum" ? `<button class="link" data-ntgo="1">Buka datanya</button> · ` : ""}<button class="link" id="ct-untarget">Ganti</button>${prev.length ? ` · sudah ada ${prev.length} catatan untuk data ini` : ""}</span></div>${noteForm("ntm", g)}`;
+  }
+  const cands = words(f.tq).length ? ctTargets(f.tq) : [];
+  return `<label class="f">1. Cari aset, ruang, atau barang persediaan yang dicatat<input id="ct-tq" type="search" value="${esc(f.tq)}" placeholder="ketik nama barang, kode, nomor register, posisi, atau nama ruang"></label>
+     ${cands.length ? `<div class="suggest" style="margin-top:6px">${cands.map((c, i) => `<button data-ctpick="${i}"><span><b>${esc(c.label)}</b><br><span class="faint sm">${esc(NT_JENIS[c.t])} · ${esc(c.sub || "")}</span></span><span class="pill">${esc(NT_JENIS[c.t])}</span></button>`).join("")}</div>` : words(f.tq).length ? '<p class="hint">Tidak ditemukan. Coba kata lain.</p>' : ""}
+     <p class="hint">2. Pilih datanya, lalu tulis temuannya. Catatan akan tampil di detail data tersebut. Atau <button class="link" id="ct-umum">tulis catatan umum</button> yang tidak terkait satu data.</p>`;
+}
+function ctQuickPanel() {
+  const open = S.catatan.filter(c => c.st !== "Selesai");
+  return `<section class="panel" style="margin-bottom:14px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">Catatan temuan</h3><span class="muted">${fmt(open.length)} belum selesai · ${fmt(S.catatan.length - open.length)} selesai</span><span class="sp" style="flex:1"></span><a href="#catatan">Buka semua catatan</a></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:10px">
+      ${can("catatan") ? `<div>${ctWriter()}</div>` : ""}
+      <div><p class="sectionlabel">Belum selesai, terbaru</p><div style="display:flex;flex-direction:column;gap:8px">${open.slice(0, 3).map(c => noteCard(c, true)).join("") || '<p class="muted" style="margin:0">Tidak ada catatan yang terbuka.</p>'}${open.length > 3 ? `<a href="#catatan">dan ${fmt(open.length - 3)} catatan lainnya</a>` : ""}</div></div>
+    </div></section>`;
 }
 function vCatatan() {
   const f = UI.ct;
   const rows = S.catatan.filter(c => (f.st === "open" ? c.st !== "Selesai" : !f.st || c.st === f.st) && (!f.kat || c.kat === f.kat) && (!f.jenis || (c.target || {}).t === f.jenis) && matches(f.q, [c.teks, c.kat, c.tl, (c.target || {}).label, nameOf(c.by)]));
   const cnt = st => S.catatan.filter(c => (c.st || "Terbuka") === st).length;
-  const cands = words(f.tq).length ? ctTargets(f.tq) : [];
   return `<h2>Catatan temuan</h2>
   <p class="lead">Catat setiap temuan di lapangan dan tautkan ke aset, ruang, atau barang persediaannya, misalnya charger laptop rusak atau kunci pintu ruang macet. Catatan langsung tersimpan beserta nama penulis dan waktunya.</p>
   <div class="grid kpis"><div class="kpi"><span class="l">Terbuka</span><span class="v">${fmt(cnt("Terbuka"))}</span></div><div class="kpi"><span class="l">Ditindaklanjuti</span><span class="v">${fmt(cnt("Ditindaklanjuti"))}</span></div><div class="kpi"><span class="l">Selesai</span><span class="v">${fmt(cnt("Selesai"))}</span></div></div>
-  ${can("catatan") ? `<section class="panel" style="margin-top:14px"><h3>Tulis catatan</h3>
-    ${f.target ? `<div class="note info" style="margin-bottom:8px">Untuk ${esc(NT_JENIS[f.target.t])}: <b>${esc(f.target.label)}</b> <button class="link" id="ct-untarget">ganti</button></div>${noteForm("ntm", f.target)}` :
-    `<label class="f">Cari data yang dicatat (aset, ruang, atau barang persediaan)<input id="ct-tq" type="search" value="${esc(f.tq)}" placeholder="mis. laptop, G.I.L1.R1, kertas A4"></label>
-     ${cands.length ? `<div class="suggest" style="margin-top:6px">${cands.map((c, i) => `<button data-ctpick="${i}"><span><b>${esc(c.label)}</b><br><span class="faint sm">${esc(NT_JENIS[c.t])} · ${esc(c.sub || "")}</span></span></button>`).join("")}</div>` : ""}
-     <p class="hint">Atau <button class="link" id="ct-umum">tulis catatan umum</button> yang tidak terkait satu data tertentu.</p>`}
-  </section>` : ""}
+  ${can("catatan") ? `<section class="panel" style="margin-top:14px"><h3>Tulis catatan</h3>${ctWriter()}</section>` : ""}
   <div class="toolbar" style="margin-top:14px">
     <div class="chips"><button class="chip" data-ctst="open" aria-pressed="${f.st === "open"}">Belum selesai</button>${NST.map(o => `<button class="chip" data-ctst="${o}" aria-pressed="${f.st === o}">${o}</button>`).join("")}<button class="chip" data-ctst="" aria-pressed="${!f.st}">Semua</button></div>
   </div>
@@ -2696,6 +2739,12 @@ function vCatatan() {
     <label class="f">Jenis data<select id="ct-jenis"><option value="">Semua</option>${Object.entries(NT_JENIS).map(([k, l]) => `<option value="${k}" ${k === f.jenis ? "selected" : ""}>${l}</option>`).join("")}</select></label>
     <span class="sp"></span><button id="ct-xlsx" ${S.catatan.length ? "" : "disabled"}>Unduh Excel</button></div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${rows.map(c => noteCard(c, true)).join("") || `<div class="empty" style="grid-column:1/-1"><b>Tidak ada catatan</b>${S.catatan.length ? "Ubah filter." : "Catatan temuan yang ditulis akan muncul di sini."}</div>`}</div>`;
+}
+function openNoteTarget(g) {
+  if (!g) return;
+  if (g.t === "aset") { if (!allItems().byKey.get(g.id)) { toast("Aset ini sudah tidak ada di daftar."); return; } openItem(g.id); }
+  else if (g.t === "ruang") { if (!S.ruang.some(r => r._id === g.id)) { toast("Ruang ini sudah dihapus."); return; } openRuang(g.id); }
+  else if (g.t === "barang") { drawer = { mode:"psd", id:g.id, fresh:true }; renderDrawer(); }
 }
 async function addNote(btn) {
   const prefix = btn.dataset.ntadd, teks = val(prefix + "-teks"), kat = val(prefix + "-kat");
@@ -2732,7 +2781,8 @@ document.addEventListener("click", async e => {
   if (d.ctpick != null) { const c = ctTargets(UI.ct.tq)[+d.ctpick]; if (c) { UI.ct.target = c; UI.ct.tq = ""; render(); } }
   if (t.id === "ct-umum") { UI.ct.target = { t:"umum", id:"", label:"Catatan umum" }; render(); }
   if (t.id === "ct-untarget") { UI.ct.target = null; render(); }
-  if (d.ntopen) { const c = S.catatan.find(x => x._id === d.ntopen); if (!c) return; const g = c.target; if (g.t === "aset") openItem(g.id); else if (g.t === "ruang") openRuang(g.id); else if (g.t === "barang") { drawer = { mode:"psd", id:g.id, fresh:true }; renderDrawer(); } }
+  if (d.ntgo) { const g = UI.ct.target; if (g) openNoteTarget(g); }
+  if (d.ntopen) { const c = S.catatan.find(x => x._id === d.ntopen); if (c) openNoteTarget(c.target); }
   if (t.id === "ct-xlsx") xlsxSave(`Catatan Temuan Sarpras ${today()}.xlsx`, [["Catatan", S.catatan.map((c, n) => ({ "No":n + 1, "Tanggal":tglJam(c.at), "Penulis":nameOf(c.by), "Jenis data":NT_JENIS[(c.target || {}).t] || "", "Data":(c.target || {}).label || "", "Kategori":c.kat || "", "Catatan":c.teks, "Status":c.st || "Terbuka", "Tindak lanjut":c.tl || "", "Oleh":c.tl ? nameOf(c.tlBy) : "", "Tanggal tindak lanjut":c.tl ? tglJam(c.tlAt) : "", "Jumlah foto":(c.fotos || []).length }))]]);
 });
 
