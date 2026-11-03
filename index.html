@@ -76,6 +76,9 @@ nav.tabs a.navhome{margin-top:6px;border:1px solid var(--line)}
 @media (max-width:640px){.apps{grid-template-columns:repeat(2,1fr);gap:10px}.appcard .ai{width:64px;height:64px}.appcard .ai svg{width:48px;height:48px}.appcard h3{font-size:14px}}
 .hero{display:flex;gap:14px;align-items:center;margin-bottom:16px}.hero img{width:52px;height:52px;flex:none}.hero h2{display:block!important;margin:0}
 .links-note{margin-top:18px}
+.kibcard{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 18px;border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--sunk)}
+.kibg{margin:0 0 4px;font-weight:600;font-size:12.5px;color:var(--accent)}
+.kibcard dl.kv{grid-template-columns:minmax(90px,42%) minmax(0,1fr);gap:4px 10px}.kibcard dl.kv dd{overflow-wrap:break-word}
 table.jd-week{table-layout:fixed}table.jd-week th,table.jd-week td{vertical-align:top}
 table.jd-week thead th{text-align:center;font-size:13px}
 .jd-cell{display:table-cell;padding:6px!important}
@@ -945,6 +948,41 @@ document.addEventListener("change", e => {
   if (/^jf-(tgl|mulai|selesai)$/.test(t.id)) { jdReadForm(); render(); }
 });
 
+/* ================= format SIPBMD KIB A (tanah) & KIB C (gedung dan bangunan) ================= */
+// each field: [label, source] where source is a core field name ("@nodok") or a regex on the SIPBMD column title kept in x.extra
+const KIB_FMT = {
+  tanah:{ judul:"Kartu Inventarisasi Barang (KIBAR) Tanah", grup:[
+    ["Data barang", [["Kode lokasi", /^kode\s*lokasi/i], ["Spesifikasi nama barang", /spesifikasi/i], ["Luas", /^(luas|jumlah\s*\(luas\))/i, "m²"], ["Satuan", /^satuan/i], ["Harga satuan perolehan", /harga\s*satuan/i, "rp"], ["Nilai perolehan", "@nilai", "rp"], ["Kondisi di SIPBMD", "@ksip"]]],
+    ["Lokasi", [["Provinsi", /^provinsi/i], ["Kabupaten/Kota", /^kab/i], ["Kecamatan", /^kecamatan/i], ["Kelurahan/Desa", /kelurahan|desa/i], ["Jalan", /^(jalan|alamat)/i], ["RT/RW", /^rt/i], ["Titik koordinat", /koordinat/i]]],
+    ["Dokumen kepemilikan", [["Nama dokumen", /^(nama\s*dokumen|hak|jenis\s*dokumen)/i], ["Nomor", "@nodok"], ["Tanggal", /^(tanggal|tgl\.?)\s*(dokumen|sertifikat)/i, "tgl"], ["Nama kepemilikan dalam dokumen", /kepemilikan|^nama\s*pemilik/i]]],
+    ["Tanda batas tanah", [["Utara", /utara/i], ["Timur", /timur/i], ["Selatan", /selatan/i], ["Barat", /barat/i]]],
+  ] },
+  gedung:{ judul:"Data Gedung dan Bangunan (SIPBMD)", grup:[
+    ["Data bangunan", [["Tanggal perolehan", "@tgl", "tgl"], ["Nomor dokumen", "@nodok"], ["Tanggal dokumen", /^(tanggal|tgl\.?)\s*dokumen/i, "tgl"], ["Bertingkat", /bertingkat/i], ["Beton", /^beton/i], ["Luas bangunan", /luas/i, "m²"], ["Kondisi di SIPBMD", "@ksip"]]],
+    ["Lokasi & tanah", [["Lokasi", /^(lokasi|alamat)/i], ["Status tanah", /status\s*tanah/i], ["Asal usul", "@asal"]]],
+    ["Nilai & keterangan", [["Nilai perolehan", "@nilai", "rp"], ["Keterangan", "@ket"]]],
+  ] },
+};
+function kibVal(x, src) {
+  if (typeof src === "string") return { key:null, v:x[src.slice(1)] };
+  const ex = x.extra || {}, key = Object.keys(ex).find(k => src.test(k));
+  return { key, v:key ? ex[key] : "" };
+}
+function kibFmtVal(v, unit) {
+  if (v == null || v === "" || v === "-") return "";
+  if (unit === "rp") return rp(numVal(v));
+  if (unit === "tgl") return tglID(parseTgl(String(v))) || String(v);
+  if (unit === "m²") { const n = numVal(v); return n ? n.toLocaleString("id-ID", { maximumFractionDigits:2 }) + " m²" : String(v); }
+  return String(v);
+}
+// keys of x.extra that the structured card already shows
+function kibUsedKeys(x) { const f = KIB_FMT[x.kat]; if (!f) return new Set(); const u = new Set(); for (const [, fs] of f.grup) for (const [, src] of fs) { const r = kibVal(x, src); if (r.key) u.add(r.key); } return u; }
+function kibCard(x) {
+  const f = KIB_FMT[x.kat]; if (!f || !x.sip) return "";
+  return `<div><p class="sectionlabel">${esc(f.judul)}</p><div class="kibcard">${f.grup.map(([g, fs]) => { const rows = fs.map(([l, src, u]) => [l, kibFmtVal(kibVal(x, src).v, u)]); return `<div><p class="kibg">${esc(g)}</p><dl class="kv">${rows.map(([l, v]) => `<dt>${esc(l)}</dt><dd>${v ? esc(v) : '<span class="faint">—</span>'}</dd>`).join("")}</dl></div>`; }).join("")}</div></div>`;
+}
+const kibCell = (x, re, unit) => kibFmtVal(kibVal(x, re).v, unit);
+
 /* ================= view: aset ================= */
 // assets that physically exist but have no record in SIPBMD (all golongan)
 const takItems = () => allItems().visible.filter(x => !x.sip && x.src !== "G");
@@ -996,21 +1034,23 @@ function vAset() {
     <span class="sp"></span><button id="a-xlsx">Unduh Excel (${fmt(rows.length)})</button><button id="a-kir">Unduh KIR per ruang/pemegang</button>
   </div>
   <div class="tablebox"><table>
-    <thead><tr><th></th><th>Kode · No. registrasi</th><th>Aset</th><th>Status</th><th class="hide-sm">Diserahkan ke</th><th class="hide-sm">Posisi</th><th>Kondisi</th><th class="num">Nilai</th></tr></thead>
+    <thead><tr><th></th><th>Kode · No. registrasi</th><th>Aset</th><th>Status</th>${sub === "tanah" ? '<th class="num hide-sm">Luas</th><th class="hide-sm">Dokumen kepemilikan</th>' : sub === "gedung" ? '<th class="num hide-sm">Luas bangunan</th><th class="hide-sm">Konstruksi · status tanah</th>' : '<th class="hide-sm">Diserahkan ke</th><th class="hide-sm">Posisi</th>'}<th>Kondisi</th><th class="num">Nilai</th></tr></thead>
     <tbody>${slice.map(x => `<tr class="rowlink" tabindex="0" data-key="${esc(x.key)}">
       <td>${(x.fotos || []).length ? `<img class="thumb" src="${fotoSrc(x.fotos[0])}" data-foto="${esc(x.fotos[0])}" alt="" loading="lazy">` : `<span class="thumb" aria-hidden="true"></span>`}</td>
       <td><span class="mono">${esc(x.sip ? x.kode : (x.reg || x.kode || "—"))}</span><div class="sm mono">${x.sip ? "No. " + esc(x.noreg) + (x.reg ? " · " + esc(x.reg) : "") : esc(x.srcSheet ? x.srcSheet.join(", ") : x.gedung || "")}</div></td>
       <td><div class="nm">${esc(itemNama(x))}${ntBadge("aset", x.key)}</div><div class="sm">${esc([sub === "tak" && KATMAP[x.kat] ? KATMAP[x.kat].kib : "", x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div></td>
       <td>${statusPill(x)}</td>
-      <td class="hide-sm">${x.pj ? esc(x.pj) + `<div class="sm">${esc([x.jab, x.untuk].filter(Boolean).join(" · "))}</div>` : '<span class="pill line">belum diserahkan</span>'}</td>
-      <td class="hide-sm">${esc(x.lokasi) || '<span class="faint">—</span>'}</td>
+      ${sub === "tanah" ? `<td class="num hide-sm">${esc(kibCell(x, /^(luas|jumlah\s*\(luas\))/i, "m²")) || '<span class="faint">—</span>'}</td><td class="hide-sm">${esc([kibCell(x, /^(nama\s*dokumen|hak|jenis\s*dokumen)/i), x.nodok ? "No. " + x.nodok : ""].filter(Boolean).join(" · ")) || '<span class="faint">—</span>'}<div class="sm">${esc(kibCell(x, /^(tanggal|tgl\.?)\s*(dokumen|sertifikat)/i, "tgl"))}</div></td>` :
+        sub === "gedung" ? `<td class="num hide-sm">${esc(kibCell(x, /luas/i, "m²")) || '<span class="faint">—</span>'}</td><td class="hide-sm sm">${esc([kibCell(x, /bertingkat/i) === "Ya" ? "Bertingkat" : kibCell(x, /bertingkat/i) ? "Tidak bertingkat" : "", kibCell(x, /^beton/i) === "Ya" ? "Beton" : kibCell(x, /^beton/i) ? "Bukan beton" : ""].filter(Boolean).join(", ")) || "—"}<div>${esc(kibCell(x, /status\s*tanah/i))}</div></td>` :
+        `<td class="hide-sm">${x.pj ? esc(x.pj) + `<div class="sm">${esc([x.jab, x.untuk].filter(Boolean).join(" · "))}</div>` : '<span class="pill line">belum diserahkan</span>'}</td>
+      <td class="hide-sm">${esc(x.lokasi) || '<span class="faint">—</span>'}</td>`}
       <td>${kondPill(x.kond)}${usulHapus(x) ? '<div class="sm" style="color:var(--bad)">usul hapus</div>' : ""}</td>
       <td class="num">${itemNilai(x) ? rp(itemNilai(x)) : '<span class="faint">—</span>'}</td></tr>`).join("") || `<tr><td colspan="8"><div class="empty"><b>Tidak ada aset yang cocok</b>Ubah kata kunci atau filter, atau tambah aset baru.</div></td></tr>`}</tbody>
   </table></div>
   <div class="pager"><span>${fmt(rows.length)} catatan · ${rp(rows.reduce((t, x) => t + itemNilai(x), 0))}</span><span><button id="a-prev" ${f.page===0?"disabled":""}>Sebelumnya</button> Hal. ${f.page+1}/${pages} <button id="a-next" ${f.page>=pages-1?"disabled":""}>Berikutnya</button></span></div>`;
 }
 function asetRow(x) {
-  return { "Golongan":KATMAP[x.kat] ? KATMAP[x.kat].kib + " " + KATMAP[x.kat].nama : "", "Status":x.sip ? "SIPBMD" : "Tak tercatat", "Kode Aset":x.kode || "", "No Register":x.noreg || "", "No Registrasi Internal":x.reg || "", "Nama Aset":x.nama, "Merek/Pencipta":x.merek || "", "Spesifikasi":x.spes || "", "Tahun":x.th || "", "Tanggal Perolehan":x.tgl || "", "Nomor Dokumen":x.nodok || "", "Jumlah":x.jml || 1, "Nilai":itemNilai(x), "Kapitalisasi":x.kap || "", "Sumber Dana":x.sumber || "", "No SPJ":x.spj || "", "Diserahkan ke":x.pj || "", "NIP":x.nip || "", "Jabatan":x.jab || "", "Peruntukan":x.untuk || "", "Posisi":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "", "Kondisi":x.kond || "Belum dicek", "Tgl Cek":x.tcek || "", "Pemeriksa":x.cek || "", "Usul Hapus":usulHapus(x) ? (x.hapusNo || "Ya") : "", "Foto (tautan)":x.foto || "", "Foto diunggah":(x.fotos || []).length, "Catatan":x.cat || x.ket || "" };
+  return Object.assign({ "Golongan":KATMAP[x.kat] ? KATMAP[x.kat].kib + " " + KATMAP[x.kat].nama : "", "Status":x.sip ? "SIPBMD" : "Tak tercatat", "Kode Aset":x.kode || "", "No Register":x.noreg || "", "No Registrasi Internal":x.reg || "", "Nama Aset":x.nama, "Merek/Pencipta":x.merek || "", "Spesifikasi":x.spes || "", "Tahun":x.th || "", "Tanggal Perolehan":x.tgl || "", "Nomor Dokumen":x.nodok || "", "Jumlah":x.jml || 1, "Nilai":itemNilai(x), "Kapitalisasi":x.kap || "", "Sumber Dana":x.sumber || "", "No SPJ":x.spj || "", "Diserahkan ke":x.pj || "", "NIP":x.nip || "", "Jabatan":x.jab || "", "Peruntukan":x.untuk || "", "Posisi":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "", "Kondisi":x.kond || "Belum dicek", "Tgl Cek":x.tcek || "", "Pemeriksa":x.cek || "", "Usul Hapus":usulHapus(x) ? (x.hapusNo || "Ya") : "", "Foto (tautan)":x.foto || "", "Foto diunggah":(x.fotos || []).length, "Catatan":x.cat || x.ket || "" }, x.extra || {});
 }
 
 /* ================= drawer ================= */
@@ -1101,6 +1141,7 @@ function drawerItem(x) {
             <label class="ck" style="align-self:end"><input id="d-rehab" type="checkbox" ${x.rehab ? "checked" : ""}> Jangan usulkan hapus (akan diperbaiki/direhabilitasi)</label></fieldset></div>` : ""}
         </div>
       </div>
+      ${kibCard(x)}
       <div><p class="sectionlabel">Pencatatan</p>
         <fieldset class="fgrid fs" ${drawerItem.canU ? "" : "disabled"}>
           ${x.src === "S" || x.src === "P" ? "" : `<div class="full"><span class="f" style="margin-bottom:6px;display:block">Status pencatatan</span>
@@ -1113,7 +1154,7 @@ function drawerItem(x) {
         </fieldset>
         <dl class="kv" style="margin-top:12px">
           ${kv("Spesifikasi", esc(x.spes))}${kv("No. pabrik/serial", esc(x.sn))}${kv("Tahun", esc(x.th))}${kv("Tanggal perolehan", esc(tglID(x.tgl)))}${kv("Nomor dokumen", esc(x.nodok))}${kv("Asal usul", esc(x.asal))}
-          ${kv("Jumlah", x.jml > 1 ? fmt(x.jml) : "")}${kv("Nilai", itemNilai(x) ? rp(itemNilai(x)) : "")}${kv("Kapitalisasi", esc(x.kap))}${kv("Sumber dana", esc(x.sumber))}${kv("Keterangan", esc(x.ket))}${kv("No. BAST terakhir", esc(x.bast))}${kv("Kondisi di SIPBMD", esc(x.ksip))}${kv("Asal catatan", esc((x.srcSheet || []).join(", ")))}${x.extra ? Object.entries(x.extra).map(([k, v]) => kv(esc(k), esc(v))).join("") : ""}
+          ${kv("Jumlah", x.jml > 1 ? fmt(x.jml) : "")}${kv("Nilai", itemNilai(x) ? rp(itemNilai(x)) : "")}${kv("Kapitalisasi", esc(x.kap))}${kv("Sumber dana", esc(x.sumber))}${kv("Keterangan", esc(x.ket))}${kv("No. BAST terakhir", esc(x.bast))}${kv("Kondisi di SIPBMD", esc(x.ksip))}${kv("Asal catatan", esc((x.srcSheet || []).join(", ")))}${x.extra ? (() => { const u = kibUsedKeys(x); return Object.entries(x.extra).filter(([k]) => !u.has(k)).map(([k, v]) => kv(esc(k), esc(v))).join(""); })() : ""}
         </dl>
       </div>
       ${pairBox}
@@ -2619,10 +2660,10 @@ document.addEventListener("click", async e => {
     }
     case "a-prev": UI.aset.page--; render(); break;
     case "a-next": UI.aset.page++; render(); break;
-    case "a-xlsx": xlsxSave(`Aset ${KATMAP[sub].kib} ${KATMAP[sub].nama} ${today()}.xlsx`, [[KATMAP[sub].kib, filterAset().map(asetRow)]]); break;
+    case "a-xlsx": { const kk = sub === "tak" ? KAT_TAK : KATMAP[sub]; xlsxSave(`Aset ${kk.kib} ${kk.nama} ${today()}.xlsx`, [[kk.kib.slice(0, 31), filterAset().map(asetRow)]]); break; }
     case "a-kir": {
-      const g = {}; for (const x of allItems().visible.filter(x => x.kat === sub)) { const k = x.lokasi || x.pj || "(belum ada posisi/pemegang)"; (g[k] = g[k] || []).push(x); }
-      xlsxSave(`KIR ${KATMAP[sub].nama} ${today()}.xlsx`, [["Rekap", Object.entries(g).sort().map(([k, a]) => ({ "Posisi / Pemegang":k, "Jumlah":a.length, "Nilai":a.reduce((s, x) => s + itemNilai(x), 0), "Sudah dicek":a.filter(x => x.kond).length }))], ["KIR", Object.entries(g).sort().flatMap(([k, a]) => a.map(x => Object.assign({ "Posisi / Pemegang":k }, asetRow(x))))]]);
+      const g = {}; for (const x of (sub === "tak" ? takItems() : allItems().visible.filter(x => x.kat === sub))) { const k = x.lokasi || x.pj || "(belum ada posisi/pemegang)"; (g[k] = g[k] || []).push(x); }
+      xlsxSave(`KIR ${(sub === "tak" ? KAT_TAK : KATMAP[sub]).nama} ${today()}.xlsx`, [["Rekap", Object.entries(g).sort().map(([k, a]) => ({ "Posisi / Pemegang":k, "Jumlah":a.length, "Nilai":a.reduce((s, x) => s + itemNilai(x), 0), "Sudah dicek":a.filter(x => x.kond).length }))], ["KIR", Object.entries(g).sort().flatMap(([k, a]) => a.map(x => Object.assign({ "Posisi / Pemegang":k }, asetRow(x))))]]);
       break;
     }
     case "b-ofpeg": { UI.bast.q = UI.bast.p.split(",")[0]; render(); break; }
