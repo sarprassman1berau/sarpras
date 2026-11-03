@@ -31,7 +31,7 @@ Aplikasi pencatatan sarana dan prasarana SMAN 1 Berau: aset SIPBMD (KIB A–F da
 3. Tunggu 1–2 menit, lalu buka https://sarprassman1berau.github.io/sarpras/ dan login dengan akun master.
 
 ### 5. Buat akun operator
-Login sebagai master → **Pengaturan → Akun & akses → Buat akun operator** (nama, jabatan, **nama pengguna atau email**, password awal). Sampaikan login dan password awal kepada operator; operator bisa mengganti passwordnya sendiri di halaman yang sama.
+Login sebagai master → **Pengaturan → Akun & akses → Buat akun operator** (nama, jabatan, **nama pengguna atau email**, password awal). Sampaikan login dan password awal kepada operator; operator bisa mengganti passwordnya sendiri di halaman yang sama. Centang **hak akses** akun tersebut (atau pilih paket Staf sarpras / Panitia penghapusan / Hanya lihat). Hak akses bisa diubah kapan saja lewat tombol **Atur akses** di daftar akun.
 
 - **Nama pengguna** (mis. `ika`): tidak perlu email. Di Firebase tersimpan sebagai `ika@pengguna.sarpras-sman1berau.firebaseapp.com` (alamat tanpa kotak surat). Tidak bisa memakai "Lupa password"; jika lupa, master menonaktifkan akun itu lalu membuat akun baru.
 - **Email**: bisa memakai "Lupa password" dan tombol "Kirim reset password".
@@ -45,6 +45,27 @@ Login sebagai master → **Pengaturan → Akun & akses → Buat akun operator** 
 | Master | Email di `MASTER_EMAILS` (index.html) dan di `isMaster()` (firestore.rules) | Membaca dan menyimpan semua data secara langsung, menyetujui/menolak usulan, mengimpor data, membuat/menonaktifkan akun operator, mengubah pengaturan |
 | Operator | Akun yang dibuat master (dokumen `akun/{uid}` dengan `aktif: true`) | Membaca semua data dan mengisi perubahan. Setiap simpanan menjadi **usulan** yang baru berlaku setelah master menyetujuinya di menu **Validasi** |
 | Lainnya | Tidak login, atau akun nonaktif | Tidak bisa membaca apa pun (dijaga aturan Firestore) |
+
+### Hak akses operator
+Disimpan di `akun/{uid}.izin` sebagai centang per bidang. Akun lama tanpa `izin` dianggap Staf sarpras (akses penuh).
+
+| Kunci | Arti |
+|---|---|
+| `aset_ubah` | Aset: diserahkan ke, peruntukan, posisi, no. registrasi, SPJ, sumber dana, padanan SIPBMD |
+| `aset_kondisi` | Aset: kondisi, tanggal cek, pemeriksa, catatan kondisi, foto |
+| `aset_tambah` | Tombol Tambah aset |
+| `hapus` | Menu Usulan Penghapusan, nomor usulan, pengecualian hapus |
+| `bast` | Menu BAST, Per Pemegang, Laporan BAST, tombol BAST di detail aset |
+| `ruang` | Mengubah gedung dan ruang |
+| `persediaan` | Menu Persediaan |
+| `kertas` | Menu Kertas Kerja Modal dan Rekon Aset |
+| `surat` | Menu Surat Keluar |
+| `catatan` | Menulis catatan temuan dan mengubah status/tindak lanjutnya |
+
+Paket: **Staf sarpras** = semua; **Panitia penghapusan** = `aset_kondisi`, `hapus`, `catatan`; **Hanya lihat** = tidak ada. Rekap, Aset SIPBMD, Kondisi Ruangan, Catatan Temuan, Validasi, dan Pengaturan selalu terlihat oleh semua akun. Pembatasan menu dan tombol dilakukan di aplikasi (`can(k)`, `canView(v)`); di sisi database, semua perubahan operator tetap hanya berupa usulan yang harus disetujui master, kecuali catatan temuan.
+
+### Catatan temuan
+Menu **Catatan Temuan** dan bagian "Catatan temuan" di detail aset, ruang, dan kartu barang persediaan. Setiap catatan tertaut ke satu data (`target: {t: aset|ruang|barang|umum, id, label}`), punya kategori (Kerusakan, Kehilangan, Perlu perbaikan / perawatan, Tidak sesuai data, Lainnya), status (Terbuka, Ditindaklanjuti, Selesai), tindak lanjut, dan foto opsional. Catatan **langsung tersimpan tanpa validasi**, supaya temuan di lapangan cepat tercatat; operator hanya bisa mengubah status dan tindak lanjutnya, isi catatan tidak bisa diubah, dan hanya master yang bisa menghapus. Catatan yang belum selesai muncul sebagai temuan di Rekap Data Sarpras.
 
 Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvalidasi), dan `_at` (waktu). Riwayat lengkap ada di koleksi `log` (satu dokumen per hari) dan tampil di menu **Validasi → Riwayat perubahan** serta di detail setiap aset.
 
@@ -71,7 +92,8 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 | `gdg`, `ruang` | Kondisi ruangan per gedung untuk Dapodik (terpisah dari aset KIB C) |
 | `penerima` | Daftar pilihan "Diserahkan ke" |
 | `foto` | Foto (JPEG dikompres, disimpan sebagai data URL, maks. ±420 KB per foto) |
-| `akun` | Akun aplikasi: nama, jabatan, email, peran, aktif |
+| `akun` | Akun aplikasi: nama, jabatan, email, peran, aktif, hak akses (`izin`) |
+| `catatan` | Catatan temuan (lihat di atas) |
 | `usulan`, `keputusan`, `log` | Alur validasi dan riwayat perubahan |
 | `meta/config` | Pengaturan surat (penandatangan, pola nomor surat) |
 

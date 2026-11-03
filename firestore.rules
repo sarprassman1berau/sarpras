@@ -4,6 +4,9 @@ rules_version = '2';
 // - Operator: punya dokumen akun/{uid} dengan aktif == true. Membaca semua data,
 //             tetapi hanya boleh menulis usulannya sendiri (usulan/{uid}) dan foto baru.
 //             Perubahan operator baru berlaku setelah master menyetujuinya di aplikasi.
+//             Menu dan tombol dibatasi sesuai centang hak akses di akun/{uid}.izin.
+// - Catatan temuan: operator dengan hak "catatan" menulis langsung (tanpa validasi),
+//             dan hanya boleh mengubah status serta tindak lanjutnya.
 // - Selain itu: tidak bisa membaca atau menulis apa pun.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -18,6 +21,11 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/akun/$(request.auth.uid)).data.aktif == true;
     }
     function isMember() { return isMaster() || isOperator(); }
+    // hak akses operator (akun/{uid}.izin). Akun lama tanpa izin = akses penuh staf.
+    function akunData() { return get(/databases/$(database)/documents/akun/$(request.auth.uid)).data; }
+    function izin(k) {
+      return isMaster() || (isOperator() && (!('izin' in akunData()) || akunData().izin.get(k, false) == true));
+    }
 
     // semua data: anggota membaca, hanya master menulis
     match /{document=**} {
@@ -39,6 +47,15 @@ service cloud.firestore {
         && request.resource.data.by == request.auth.uid
         && request.resource.data.data is string
         && request.resource.data.data.size() < 600000;
+    }
+    // catatan temuan: ditulis langsung oleh operator yang punya hak "catatan"
+    match /catatan/{id} {
+      allow create: if izin('catatan')
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.teks is string
+        && request.resource.data.teks.size() < 5000;
+      allow update: if izin('catatan')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 'tl', 'tlBy', 'tlAt']);
     }
   }
 }
