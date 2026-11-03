@@ -76,6 +76,9 @@ nav.tabs a.navhome{margin-top:6px;border:1px solid var(--line)}
 @media (max-width:640px){.apps{grid-template-columns:repeat(2,1fr);gap:10px}.appcard .ai{width:64px;height:64px}.appcard .ai svg{width:48px;height:48px}.appcard h3{font-size:14px}}
 .hero{display:flex;gap:14px;align-items:center;margin-bottom:16px}.hero img{width:52px;height:52px;flex:none}.hero h2{display:block!important;margin:0}
 .links-note{margin-top:18px}
+tbody tr.unchecked td{background:var(--bad-soft)}tbody tr.unchecked td:first-child{box-shadow:inset 4px 0 0 var(--bad)}tbody tr.unchecked:hover td{background:color-mix(in srgb, var(--bad) 18%, var(--surface))}
+.show-sm{display:none}@media (max-width:640px){.show-sm{display:block}}
+.dsum{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:13px}.dsum span b{font-weight:600}
 .kibcard{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 18px;border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--sunk)}
 .kibg{margin:0 0 4px;font-weight:600;font-size:12.5px;color:var(--accent)}
 .kibcard dl.kv{grid-template-columns:minmax(90px,42%) minmax(0,1fr);gap:4px 10px}.kibcard dl.kv dd{overflow-wrap:break-word}
@@ -260,10 +263,10 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
     <a href="#pemegang" data-v="pemegang">Per Pemegang</a>
     <a href="#laporan" data-v="laporan">Laporan BAST</a>
     <a href="#surat" data-v="surat">Surat Keluar</a></div>
-  <div class="navsec"><p class="navgroup">Persediaan & keuangan</p>
-    <a href="#persediaan-masuk" data-v="persediaan">Persediaan</a>
-    <a href="#kertas" data-v="kertas">Kertas Kerja Modal</a>
-    <a href="#rekon" data-v="rekon">Rekon Aset</a>
+  <div class="navsec"><p class="navgroup">Persediaan</p>
+    <a href="#persediaan-masuk" data-v="persediaan">Persediaan</a></div>
+  <div class="navsec"><p class="navgroup">Rekon</p>
+    <a href="#rekon" data-v="rekon">Rekon</a>
     <a href="#impor" data-v="impor">Impor SIPBMD</a></div>
   <div class="navsec"><p class="navgroup">Validasi & pengaturan</p>
     <a href="#validasi" data-v="validasi">Validasi <span id="vbadge"></span></a>
@@ -320,7 +323,7 @@ function katFromKode(kode) { const k = String(kode || ""); const f = KAT.find(c 
 const GOL = {"1.3.2.02":"Alat Angkutan","1.3.2.03":"Alat Bengkel & Alat Ukur","1.3.2.04":"Alat Pertanian","1.3.2.05":"Alat Kantor & Rumah Tangga","1.3.2.06":"Alat Studio, Komunikasi & Pemancar","1.3.2.07":"Alat Kedokteran & Kesehatan","1.3.2.08":"Alat Laboratorium","1.3.2.10":"Komputer","1.3.2.15":"Alat Peraga","1.3.2.18":"Peralatan Olahraga","1.3.2.19":"Peralatan Lainnya","1.3.5.01":"Bahan Perpustakaan","1.3.5.02":"Barang Bercorak Kesenian/Kebudayaan"};
 const golOf = kode => { const k = String(kode || "").split(".").slice(0, 4).join("."); return GOL[k] || (k ? "Kode " + k : "Tanpa kode"); };
 const KOND = ["Baik","Rusak Sedang","Rusak Berat","Hilang"];
-const kondPill = k => !k ? '<span class="pill">Belum dicek</span>' : `<span class="pill ${k==="Baik"?"ok":k==="Rusak Berat"||k==="Hilang"?"bad":"warn"}">${esc(k)}</span>`;
+const kondPill = k => !k ? '<span class="pill bad">Belum dicek</span>' : `<span class="pill ${k==="Baik"?"ok":k==="Rusak Berat"||k==="Hilang"?"bad":"warn"}">${esc(k)}</span>`;
 const statusPill = x => x.sip ? '<span class="pill info">SIPBMD</span>' : '<span class="pill warn">Tidak tercatat</span>';
 const usulHapus = x => (x.kond === "Rusak Berat" || x.kond === "Hilang") && !x.rehab;
 const BUKU_RE = /\b(buku|novel|bahan ajar|monograf|kamus|ensiklopedi|atlas|majalah|modul|komik|antologi)\b/i;
@@ -482,7 +485,7 @@ async function saveUpd(key, patch) {
     return true;
   } catch (e) { writeErr(e); return false; }
 }
-const FIELD_LABEL = { pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
+const FIELD_LABEL = { kib:"kelengkapan data KIB", pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
 
 /* ================= change layer: master writes directly, operators propose ================= */
 const isMaster = () => S.role === "master";
@@ -594,15 +597,16 @@ function route() {
   sub = s || (current === "aset" ? "pm" : current === "persediaan" ? "masuk" : "");
   if (current === "aset" && !KATMAP[sub] && sub !== "tak") sub = "pm";
   if (current === "persediaan" && !["masuk","keluar","mutasi"].includes(sub)) sub = "masuk";
-  for (const a of document.querySelectorAll("#tabs a")) { if (a.dataset.v === current) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
-  const link = document.querySelector(`#tabs a[data-v="${current}"]`), nama = current === "home" ? "Beranda" : link ? link.firstChild.textContent.trim() : "";
+  const navV = current === "kertas" ? "rekon" : current;
+  for (const a of document.querySelectorAll("#tabs a")) { if (a.dataset.v === navV) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
+  const link = document.querySelector(`#tabs a[data-v="${navV}"]`), nama = current === "home" ? "Beranda" : link ? link.firstChild.textContent.trim() : "";
   const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "akun" ? "waka" : "sarpras";
   if (app !== "home") window.__lastApp = app;
   const APPN = { home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Penggunaan Aula dan Multimedia", "Jadwal Penggunaan Aula dan Multimedia · SMAN 1 Berau", "SMAN 1 Berau · pengajuan dan persetujuan pemakaian Aula dan Ruang Multimedia"], waka:["Waka Sarpras", "Waka Sarpras · SMAN 1 Berau", "SMAN 1 Berau · akun, hak akses, dan administrasi Waka Sarpras"] }[app];
   $(".pageid .app").textContent = APPN[1]; $("#nav-appname").textContent = APPN[0]; $("#nav-appdesc").textContent = APPN[2];
   for (const a2 of ["sarpras", "jadwal", "waka"]) $("#nav-app-" + a2).hidden = app !== "home" && app !== a2;
   $("#nav-me").hidden = app === "waka";
-  const sb = current === "aset" ? (sub === "tak" ? "Aset tidak tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama) : current === "persediaan" ? ({ masuk:"Persediaan masuk", keluar:"Persediaan keluar", mutasi:"Mutasi persediaan" })[sub] : "";
+  const sb = current === "aset" ? (sub === "tak" ? "Aset tidak tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama) : current === "persediaan" ? ({ masuk:"Persediaan masuk", keluar:"Persediaan keluar", mutasi:"Mutasi persediaan" })[sub] : current === "kertas" ? "Kertas Kerja Modal" : current === "rekon" ? "Rekon Aset" : "";
   $("#pagetitle").textContent = nama; $("#pagesub").textContent = sb;
   document.title = nama + " · " + APPN[0] + (app === "home" ? "" : " SMAN 1 Berau");
   document.body.dataset.view = current;
@@ -652,7 +656,7 @@ function render(soft) {
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
     if (current === "home" || current === "jadwal" || current === "akun") { v.innerHTML = current === "home" ? vHome() : current === "akun" ? vAkunPage() : vJadwal(); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
-    v.innerHTML = ({ home:vHome, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:vKertas, rekon:vRekon, impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
+    v.innerHTML = ({ home:vHome, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) {} } }
     const nb = $("#vbadge"), np = pendingList().length; if (nb) nb.innerHTML = np ? `<span class="pill ${isMaster() ? "bad" : "warn"}">${np}</span>` : "";
     const nd = $("#nav-dot"); if (nd) nd.hidden = !(np && isMaster());
@@ -963,10 +967,12 @@ const KIB_FMT = {
     ["Nilai & keterangan", [["Nilai perolehan", "@nilai", "rp"], ["Keterangan", "@ket"]]],
   ] },
 };
-function kibVal(x, src) {
-  if (typeof src === "string") return { key:null, v:x[src.slice(1)] };
-  const ex = x.extra || {}, key = Object.keys(ex).find(k => src.test(k));
-  return { key, v:key ? ex[key] : "" };
+function kibVal(x, src, label) {
+  let r;
+  if (typeof src === "string") r = { key:null, v:x[src.slice(1)] };
+  else { const ex = x.extra || {}, key = Object.keys(ex).find(k => src.test(k)); r = { key, v:key ? ex[key] : "" }; }
+  if ((r.v == null || r.v === "" || r.v === "-") && label && x.kib && x.kib[label]) return { key:r.key, v:x.kib[label], isi:true };
+  return r;
 }
 function kibFmtVal(v, unit) {
   if (v == null || v === "" || v === "-") return "";
@@ -979,9 +985,20 @@ function kibFmtVal(v, unit) {
 function kibUsedKeys(x) { const f = KIB_FMT[x.kat]; if (!f) return new Set(); const u = new Set(); for (const [, fs] of f.grup) for (const [, src] of fs) { const r = kibVal(x, src); if (r.key) u.add(r.key); } return u; }
 function kibCard(x) {
   const f = KIB_FMT[x.kat]; if (!f || !x.sip) return "";
-  return `<div><p class="sectionlabel">${esc(f.judul)}</p><div class="kibcard">${f.grup.map(([g, fs]) => { const rows = fs.map(([l, src, u]) => [l, kibFmtVal(kibVal(x, src).v, u)]); return `<div><p class="kibg">${esc(g)}</p><dl class="kv">${rows.map(([l, v]) => `<dt>${esc(l)}</dt><dd>${v ? esc(v) : '<span class="faint">—</span>'}</dd>`).join("")}</dl></div>`; }).join("")}</div></div>`;
+  const edit = drawer && drawer.kibEdit && can("aset_ubah"); let n = 0, kosong = 0;
+  const body = f.grup.map(([g, fs]) => `<div><p class="kibg">${esc(g)}</p><dl class="kv">${fs.map(([l, src, u]) => {
+    const r = kibVal(x, src, l), sipbmd = r.v != null && r.v !== "" && r.v !== "-" && !r.isi; if (!sipbmd) kosong++;
+    if (edit && !sipbmd) { const i = n++; return `<dt>${esc(l)}</dt><dd><input id="kib-${i}" data-kibl="${esc(l)}" type="${u === "tgl" ? "date" : "text"}" value="${esc(r.isi ? (u === "tgl" ? parseTgl(String(r.v)) : r.v) : "")}" placeholder="${u === "m²" ? "dalam m²" : u === "rp" ? "angka" : "belum tercatat"}" style="width:100%"></dd>`; }
+    const v = kibFmtVal(r.v, u); return `<dt>${esc(l)}</dt><dd>${v ? esc(v) + (r.isi ? ' <span class="pill info" title="Diisi di aplikasi ini, belum ada di SIPBMD">diisi sekolah</span>' : "") : '<span class="faint">belum tercatat</span>'}</dd>`;
+  }).join("")}</dl></div>`).join("");
+  const tools = !can("aset_ubah") ? "" : edit ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="primary" id="kib-save">Simpan kelengkapan</button><button id="kib-cancel">Batal</button><span class="hint" style="align-self:center">Isian ini disimpan di aplikasi sekolah dan tidak mengubah data SIPBMD.</span></div>`
+    : kosong ? `<div style="margin-top:10px"><button id="kib-edit">Lengkapi ${kosong} isian yang belum tercatat</button></div>` : "";
+  return `<div><p class="sectionlabel">${esc(f.judul)}</p><div class="kibcard">${body}</div>${tools}</div>`;
 }
-const kibCell = (x, re, unit) => kibFmtVal(kibVal(x, re).v, unit);
+function kibLabelOf(x, re) { const f = KIB_FMT[x.kat]; if (!f) return ""; for (const [, fs] of f.grup) for (const [l, src] of fs) if (src instanceof RegExp && src.source === re.source) return l; return ""; }
+const kibCell = (x, re, unit) => kibFmtVal(kibVal(x, re, kibLabelOf(x, re)).v, unit);
+
+function rekonTabs() { return `<nav class="chips" aria-label="Rekon" style="margin-bottom:14px"><a class="chip" href="#kertas" aria-pressed="${current === "kertas"}" style="text-decoration:none">Kertas Kerja Modal</a><a class="chip" href="#rekon" aria-pressed="${current === "rekon"}" style="text-decoration:none">Rekon Aset</a></nav>`; }
 
 /* ================= view: aset ================= */
 // assets that physically exist but have no record in SIPBMD (all golongan)
@@ -1035,10 +1052,10 @@ function vAset() {
   </div>
   <div class="tablebox"><table>
     <thead><tr><th></th><th>Kode · No. registrasi</th><th>Aset</th><th>Status</th>${sub === "tanah" ? '<th class="num hide-sm">Luas</th><th class="hide-sm">Dokumen kepemilikan</th>' : sub === "gedung" ? '<th class="num hide-sm">Luas bangunan</th><th class="hide-sm">Konstruksi · status tanah</th>' : '<th class="hide-sm">Diserahkan ke</th><th class="hide-sm">Posisi</th>'}<th>Kondisi</th><th class="num">Nilai</th></tr></thead>
-    <tbody>${slice.map(x => `<tr class="rowlink" tabindex="0" data-key="${esc(x.key)}">
+    <tbody>${slice.map(x => `<tr class="rowlink ${x.kond ? "" : "unchecked"}" tabindex="0" data-key="${esc(x.key)}" ${x.kond ? "" : 'title="Kondisi belum dikonfirmasi"'}>
       <td>${(x.fotos || []).length ? `<img class="thumb" src="${fotoSrc(x.fotos[0])}" data-foto="${esc(x.fotos[0])}" alt="" loading="lazy">` : `<span class="thumb" aria-hidden="true"></span>`}</td>
       <td><span class="mono">${esc(x.sip ? x.kode : (x.reg || x.kode || "—"))}</span><div class="sm mono">${x.sip ? "No. " + esc(x.noreg) + (x.reg ? " · " + esc(x.reg) : "") : esc(x.srcSheet ? x.srcSheet.join(", ") : x.gedung || "")}</div></td>
-      <td><div class="nm">${esc(itemNama(x))}${ntBadge("aset", x.key)}</div><div class="sm">${esc([sub === "tak" && KATMAP[x.kat] ? KATMAP[x.kat].kib : "", x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div></td>
+      <td><div class="nm">${esc(itemNama(x))}${ntBadge("aset", x.key)}</div>${sub === "pm" || sub === "atl" || sub === "tak" ? `<div class="sm show-sm">${esc(x.pj || "belum diserahkan")} · ${esc(x.lokasi || "tanpa lokasi")}</div>` : ""}<div class="sm">${esc([sub === "tak" && KATMAP[x.kat] ? KATMAP[x.kat].kib : "", x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div></td>
       <td>${statusPill(x)}</td>
       ${sub === "tanah" ? `<td class="num hide-sm">${esc(kibCell(x, /^(luas|jumlah\s*\(luas\))/i, "m²")) || '<span class="faint">—</span>'}</td><td class="hide-sm">${esc([kibCell(x, /^(nama\s*dokumen|hak|jenis\s*dokumen)/i), x.nodok ? "No. " + x.nodok : ""].filter(Boolean).join(" · ")) || '<span class="faint">—</span>'}<div class="sm">${esc(kibCell(x, /^(tanggal|tgl\.?)\s*(dokumen|sertifikat)/i, "tgl"))}</div></td>` :
         sub === "gedung" ? `<td class="num hide-sm">${esc(kibCell(x, /luas/i, "m²")) || '<span class="faint">—</span>'}</td><td class="hide-sm sm">${esc([kibCell(x, /bertingkat/i) === "Ya" ? "Bertingkat" : kibCell(x, /bertingkat/i) ? "Tidak bertingkat" : "", kibCell(x, /^beton/i) === "Ya" ? "Beton" : kibCell(x, /^beton/i) ? "Bukan beton" : ""].filter(Boolean).join(", ")) || "—"}<div>${esc(kibCell(x, /status\s*tanah/i))}</div></td>` :
@@ -1058,6 +1075,16 @@ let drawer = null; // {mode:"item"|"new"|"psd", key, ...}
 let pairQ = "", confirmFoto = null, uploading = 0;
 function openItem(key) { drawer = { mode:"item", key, fresh:true }; pairQ = ""; confirmFoto = null; renderDrawer(); }
 function closeDrawer() { drawer = null; $("#drawerRoot").innerHTML = ""; }
+document.addEventListener("click", async e => {
+  const b = e.target.closest("#kib-edit, #kib-cancel, #kib-save"); if (!b || !drawer || drawer.mode !== "item") return;
+  if (b.id === "kib-edit") { drawer.kibEdit = true; drawer.fresh = true; renderDrawer(); const i = document.getElementById("kib-0"); if (i) i.focus(); return; }
+  if (b.id === "kib-cancel") { drawer.kibEdit = false; drawer.fresh = true; renderDrawer(); return; }
+  const x = allItems().byKey.get(drawer.key); if (!x) return;
+  const kib = Object.assign({}, x.kib || {});
+  for (const el of document.querySelectorAll("[data-kibl]")) { const v = el.value.trim(); if (v) kib[el.dataset.kibl] = v; else delete kib[el.dataset.kibl]; }
+  b.disabled = true;
+  if (await saveUpd(x.key, { kib })) { drawer.kibEdit = false; drawer.fresh = true; renderDrawer(); toast(isMaster() ? "Kelengkapan data tersimpan." : "Kelengkapan data dikirim untuk validasi master."); } else b.disabled = false;
+});
 function syncSipSeg() {
   const h = document.getElementById("d-sip"), seg = document.getElementById("d-sipseg"); if (!h || !seg) return;
   for (const b of seg.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.sipv === h.value));
@@ -1114,8 +1141,11 @@ function drawerItem(x) {
   const k = x.kond || "";
   return `
     <div class="dh"><div><p class="sectionlabel" style="margin:0 0 2px">${esc(kat ? kat.kib + " · " + kat.nama : "")} ${statusPill(x)}</p><h3>${esc(itemNama(x))}</h3>
-      <div class="mono muted">${esc(idLabel(x) || "tanpa nomor")}</div></div><button class="x" id="d-close">Tutup</button></div>
+      <div class="mono muted">${esc(idLabel(x) || "tanpa nomor")}</div>
+      ${x.kat === "pm" || x.kat === "atl" || !x.sip ? `<div class="dsum"><span>Diserahkan ke: <b>${x.pj ? esc(x.pj) : '<span style="color:var(--warn)">belum diserahkan</span>'}</b>${x.jab ? ` <span class="muted">(${esc(x.jab)})</span>` : ""}</span><span>Lokasi: <b>${x.lokasi ? esc(x.lokasi) : '<span style="color:var(--warn)">belum diisi</span>'}</b></span></div>` : ""}</div><button class="x" id="d-close">Tutup</button></div>
     <div class="db">
+      ${x.kond ? "" : '<div class="note bad"><b>Kondisi belum dikonfirmasi.</b> Lakukan cek fisik lalu pilih kondisinya di bagian Kondisi.</div>'}
+      ${catatanSection({ t:"aset", id:x.key, label:itemNama(x) })}
       ${(() => { drawerItem.canU = can("aset_ubah"); drawerItem.canK = can("aset_kondisi"); drawerItem.canH = can("hapus"); return (drawerItem.canU || drawerItem.canK || drawerItem.canH) ? "" : '<div class="note info">Akun Anda hanya bisa melihat data aset ini.</div>'; })()}
       <div><p class="sectionlabel">Foto aset (${fotos.length})</p>
         <div class="photos">${fotos.map(id => `<figure><a href="#foto" data-fotoopen="${esc(id)}"><img src="${fotoSrc(id)}" data-foto="${esc(id)}" alt="Foto ${esc(x.nama)}" loading="lazy"></a>${!drawerItem.canK ? "" : confirmFoto === id ? `<span class="confirm" style="position:absolute;right:4px;bottom:4px"><button class="danger" data-delfoto="${esc(id)}">Hapus</button><button data-cancelfoto="1">Batal</button></span>` : `<button data-askfoto="${esc(id)}" aria-label="Hapus foto">Hapus</button>`}</figure>`).join("")}
@@ -1159,7 +1189,6 @@ function drawerItem(x) {
       </div>
       ${pairBox}
       <div style="display:flex;gap:8px;flex-wrap:wrap;position:sticky;bottom:-16px;background:var(--surface);padding-block:10px;border-top:1px solid var(--line)">${drawerItem.canU || drawerItem.canK || drawerItem.canH ? '<button class="primary" id="d-save">Simpan</button>' : ""}${can("bast") ? '<button id="d-bast-serah">BAST penyerahan</button><button id="d-bast-tarik">BAST penarikan</button>' : ""}</div>
-      ${catatanSection({ t:"aset", id:x.key, label:itemNama(x) })}
       ${(() => { const ps = itemPaths(x), pend = pendingFor(ps), lg = logFor(ps).slice(0, 12); return (pend.length ? `<div class="note">${pend.length} perubahan menunggu validasi master: ${pend.map(p => esc(p.ring) + " (" + esc(nameOf(p.by)) + ")").join("; ")}</div>` : "") + (lg.length ? `<div><p class="sectionlabel">Riwayat perubahan data</p><div class="timeline">${lg.map(e => `<div class="ev"><span class="d">${esc(tglJam(e.t))}</span><br>${esc(e.ring)}<br><span class="muted">oleh ${esc(nameOf(e.by))}${e.st === "disetujui" ? ", divalidasi " + esc(nameOf(e.ok)) : e.st === "ditolak" ? ", ditolak " + esc(nameOf(e.ok)) : ""}</span></div>`).join("")}</div></div>` : (x._by ? `<p class="hint">Terakhir diubah oleh ${esc(nameOf(x._by))} pada ${esc(tglJam(x._at))}</p>` : "")); })()}
       <div><p class="sectionlabel">Riwayat</p>${ev.length ? `<div class="timeline">${ev.map(e => `<div class="ev"><span class="d">${esc(tglID(e.d) || "tanpa tanggal")}</span><br><b>${esc(e.t)}</b>${e.s ? `<br><span class="muted">${esc(e.s)}</span>` : ""}</div>`).join("")}</div>` : '<p class="muted">Belum ada riwayat tercatat.</p>'}</div>
     </div>`;
@@ -3249,7 +3278,7 @@ document.addEventListener("click", async e => {
 /* ---------- status terkini (siapa yang sedang membuka aplikasi) & chat tim ---------- */
 const LIVE = { on:{}, chat:[], open:false, started:false, t0:new Date().toISOString(), seen:"", lastBeat:0, sending:false };
 const ONLINE_MS = 4 * 60 * 1000, BEAT_MS = 90 * 1000;
-const VIEW_NAMA = { home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset SIPBMD", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Kertas Kerja", rekon:"Rekon", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
+const VIEW_NAMA = { home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset SIPBMD", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Rekon · Kertas Kerja Modal", rekon:"Rekon · Rekon Aset", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
 function akunNama(id) { const a = AK.list.find(x => x._id === id); return a ? (a.nama || shownLogin(a.email)) : (LIVE.on[id] && LIVE.on[id].nama) || "Akun"; }
 const isOnline = o => !!o && !o.off && Date.now() - new Date(o.at).getTime() < ONLINE_MS;
 function onlineList() { return Object.entries(LIVE.on).filter(([id, o]) => isOnline(o) && !(AK.list.find(a => a._id === id) || {}).dihapus && (AK.list.find(a => a._id === id) || {}).aktif !== false).map(([id, o]) => Object.assign({ id }, o)).sort((a, b) => akunNama(a.id).localeCompare(akunNama(b.id))); }
