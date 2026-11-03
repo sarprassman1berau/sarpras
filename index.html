@@ -62,6 +62,20 @@ body.nav-open nav.tabs{transform:none;visibility:visible;transition:transform .1
 .navhead{display:flex;gap:10px;align-items:flex-start;padding:4px 4px 8px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
 .navhead div{flex:1;display:flex;flex-direction:column;gap:2px}.navhead b{font-family:var(--f-head);font-size:15px}.navhead span{font-size:12px;color:var(--muted)}
 .navsec{display:flex;flex-direction:column;gap:1px}
+nav.tabs a.navhome{margin-top:6px;border:1px solid var(--line)}
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:6px}
+.appcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.appcard::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:var(--ac)}
+.appcard .ah{display:flex;gap:12px;align-items:center}
+.appcard .ai{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--acs);color:var(--ac);flex:none}
+.appcard h3{margin:0;font-size:18px}.appcard .ad{color:var(--muted);margin:0;font-size:13px}
+.appcard ul{margin:0;padding-left:18px;color:var(--fg);font-size:13px;display:flex;flex-direction:column;gap:3px}
+.appcard .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.appcard .stats div{background:var(--sunk);border-radius:8px;padding:8px}.appcard .stats b{display:block;font-size:18px;font-variant-numeric:tabular-nums}.appcard .stats span{font-size:11.5px;color:var(--muted)}
+.appcard .go{margin-top:auto;display:flex;gap:8px;align-items:center}
+.appcard.soon{background:linear-gradient(var(--surface),var(--surface)) padding-box}
+.hero{display:flex;gap:16px;align-items:center;margin-bottom:18px}.hero img{width:64px;height:64px;flex:none}.hero h2{display:block!important;margin:0}
+.links-note{margin-top:18px}
 .navgroup{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:12px 10px 4px;font-weight:600}
 nav.tabs a{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;color:var(--fg);text-decoration:none;font-weight:500;font-size:14px}
 nav.tabs a:hover{background:var(--sunk)}
@@ -110,7 +124,7 @@ section.panel{background:var(--surface);border:1px solid var(--line);border-radi
 .finding .cnt small{display:block;font-family:var(--f-body);font-size:11.5px;color:var(--muted);font-weight:400}
 button,.btn{font:inherit;font-weight:500;font-size:13.5px;border:1px solid var(--line-strong);background:var(--surface);color:var(--fg);border-radius:var(--r);padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 button:hover{border-color:var(--fg)}
-button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button.primary,a.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);text-decoration:none}
 button.primary:hover{filter:brightness(1.07)}
 button.ghost{border-color:transparent;background:transparent;color:var(--accent);padding-inline:6px}
 button.danger{color:var(--bad);border-color:var(--bad)}
@@ -215,6 +229,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
 <div id="nav-scrim" hidden></div>
 <nav class="tabs" id="tabs" aria-label="Menu halaman">
   <div class="navhead"><img src="" id="nav-logo" alt="" width="40" height="40" style="flex:none"><div><b>Sarpras SMAN 1 Berau</b><span>Buku induk aset & persediaan · tersambung ke SIPBMD</span></div><button type="button" class="iconbtn" id="nav-close" aria-label="Tutup menu"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
+  <a href="#home" data-v="home" class="navhome"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 9.5 10 3.5l7 6V17H12.5v-4.5h-5V17H3z"/></svg>Beranda · pilih aplikasi</a>
+  <p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Sarpras</p>
   <div class="navsec"><p class="navgroup">Utama</p>
     <a href="#ringkasan" data-v="ringkasan">Rekap Data Sarpras</a>
     <a href="#catatan" data-v="catatan">Catatan Temuan</a></div>
@@ -542,7 +558,7 @@ function xlsxSave(filename, sheets) {
 }
 
 /* ================= router ================= */
-const VIEWS = ["ringkasan","aset","ruang","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
+const VIEWS = ["home","ringkasan","aset","ruang","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
 let current = "ringkasan", sub = "";
 const UI = {
   aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"" },
@@ -554,12 +570,13 @@ const UI = {
 function route() {
   const h = (location.hash || "").replace("#", "");
   const [v, s] = h.split("-");
-  current = VIEWS.includes(v) ? v : "ringkasan";
+  current = VIEWS.includes(v) ? v : h ? "ringkasan" : "home";
   sub = s || (current === "aset" ? "pm" : current === "persediaan" ? "masuk" : "");
   if (current === "aset" && !KATMAP[sub] && sub !== "tak") sub = "pm";
   if (current === "persediaan" && !["masuk","keluar","mutasi"].includes(sub)) sub = "masuk";
   for (const a of document.querySelectorAll("#tabs a")) { if (a.dataset.v === current) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
-  const link = document.querySelector(`#tabs a[data-v="${current}"]`), nama = link ? link.firstChild.textContent.trim() : "";
+  const link = document.querySelector(`#tabs a[data-v="${current}"]`), nama = current === "home" ? "Beranda" : link ? link.firstChild.textContent.trim() : "";
+  $(".pageid .app").textContent = current === "home" ? "SMAN 1 Berau · Ruang aplikasi" : "Sarpras SMAN 1 Berau";
   const sb = current === "aset" ? (sub === "tak" ? "Aset tidak tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama) : current === "persediaan" ? ({ masuk:"Persediaan masuk", keluar:"Persediaan keluar", mutasi:"Mutasi persediaan" })[sub] : "";
   $("#pagetitle").textContent = nama; $("#pagesub").textContent = sb;
   document.title = nama + " · Sarpras SMAN 1 Berau";
@@ -606,8 +623,9 @@ function render(soft) {
     for (const sec of document.querySelectorAll("#tabs .navsec")) sec.hidden = ![...sec.querySelectorAll("a")].some(a => !a.hidden);
     if (!canView(current)) { v.innerHTML = `<div class="empty"><b>Menu ini tidak termasuk akses akun Anda</b>Minta akun master menambahkan akses jika Anda perlu membukanya.</div>`; return; }
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
+    if (current === "home") { v.innerHTML = vHome(); const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
-    v.innerHTML = ({ ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:vKertas, rekon:vRekon, impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
+    v.innerHTML = ({ home:vHome, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:vKertas, rekon:vRekon, impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) {} } }
     const nb = $("#vbadge"), np = pendingList().length; if (nb) nb.innerHTML = np ? `<span class="pill ${isMaster() ? "bad" : "warn"}">${np}</span>` : "";
     const nd = $("#nav-dot"); if (nd) nd.hidden = !(np && isMaster());
@@ -659,6 +677,36 @@ function kibStrip(mode) {
   const c = katCounts();
   const tak = takItems(), tv = tak.reduce((t, x) => t + itemNilai(x), 0);
   return `<nav class="kib" aria-label="Golongan aset">${KAT.map(k => `<a href="#aset-${k.id}" ${mode === "aset" && sub === k.id ? 'aria-current="page"' : ""}><span class="h">${k.kib} · ${k.kode}</span><span class="n">${k.nama}</span><span class="c">${fmt(c[k.id].n)} catatan${c[k.id].v ? " · " + rp(c[k.id].v) : ""}</span></a>`).join("")}<a href="#aset-tak" class="kib-tak" ${mode === "aset" && sub === "tak" ? 'aria-current="page"' : ""}><span class="h">Semua golongan</span><span class="n">Aset tidak tercatat</span><span class="c">${fmt(tak.length)} aset${tv ? " · " + rp(tv) : ""}</span></a></nav>`;
+}
+
+/* ================= view: beranda (ruang aplikasi) ================= */
+const APPS = [
+  { id:"sarpras", nama:"Sarpras", desc:"Pendataan aset SIPBMD, kondisi ruangan, BAST, usulan penghapusan, persediaan, dan kertas kerja modal.", href:"#ringkasan", ac:"var(--accent)", acs:"var(--accent-soft)", siap:true,
+    icon:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 8.5 12 4l9 4.5-9 4.5z"/><path d="M3 8.5v7L12 20l9-4.5v-7M12 13v7"/></svg>' },
+  { id:"keuangan", nama:"Keuangan", desc:"Perencanaan dan RKAS, usulan kebutuhan dari unit, realisasi belanja, dan laporan.", ac:"var(--info)", acs:"var(--info-soft)", siap:false,
+    rencana:["RKAS & perencanaan anggaran", "Usulan kebutuhan (form dari unit/guru)", "Realisasi belanja & SPJ", "Laporan & rekap per sumber dana"],
+    icon:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/><path d="M6 6V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>' },
+  { id:"waka", nama:"Waka Sarpras", desc:"Program kerja dan realisasinya, jadwal ruang Aula dan Multimedia, persuratan, dan proposal.", ac:"var(--warn)", acs:"var(--warn-soft)", siap:false,
+    rencana:["Program kerja & realisasi", "Jadwal ruang: Aula dan Multimedia berdampingan", "Persuratan (agenda surat masuk/keluar)", "Proposal & dokumentasi kegiatan"],
+    icon:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16M9 3v4M15 3v4M8 13h3M8 16h6"/></svg>' },
+];
+function vHome() {
+  const me = AK.list.find(a => a._id === S.me), nama = me ? (me.nama || shownLogin(me.email)) : "";
+  const jam = new Date().getHours(), salam = jam < 11 ? "Selamat pagi" : jam < 15 ? "Selamat siang" : jam < 18 ? "Selamat sore" : "Selamat malam";
+  const ready = S.ready || S.seed.aset.length, all = ready ? allItems().visible : [];
+  const stat = (n, l) => `<div><b>${n}</b><span>${l}</span></div>`;
+  const card = a => {
+    const ok = appAccess(a.id);
+    return `<article class="appcard ${a.siap ? "" : "soon"}" style="--ac:${a.ac};--acs:${a.acs}">
+      <div class="ah"><span class="ai" aria-hidden="true">${a.icon}</span><div><h3>${a.nama}</h3>${a.siap ? '<span class="pill ok">Aktif</span>' : '<span class="pill warn">Sedang disiapkan</span>'}</div></div>
+      <p class="ad">${a.desc}</p>
+      ${a.id === "sarpras" ? (!ok ? "" : `<div class="stats">${stat(ready ? fmt(all.length) : "…", "aset tercatat")}${stat(fmt(S.catatan.filter(c => c.st !== "Selesai").length), "catatan temuan terbuka")}${stat(fmt(pendingList().length), "menunggu validasi")}</div>`) : `<div><p class="sectionlabel" style="margin-bottom:4px">Rencana menu</p><ul>${a.rencana.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>`}
+      <div class="go">${a.siap ? (ok ? `<a class="btn primary" href="${a.href}">Buka ${a.nama}</a>` : '<span class="muted sm">Tidak termasuk akses akun Anda</span>') : `<button disabled>Belum tersedia</button>${ok ? '<span class="sm muted">Akun Anda sudah diberi akses</span>' : ""}`}</div>
+    </article>`;
+  };
+  return `<div class="hero"><img src="${LOGO.sekolah}" alt="Logo SMAN 1 Berau"><div><h2>${salam}${nama ? ", " + esc(nama) : ""}</h2><p class="muted" style="margin:2px 0 0">Pilih aplikasi yang ingin dibuka. Semua aplikasi memakai akun, data pegawai, ruang, kop surat, chat tim, dan catatan temuan yang sama.</p></div></div>
+  <div class="apps">${APPS.map(card).join("")}</div>
+  <div class="note info links-note">Aplikasi saling tertaut: belanja modal di Keuangan akan mengalir ke Kertas Kerja Modal dan aset Sarpras; jadwal Aula dan Multimedia di Waka Sarpras memakai data ruang dari Kondisi Ruangan; proposal rehabilitasi bisa menarik data ruang rusak dan foto temuan.</div>`;
 }
 
 /* ================= view: aset ================= */
@@ -2683,7 +2731,7 @@ function vAkun() {
       <button class="primary" id="ak-new" style="margin-top:10px">Buat akun</button>
       <p class="hint">Sampaikan nama pengguna (atau email) dan password awal kepada operator. Operator bisa mengganti passwordnya sendiri setelah masuk. Akun dengan nama pengguna tidak bisa memakai "Lupa password"; jika lupa, nonaktifkan akunnya lalu buat akun baru.</p></div>` : ""}
     <div class="tablebox"><table><thead><tr><th>Nama</th><th>Login</th><th>Peran</th><th>Akses</th><th>Status</th>${master ? "<th></th>" : ""}</tr></thead><tbody>
-    ${list.map(a => `<tr><td>${esc(a.nama || "")}<div class="sm">${esc(a.jab || "")}</div></td><td class="sm">${esc(shownLogin(a.email))}${isUsernameAcct(a.email) ? ' <span class="pill">nama pengguna</span>' : ""}</td><td>${a.role === "master" ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'}</td><td class="sm">${a.role === "master" ? "semua" : esc(izinSummary(a.izin))}</td><td>${a.aktif === false ? '<span class="pill bad">nonaktif</span>' : '<span class="pill ok">aktif</span>'}</td>
+    ${list.map(a => `<tr><td>${esc(a.nama || "")}<div class="sm">${esc(a.jab || "")}</div></td><td class="sm">${esc(shownLogin(a.email))}${isUsernameAcct(a.email) ? ' <span class="pill">nama pengguna</span>' : ""}</td><td>${a.role === "master" ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'}</td><td class="sm">${a.role === "master" ? "semua" : `${esc(appSummary(a.izin))}<br><span class="muted">Sarpras: ${esc(izinSummary(a.izin))}</span>`}</td><td>${a.aktif === false ? '<span class="pill bad">nonaktif</span>' : '<span class="pill ok">aktif</span>'}</td>
       ${master ? `<td style="white-space:nowrap">${a.role === "master" ? "" : `${isUsernameAcct(a.email) ? "" : `<button class="ghost" data-akreset="${esc(a.email || "")}">Kirim reset password</button>`}<button class="ghost" data-akedit="${esc(a._id)}">Atur akses</button><button class="ghost" data-akaktif="${esc(a._id)}">${a.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>`}</td>` : ""}</tr>
       ${master && UI.akEdit === a._id ? `<tr><td colspan="6" style="background:var(--sunk)"><p class="sectionlabel">Hak akses ${esc(a.nama || shownLogin(a.email))}</p>${izinChecklist("ae-iz", a.izin || PRESET.staf.izin)}<div style="display:flex;gap:8px;margin-top:8px"><button class="primary" data-aesave="${esc(a._id)}">Simpan hak akses</button><button data-aecancel="1">Batal</button></div></td></tr>` : ""}`).join("") || `<tr><td colspan="5" class="muted">Belum ada akun operator.</td></tr>`}
     </tbody></table></div>
@@ -2712,20 +2760,27 @@ const PRESET = {
 // an account created before permissions existed keeps full staff access
 function myIzin() { const me = AK.list.find(a => a._id === S.me); return me && me.izin ? me.izin : PRESET.staf.izin; }
 function can(k) { return isMaster() || (S.role === "operator" && !!myIzin()[k]); }
+// which applications an account may open (accounts without the setting keep Sarpras only)
+const APP_IZIN = [["app_sarpras", "Sarpras", "Aset, ruang, BAST, persediaan"], ["app_keuangan", "Keuangan", "RKAS, usulan, realisasi (sedang disiapkan)"], ["app_waka", "Waka Sarpras", "Program kerja, jadwal ruang, surat (sedang disiapkan)"]];
+function appAccess(id) { if (isMaster()) return true; if (S.role !== "operator") return false; const v = myIzin()["app_" + id]; return id === "sarpras" ? v !== false : !!v; }
 const TAB_IZIN = { bast:"bast", pemegang:"bast", laporan:"bast", hapus:"hapus", persediaan:"persediaan", surat:"surat", kertas:"kertas", rekon:"kertas" };
-function canView(v) { if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
+function canView(v) { if (v === "home" || v === "atur") return true; if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
 function izinSummary(iz) {
   if (!iz) return PRESET.staf.nama;
   for (const p of Object.values(PRESET)) if (IZIN.every(([k]) => !!iz[k] === !!p.izin[k])) return p.nama;
   const on = IZIN.filter(([k]) => iz[k]).map(([, l]) => l.split(":")[0].replace("Aset", "aset"));
   return on.length ? [...new Set(on)].join(", ") : "hanya lihat";
 }
+function appSummary(iz) { iz = iz || {}; return APP_IZIN.filter(([k]) => k === "app_sarpras" ? iz[k] !== false : !!iz[k]).map(([, l]) => l).join(", ") || "tidak ada aplikasi"; }
 function izinChecklist(prefix, iz) {
-  return `<div class="chips" style="margin-bottom:8px">${Object.entries(PRESET).map(([k, p]) => `<button type="button" class="chip" data-preset="${k}" data-for="${prefix}">${p.nama}</button>`).join("")}</div>
+  const appOn = k => iz && (k === "app_sarpras" ? iz[k] !== false : !!iz[k]);
+  return `<p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Aplikasi yang boleh dibuka</b></p><div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 14px;margin-bottom:12px">${APP_IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${(iz ? appOn(k) : k === "app_sarpras") ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
+    <p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Hak akses di aplikasi Sarpras</b></p>
+    <div class="chips" style="margin-bottom:8px">${Object.entries(PRESET).map(([k, p]) => `<button type="button" class="chip" data-preset="${k}" data-for="${prefix}">${p.nama}</button>`).join("")}</div>
     <div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px">${IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${iz && iz[k] ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
     <p class="hint">Semua akun bisa melihat Rekap, Aset SIPBMD, Kondisi Ruangan, dan Catatan Temuan. Semua perubahan dari operator tetap menunggu validasi master.</p>`;
 }
-const readIzin = prefix => Object.fromEntries(IZIN.map(([k]) => [k, !!(document.getElementById(prefix + "-" + k) || {}).checked]));
+const readIzin = prefix => Object.fromEntries([...IZIN, ...APP_IZIN].map(([k]) => [k, !!(document.getElementById(prefix + "-" + k) || {}).checked]));
 document.addEventListener("click", async e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.dataset.preset) { const iz = PRESET[t.dataset.preset].izin; for (const [k] of IZIN) { const el = document.getElementById(t.dataset.for + "-" + k); if (el) el.checked = !!iz[k]; } }

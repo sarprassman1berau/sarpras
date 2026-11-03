@@ -103,6 +103,8 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 | `usulan`, `keputusan`, `log` | Alur validasi dan riwayat perubahan |
 | `meta/config` | Pengaturan surat (penandatangan, pola nomor surat) |
 
+**Beranda (ruang aplikasi):** halaman pertama setelah login (`#home`, fungsi `vHome`, daftar `APPS`). Kartu aplikasi Sarpras (aktif), Keuangan dan Waka Sarpras (sedang disiapkan). Akses per aplikasi disimpan di `akun/{uid}.izin` dengan kunci `app_sarpras`, `app_keuangan`, `app_waka` (akun tanpa kunci ini tetap boleh membuka Sarpras); fungsi `appAccess(id)`. Akun tanpa akses Sarpras hanya melihat Beranda dan Pengaturan.
+
 **Aset tidak tercatat:** kartu "Aset tidak tercatat" di deretan golongan (alamat `#aset-tak`) menampilkan semua aset yang `sip` = false dari semua golongan. Di detail aset ada pilihan **Status pencatatan** (Tidak tercatat / Sudah tercatat di SIPBMD); mengubah ke tercatat wajib mengisi kode aset dan no. register SIPBMD (tersimpan di `sip`, `kode`, `noreg`, lewat validasi master seperti perubahan lain), atau pasangkan ke data impor SIPBMD lewat "Padanan di SIPBMD".
 
 **Logo:** logo SMAN 1 Berau dan logo Pemprov Kaltim disimpan di `index.html` sebagai gambar PNG ringan (konstanta `LOGO`). Dipakai sebagai ikon aplikasi, di halaman login, di menu kiri, dan di kop surat (Kaltim kiri, sekolah kanan, tinggi sama) pada pratinjau dan PDF (`pdfKop`). Untuk mengganti logo, ganti isi `LOGO` dan dua tag `<link rel="icon">`.
