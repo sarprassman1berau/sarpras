@@ -334,7 +334,8 @@ let loadTimer = null;
 const setSync = t => { $("#sync").textContent = t; };
 async function boot() {
   route();
-  loadTimer = setTimeout(() => { if (!S.ready) { setSync("data belum terjangkau"); S.loadErr = "Data belum diterima dari Firebase setelah 15 detik. Periksa koneksi internet. Jika koneksi baik, pastikan database Firestore sudah dibuat (Databases & Storage → Firestore Database) dan aturan keamanan (tab Rules) sudah di-Publish."; render(); } }, 15000);
+  loadTimer = setTimeout(() => { if (!S.ready) { setSync("data belum terjangkau"); S.loadErr = "Data belum diterima dari Firebase setelah 15 detik. Periksa koneksi internet. Jika koneksi baik, pastikan database Firestore sudah dibuat (Databases & Storage → Firestore Database) dan aturan keamanan (tab Rules) sudah di-Publish."; S.loadDetail = "memeriksa server…"; render();
+    if (window.__fsProbe) window.__fsProbe().then(m => { S.loadDetail = m; const hint = Object.entries(LOAD_HINT).find(([k]) => m.startsWith(k)); if (hint) S.loadErr = hint[1]; render(); }); } }, 15000);
   if (!window.claude || !window.claude.use) { setSync("layanan data belum siap"); render(); return; }
   const use = n => Promise.resolve().then(() => window.claude.use(n)).catch(() => null);
   // optional capabilities load on their own so a slow one never holds up the data
@@ -548,7 +549,7 @@ function render(soft) {
     const v = $("#view"), ae = document.activeElement;
     const focusId = ae && v.contains(ae) ? ae.id : null; let sel = null; try { sel = ae.selectionStart; } catch (e) {}
     if (S.role === "none") { v.innerHTML = lockScreen(); return; }
-    if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p><button onclick="location.reload()">Muat ulang</button></div>`; return; }
+    if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
     v.innerHTML = ({ ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:vKertas, rekon:vRekon, impor:vImpor, validasi:vValidasi, atur:vAtur })[current]();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) {} } }
@@ -2366,7 +2367,14 @@ const MASTER_EMAILS = ["sarpras.sman1berau@gmail.com"];
 firebase.initializeApp(FB_CONFIG);
 const fauth = firebase.auth();
 const fstore = firebase.firestore();
+// long polling is used automatically on networks that block Firestore's streaming connection
+try { fstore.settings({ experimentalAutoDetectLongPolling:true, merge:true }); } catch (e) {}
 try { fstore.enablePersistence({ synchronizeTabs:true }).catch(() => {}); } catch (e) {}
+// asks the server directly so a load problem can show Firebase's own error message
+window.__fsProbe = async () => {
+  try { await fstore.collection("seed").limit(1).get({ source:"server" }); return "Server Firebase menjawab normal. Coba muat ulang halaman."; }
+  catch (e) { console.error("probe", e); return (e.code ? e.code + ": " : "") + (e.message || String(e)); }
+};
 const FS = firebase.firestore;
 const isMasterEmail = email => MASTER_EMAILS.map(e => e.toLowerCase()).includes(String(email || "").toLowerCase());
 const plain = d => JSON.parse(JSON.stringify(d === undefined ? null : d));
