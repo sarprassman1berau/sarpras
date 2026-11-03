@@ -47,6 +47,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;backgroun
 .brand{display:flex;align-items:center;gap:12px;padding-block:10px;min-height:44px}
 .iconbtn{display:inline-flex;align-items:center;justify-content:center;position:relative;width:40px;height:40px;padding:0;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);flex:none;cursor:pointer}
 .iconbtn:hover{background:var(--sunk)}
+#nav-btn{border:0;background:none;width:44px;height:44px;border-radius:50%}#nav-btn img{width:42px;height:42px;display:block;transition:transform .15s}#nav-btn:hover img{transform:scale(1.06)}#nav-btn:hover{background:none}#nav-btn .navdot{top:2px;right:2px}
 .navdot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 2px var(--surface)}
 .pageid{display:flex;flex-direction:column;min-width:0;border-left:3px solid var(--accent);padding-left:10px}
 .pageid .app{font-size:11.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;line-height:1.2}
@@ -206,7 +207,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
 
 <header class="top">
   <div class="wrap brand">
-    <button type="button" class="iconbtn" id="nav-btn" aria-label="Buka menu halaman" aria-expanded="false" aria-controls="tabs"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="navdot" id="nav-dot" hidden></span></button>
+    <button type="button" class="iconbtn" id="nav-btn" aria-label="Buka menu halaman" aria-expanded="false" aria-controls="tabs"><img id="nav-btn-logo" src="" alt="" width="40" height="40"><span class="navdot" id="nav-dot" hidden></span></button>
     <div class="pageid"><span class="app">Sarpras SMAN 1 Berau</span><h1 id="pagetitle">Rekap Data Sarpras</h1><span class="pagesub" id="pagesub"></span></div>
     <span class="sync" id="sync">memuat…</span><span id="online-slot"></span><span id="role"></span>
   </div>
@@ -567,7 +568,7 @@ function route() {
   window.scrollTo(0, 0);
   render();
 }
-{ const nl = document.getElementById("nav-logo"); if (nl) nl.src = LOGO.sekolah; }
+for (const id of ["nav-logo", "nav-btn-logo"]) { const el = document.getElementById(id); if (el) el.src = LOGO.sekolah; }
 function setNav(open) {
   document.body.classList.toggle("nav-open", open);
   $("#nav-scrim").hidden = !open; $("#nav-btn").setAttribute("aria-expanded", String(open));
