@@ -38,19 +38,34 @@
   color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.5;margin:0}
-body.locked nav.tabs{display:none}
+body.locked nav.tabs,body.locked #nav-btn,body.locked #nav-scrim{display:none}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
 .wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1320px;margin:0 auto}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding-block:12px 4px}
-.brand h1{font-family:var(--f-head);font-weight:700;font-size:20px;margin:0;letter-spacing:.01em}
-.brand .sub{color:var(--muted);font-size:12.5px}
-.brand .sync{margin-left:auto;font-size:12px;color:var(--faint);font-family:var(--f-mono)}
-nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-inline:-4px}
-nav.tabs::-webkit-scrollbar{display:none}
-nav.tabs a{flex:none;padding:9px 11px 10px;color:var(--muted);text-decoration:none;font-weight:500;font-size:13.5px;border-bottom:2px solid transparent;white-space:nowrap}
-nav.tabs a:hover{color:var(--fg)}
-nav.tabs a[aria-current="page"]{color:var(--accent);border-bottom-color:var(--accent)}
+.brand{display:flex;align-items:center;gap:12px;padding-block:10px;min-height:44px}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;position:relative;width:40px;height:40px;padding:0;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);flex:none;cursor:pointer}
+.iconbtn:hover{background:var(--sunk)}
+.navdot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 2px var(--surface)}
+.pageid{display:flex;flex-direction:column;min-width:0;border-left:3px solid var(--accent);padding-left:10px}
+.pageid .app{font-size:11.5px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;line-height:1.2}
+.pageid h1{font-family:var(--f-head);font-weight:700;font-size:20px;margin:0;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pageid .pagesub{font-size:12.5px;color:var(--accent);line-height:1.2}
+.pageid .pagesub:empty{display:none}
+.brand .sync{margin-left:auto;font-size:12px;color:var(--faint);font-family:var(--f-mono);text-align:right}
+body:not([data-view="atur"]) #view > h2:first-child{display:none}
+#nav-scrim{position:fixed;inset:0;background:rgba(10,20,15,.35);z-index:49}
+nav.tabs{position:fixed;top:0;left:0;bottom:0;width:min(290px,86vw);background:var(--surface);border-right:1px solid var(--line);z-index:50;display:flex;flex-direction:column;gap:2px;overflow-y:auto;padding:max(12px,env(safe-area-inset-top,0px)) 10px max(16px,env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));transform:translateX(-104%);visibility:hidden;transition:transform .18s ease-out,visibility 0s linear .18s;box-shadow:4px 0 24px rgba(0,0,0,.12)}
+body.nav-open nav.tabs{transform:none;visibility:visible;transition:transform .18s ease-out}
+.navhead{display:flex;gap:10px;align-items:flex-start;padding:4px 4px 8px 8px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.navhead div{flex:1;display:flex;flex-direction:column;gap:2px}.navhead b{font-family:var(--f-head);font-size:15px}.navhead span{font-size:12px;color:var(--muted)}
+.navsec{display:flex;flex-direction:column;gap:1px}
+.navgroup{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:12px 10px 4px;font-weight:600}
+nav.tabs a{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;color:var(--fg);text-decoration:none;font-weight:500;font-size:14px}
+nav.tabs a:hover{background:var(--sunk)}
+nav.tabs a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+#online-pop{position:fixed;top:62px;right:16px;z-index:45;width:min(330px,calc(100vw - 32px));max-height:min(70vh,560px);overflow-y:auto;background:var(--surface);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:12px}
+.ob-n{position:absolute;bottom:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--ok);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--surface)}
+@media (max-width:640px){.brand{gap:8px}.brand .sync,.brand #role{display:none}.pageid{flex:1}.pageid .app{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px}.pageid h1{font-size:17px;white-space:normal}#lg-out-top{padding-inline:6px}}
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.rowlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 main{padding-block:18px 60px}
 h2{font-family:var(--f-head);font-weight:700;font-size:22px;margin:0 0 4px;text-wrap:balance}
@@ -186,31 +201,36 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
 </style>
 
 <header class="top">
-  <div class="wrap">
-    <div class="brand">
-      <h1>Sarpras SMAN 1 Berau</h1>
-      <span class="sub">Buku induk aset & persediaan · tersambung ke SIPBMD</span>
-      <span class="sync" id="sync">memuat…</span><span id="role"></span>
-    </div>
-    <nav class="tabs" id="tabs" aria-label="Menu">
-      <a href="#ringkasan" data-v="ringkasan">Rekap Data Sarpras</a>
-      <a href="#aset-pm" data-v="aset">Aset SIPBMD</a>
-      <a href="#ruang" data-v="ruang">Kondisi Ruangan</a>
-      <a href="#bast" data-v="bast">BAST</a>
-      <a href="#hapus" data-v="hapus">Usulan Penghapusan</a>
-      <a href="#persediaan-masuk" data-v="persediaan">Persediaan</a>
-      <a href="#pemegang" data-v="pemegang">Per Pemegang</a>
-      <a href="#laporan" data-v="laporan">Laporan BAST</a>
-      <a href="#surat" data-v="surat">Surat Keluar</a>
-      <a href="#kertas" data-v="kertas">Kertas Kerja Modal</a>
-      <a href="#rekon" data-v="rekon">Rekon Aset</a>
-      <a href="#impor" data-v="impor">Impor SIPBMD</a>
-      <a href="#catatan" data-v="catatan">Catatan Temuan</a>
-      <a href="#validasi" data-v="validasi">Validasi <span id="vbadge"></span></a>
-      <a href="#atur" data-v="atur">Pengaturan</a>
-    </nav>
+  <div class="wrap brand">
+    <button type="button" class="iconbtn" id="nav-btn" aria-label="Buka menu halaman" aria-expanded="false" aria-controls="tabs"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="navdot" id="nav-dot" hidden></span></button>
+    <div class="pageid"><span class="app">Sarpras SMAN 1 Berau</span><h1 id="pagetitle">Rekap Data Sarpras</h1><span class="pagesub" id="pagesub"></span></div>
+    <span class="sync" id="sync">memuat…</span><span id="online-slot"></span><span id="role"></span>
   </div>
 </header>
+<div id="nav-scrim" hidden></div>
+<nav class="tabs" id="tabs" aria-label="Menu halaman">
+  <div class="navhead"><div><b>Sarpras SMAN 1 Berau</b><span>Buku induk aset & persediaan · tersambung ke SIPBMD</span></div><button type="button" class="iconbtn" id="nav-close" aria-label="Tutup menu"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
+  <div class="navsec"><p class="navgroup">Utama</p>
+    <a href="#ringkasan" data-v="ringkasan">Rekap Data Sarpras</a>
+    <a href="#catatan" data-v="catatan">Catatan Temuan</a></div>
+  <div class="navsec"><p class="navgroup">Aset & ruang</p>
+    <a href="#aset-pm" data-v="aset">Aset SIPBMD</a>
+    <a href="#ruang" data-v="ruang">Kondisi Ruangan</a>
+    <a href="#hapus" data-v="hapus">Usulan Penghapusan</a></div>
+  <div class="navsec"><p class="navgroup">Penyerahan barang</p>
+    <a href="#bast" data-v="bast">BAST</a>
+    <a href="#pemegang" data-v="pemegang">Per Pemegang</a>
+    <a href="#laporan" data-v="laporan">Laporan BAST</a>
+    <a href="#surat" data-v="surat">Surat Keluar</a></div>
+  <div class="navsec"><p class="navgroup">Persediaan & keuangan</p>
+    <a href="#persediaan-masuk" data-v="persediaan">Persediaan</a>
+    <a href="#kertas" data-v="kertas">Kertas Kerja Modal</a>
+    <a href="#rekon" data-v="rekon">Rekon Aset</a>
+    <a href="#impor" data-v="impor">Impor SIPBMD</a></div>
+  <div class="navsec"><p class="navgroup">Akun</p>
+    <a href="#validasi" data-v="validasi">Validasi <span id="vbadge"></span></a>
+    <a href="#atur" data-v="atur">Pengaturan</a></div>
+</nav>
 <main class="wrap" id="view"></main>
 <div id="drawerRoot"></div>
 <div id="toastRoot"></div>
@@ -530,9 +550,26 @@ function route() {
   if (current === "aset" && !KATMAP[sub]) sub = "pm";
   if (current === "persediaan" && !["masuk","keluar","mutasi"].includes(sub)) sub = "masuk";
   for (const a of document.querySelectorAll("#tabs a")) { if (a.dataset.v === current) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
+  const link = document.querySelector(`#tabs a[data-v="${current}"]`), nama = link ? link.firstChild.textContent.trim() : "";
+  const sb = current === "aset" ? KATMAP[sub].kib + " · " + KATMAP[sub].nama : current === "persediaan" ? ({ masuk:"Persediaan masuk", keluar:"Persediaan keluar", mutasi:"Mutasi persediaan" })[sub] : "";
+  $("#pagetitle").textContent = nama; $("#pagesub").textContent = sb;
+  document.title = nama + " · Sarpras SMAN 1 Berau";
+  document.body.dataset.view = current;
+  setNav(false);
   window.scrollTo(0, 0);
   render();
 }
+function setNav(open) {
+  document.body.classList.toggle("nav-open", open);
+  $("#nav-scrim").hidden = !open; $("#nav-btn").setAttribute("aria-expanded", String(open));
+  if (open) { const a = document.querySelector('#tabs a[aria-current="page"]') || document.querySelector("#tabs a:not([hidden])"); if (a) a.focus(); }
+}
+document.addEventListener("click", e => {
+  if (e.target.closest("#nav-btn")) setNav(!document.body.classList.contains("nav-open"));
+  else if (e.target.closest("#nav-close") || e.target.id === "nav-scrim") setNav(false);
+  else if (e.target.closest("#tabs a")) setNav(false);
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && document.body.classList.contains("nav-open")) { setNav(false); $("#nav-btn").focus(); } });
 window.addEventListener("hashchange", route);
 let renderQueued = false;
 const LOAD_HINT = {
@@ -556,12 +593,14 @@ function render(soft) {
     const focusId = ae && v.contains(ae) ? ae.id : null; let sel = null; try { sel = ae.selectionStart; } catch (e) {}
     if (S.role === "none") { v.innerHTML = lockScreen(); return; }
     for (const a of document.querySelectorAll("#tabs a")) a.hidden = !canView(a.dataset.v);
+    for (const sec of document.querySelectorAll("#tabs .navsec")) sec.hidden = ![...sec.querySelectorAll("a")].some(a => !a.hidden);
     if (!canView(current)) { v.innerHTML = `<div class="empty"><b>Menu ini tidak termasuk akses akun Anda</b>Minta akun master menambahkan akses jika Anda perlu membukanya.</div>`; return; }
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
     v.innerHTML = ({ ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:vKertas, rekon:vRekon, impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) {} } }
     const nb = $("#vbadge"), np = pendingList().length; if (nb) nb.innerHTML = np ? `<span class="pill ${isMaster() ? "bad" : "warn"}">${np}</span>` : "";
+    const nd = $("#nav-dot"); if (nd) nd.hidden = !(np && isMaster());
     if (drawer) renderDrawer();
   });
 }
@@ -581,7 +620,6 @@ function vRingkasan() {
   return `
   <h2>Rekap Data Sarpras</h2>
   <p class="lead">Tulis catatan temuan, lihat rekap aset dan kondisi ruangan, serta siapa saja yang terakhir mengubah data. Angka di halaman ini langsung berubah setiap ada isian baru yang disimpan.</p>
-  <div id="live-status">${liveStatusPanel()}</div>
   ${ctQuickPanel()}
   ${asetRekapPanel()}
   ${ruangRekapPanel(true)}
@@ -2834,10 +2872,24 @@ function liveStatusPanel() {
   const akun = AK.list.filter(a => a.aktif !== false);
   const on = onlineList(), onIds = new Set(on.map(o => o.id));
   const rows = akun.slice().sort((a, b) => (onIds.has(b._id) - onIds.has(a._id)) || String(a.nama || a.email).localeCompare(String(b.nama || b.email)));
-  return `<section class="panel" style="margin-bottom:14px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">Status terkini</h3><span class="muted">${fmt(on.length)} dari ${fmt(akun.length)} akun sedang membuka aplikasi</span><span class="sp" style="flex:1"></span><button class="link" data-chatopen="1">Buka chat tim</button></div>
-    <div class="live-grid">${rows.map(a => { const o = LIVE.on[a._id], live = onIds.has(a._id); return `<div class="live-acc"><span class="live-dot ${live ? "on" : ""}" aria-hidden="true"></span><span><b style="font-weight:500">${esc(a.nama || shownLogin(a.email))}</b>${a._id === S.me ? ' <span class="faint sm">(Anda)</span>' : ""}<br><span class="sm ${live ? "" : "muted"}">${live ? "sedang membuka · " + esc(VIEW_NAMA[o.view] || "Rekap") : esc(agoText(o && o.at))}</span></span></div>`; }).join("") || '<p class="muted" style="margin:0">Belum ada akun.</p>'}</div></section>`;
+  return `<div style="display:flex;gap:8px;align-items:baseline"><h3 style="margin:0;flex:1">Status terkini</h3><button class="link" data-chatopen="1">Buka chat tim</button></div><p class="muted sm" style="margin:2px 0 0">${fmt(on.length)} dari ${fmt(akun.length)} akun sedang membuka aplikasi</p>
+    <div class="live-grid">${rows.map(a => { const o = LIVE.on[a._id], live = onIds.has(a._id); return `<div class="live-acc"><span class="live-dot ${live ? "on" : ""}" aria-hidden="true"></span><span><b style="font-weight:500">${esc(a.nama || shownLogin(a.email))}</b>${a._id === S.me ? ' <span class="faint sm">(Anda)</span>' : ""}<br><span class="sm ${live ? "" : "muted"}">${live ? "sedang membuka · " + esc(VIEW_NAMA[o.view] || "Rekap") : esc(agoText(o && o.at))}</span></span></div>`; }).join("") || '<p class="muted" style="margin:0">Belum ada akun.</p>'}</div>`;
 }
-function liveRefreshStatus() { const el = document.getElementById("live-status"); if (el) el.innerHTML = liveStatusPanel(); }
+const ICON_PEOPLE = '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7.5" cy="7" r="2.8"/><path d="M2.5 16c.4-2.8 2.4-4.4 5-4.4s4.6 1.6 5 4.4" stroke-linecap="round"/><circle cx="14" cy="7.8" r="2.2"/><path d="M13.6 11.7c2 .1 3.5 1.4 3.9 3.8" stroke-linecap="round"/></svg>';
+function liveRefreshStatus() {
+  const slot = document.getElementById("online-slot"); if (!slot) return;
+  let btn = document.getElementById("online-btn");
+  if (!btn) { slot.innerHTML = `<button type="button" class="iconbtn" id="online-btn" aria-haspopup="dialog" aria-expanded="false">${ICON_PEOPLE}<span class="ob-n" id="online-n"></span></button>`; btn = document.getElementById("online-btn"); }
+  const n = onlineList().length; document.getElementById("online-n").textContent = n;
+  btn.setAttribute("aria-label", "Status terkini: " + n + " akun sedang membuka aplikasi"); btn.title = n + " akun sedang online";
+  const pop = document.getElementById("online-pop"); if (pop) pop.innerHTML = liveStatusPanel();
+}
+function liveToggleStatus(open) {
+  let pop = document.getElementById("online-pop");
+  if (!open) { if (pop) pop.remove(); const b = document.getElementById("online-btn"); if (b) b.setAttribute("aria-expanded", "false"); return; }
+  if (!pop) { pop = document.createElement("div"); pop.id = "online-pop"; pop.setAttribute("role", "dialog"); pop.setAttribute("aria-label", "Status terkini"); document.body.appendChild(pop); }
+  pop.innerHTML = liveStatusPanel(); document.getElementById("online-btn").setAttribute("aria-expanded", "true");
+}
 async function liveBeat(off) {
   if (!LIVE.started || !S.me) return;
   LIVE.lastBeat = Date.now();
@@ -2884,7 +2936,7 @@ function liveStart() {
   if (!LIVE.seen) LIVE.seen = LIVE.t0;
   const st = document.createElement("style");
   st.textContent = `body{padding-bottom:72px}
-.live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 16px;margin-top:10px}
+.live-grid{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .live-acc{display:flex;gap:8px;align-items:flex-start}
 .live-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--line-strong);margin-top:6px;display:inline-block}
 .live-dot.on{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
@@ -2931,9 +2983,14 @@ function liveStart() {
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") liveBeat(); });
   window.addEventListener("pagehide", () => liveBeat(true));
   window.addEventListener("hashchange", () => { if (Date.now() - LIVE.lastBeat > 15000) liveBeat(); });
+  document.addEventListener("click", e => {
+    if (e.target.closest("#online-btn")) { liveToggleStatus(!document.getElementById("online-pop")); return; }
+    if (document.getElementById("online-pop") && !e.target.closest("#online-pop")) liveToggleStatus(false);
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && document.getElementById("online-pop")) liveToggleStatus(false); });
   document.addEventListener("click", async e => {
     const t = e.target.closest("button"); if (!t) return;
-    if (t.dataset.chatopen) { LIVE.open = true; chatRender(true); setTimeout(() => { const i = document.getElementById("chat-in"); if (i) i.focus(); }, 0); }
+    if (t.dataset.chatopen) { liveToggleStatus(false); LIVE.open = true; chatRender(true); setTimeout(() => { const i = document.getElementById("chat-in"); if (i) i.focus(); }, 0); }
     if (t.id === "chat-close") { LIVE.open = false; chatRender(); }
     if (t.id === "chat-send") chatSend();
     if (t.dataset.chatdel) { try { await fstore.doc("chat/" + t.dataset.chatdel).delete(); } catch (err) { toast("Pesan gagal dihapus."); } }
@@ -2943,7 +3000,7 @@ function liveStart() {
     if (e.key === "Escape") { LIVE.open = false; chatRender(); }
   });
   pnl.addEventListener("input", e => { if (e.target.id === "chat-in") { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; } });
-  chatRender();
+  chatRender(); liveRefreshStatus();
 }
 
 /* ---------- start: wait for sign-in, then run the app ---------- */
