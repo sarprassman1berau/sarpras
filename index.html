@@ -2952,15 +2952,15 @@ document.addEventListener("click", async e => {
 function lockScreen() {
   const u = fauth.currentUser;
   return `<div class="empty" style="max-width:560px;margin:40px auto;text-align:left"><b style="font-size:20px">Akun belum aktif</b>
-    <p>Anda masuk sebagai <b>${esc(u ? shownLogin(u.email) : "")}</b>, tetapi akun ini belum terdaftar sebagai operator sarpras atau sedang dinonaktifkan.</p>
-    <p>Minta akun master (Waka Sarpras) mengaktifkan akun Anda di menu Pengaturan → Akun & akses.</p><button id="lg-out">Keluar</button></div>`;
+    <p>Anda masuk sebagai <b>${esc(u ? shownLogin(u.email) : "")}</b>, tetapi akun ini belum terdaftar, sedang dinonaktifkan, atau sudah dihapus.</p>
+    <p>Minta akun master (Waka Sarpras) mengaktifkan atau membuatkan akun Anda di aplikasi Waka Sarpras → Akun & hak akses.</p><button id="lg-out">Keluar</button></div>`;
 }
 function vAkunPage() {
   return `<h2>Akun & hak akses</h2><p class="lead">${isMaster() ? "Kelola akun semua aplikasi SMAN 1 Berau: buat akun baru, ubah nama, jabatan, dan hak akses akun yang sudah terdaftar, nonaktifkan akun, dan ganti password Anda." : "Data akun Anda dan penggantian password. Pengelolaan akun dilakukan oleh Waka Sarpras (akun master)."}</p>${vAkun()}`;
 }
 function vAkun() {
   const u = fauth.currentUser, master = isMaster();
-  const list = AK.list.slice().sort((a, b) => (a.role === "master" ? -1 : 1) - (b.role === "master" ? -1 : 1) || String(a.nama).localeCompare(String(b.nama)));
+  const list = AK.list.filter(a => !a.dihapus).sort((a, b) => (a.role === "master" ? -1 : 1) - (b.role === "master" ? -1 : 1) || String(a.nama).localeCompare(String(b.nama)));
   return `<section class="panel" id="akun"><h3>Akun</h3>
     <p style="margin:0 0 12px">Anda masuk sebagai <b>${esc(akunName(u && u.uid) || shownLogin(u && u.email))}</b> (${esc(shownLogin(u && u.email))}) · ${master ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'} <button class="ghost" id="lg-out">Keluar</button></p>
     ${master ? `<div style="border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--sunk);margin-bottom:12px">
@@ -2972,7 +2972,7 @@ function vAkun() {
       <p class="hint">Sampaikan nama pengguna (atau email) dan password awal kepada operator. Operator bisa mengganti passwordnya sendiri setelah masuk. Akun dengan nama pengguna tidak bisa memakai "Lupa password"; jika lupa, nonaktifkan akunnya lalu buat akun baru.</p></div>` : ""}
     <div class="tablebox"><table><thead><tr><th>Nama</th><th>Login</th><th>Peran</th><th>Akses</th><th>Status</th>${master ? "<th></th>" : ""}</tr></thead><tbody>
     ${list.map(a => `<tr><td>${esc(a.nama || "")}<div class="sm">${esc(a.jab || "")}</div></td><td class="sm">${esc(shownLogin(a.email))}${isUsernameAcct(a.email) ? ' <span class="pill">nama pengguna</span>' : ""}</td><td>${a.role === "master" ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'}</td><td class="sm">${a.role === "master" ? "semua" : `${esc(appSummary(a.izin))}<br><span class="muted">Aset & Persediaan: ${esc(izinSummary(a.izin))}</span>`}</td><td>${a.aktif === false ? '<span class="pill bad">nonaktif</span>' : '<span class="pill ok">aktif</span>'}</td>
-      ${master ? `<td style="white-space:nowrap">${a.role === "master" ? "" : `${isUsernameAcct(a.email) ? "" : `<button class="ghost" data-akreset="${esc(a.email || "")}">Kirim reset password</button>`}<button class="ghost" data-akedit="${esc(a._id)}">Ubah</button><button class="ghost" data-akaktif="${esc(a._id)}">${a.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>`}</td>` : ""}</tr>
+      ${master ? `<td style="white-space:nowrap">${a.role === "master" ? "" : `${isUsernameAcct(a.email) ? "" : `<button class="ghost" data-akreset="${esc(a.email || "")}">Kirim reset password</button>`}<button class="ghost" data-akedit="${esc(a._id)}">Ubah</button><button class="ghost" data-akaktif="${esc(a._id)}">${a.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>${a.aktif === false ? (UI.akDel === a._id ? `<span class="confirm"><button class="danger" data-akdelyes="${esc(a._id)}">Ya, hapus akun</button><button data-akdelno="1">Batal</button></span>` : `<button class="ghost danger" data-akdel="${esc(a._id)}">Hapus</button>`) : ""}`}</td>` : ""}</tr>
       ${master && UI.akEdit === a._id ? `<tr><td colspan="6" style="background:var(--sunk)"><p class="sectionlabel">Ubah akun ${esc(a.nama || shownLogin(a.email))}</p>
         <div class="fgrid" style="margin-bottom:10px"><label class="f">Nama lengkap<input id="ae-nama" value="${esc(a.nama || "")}"></label><label class="f">Jabatan<input id="ae-jab" value="${esc(a.jab || "")}"></label>
         <label class="f">Login<input value="${esc(shownLogin(a.email))}" disabled><span class="hint">Nama pengguna/email login tidak bisa diubah. Jika perlu login baru, buat akun baru lalu nonaktifkan akun ini.</span></label></div>
@@ -3189,7 +3189,15 @@ document.addEventListener("click", async e => {
     t.disabled = false;
   }
   if (t.dataset.akreset) { try { await fauth.sendPasswordResetEmail(t.dataset.akreset); toast("Tautan atur ulang password dikirim ke " + t.dataset.akreset + "."); } catch (err) { toast(authErr(err)); } }
-  if (t.dataset.akaktif) { const a = AK.list.find(x => x._id === t.dataset.akaktif); if (a) { try { await W.set("akun/" + a._id, Object.assign({}, a, { _id:undefined, aktif:a.aktif === false })); toast(a.aktif === false ? "Akun diaktifkan." : "Akun dinonaktifkan."); } catch (err) { writeErr(err); } } }
+  if (t.dataset.akdel) { UI.akDel = t.dataset.akdel; render(); return; }
+  if (t.dataset.akdelno) { UI.akDel = null; render(); return; }
+  if (t.dataset.akdelyes) {
+    const a = AK.list.find(x => x._id === t.dataset.akdelyes); if (!a || a.aktif !== false) return;
+    // the record is kept (marked deleted) so history still shows who made earlier changes; it disappears from every list
+    try { await W.group("Hapus akun " + (a.nama || shownLogin(a.email)), () => W.update("akun/" + a._id, { aktif:false, dihapus:true, dihapusAt:new Date().toISOString() })); try { await fstore.doc("online/" + a._id).delete(); } catch (e2) {} UI.akDel = null; toast("Akun " + (a.nama || shownLogin(a.email)) + " dihapus dari daftar."); render(); } catch (err) { writeErr(err); }
+    return;
+  }
+  if (t.dataset.akaktif) { const a = AK.list.find(x => x._id === t.dataset.akaktif); if (a) { try { await W.update("akun/" + a._id, { aktif:a.aktif === false }); toast(a.aktif === false ? "Akun diaktifkan." : "Akun dinonaktifkan."); } catch (err) { writeErr(err); } } }
   if (t.id === "ak-pw") {
     const p1 = $("#ak-p1").value, p2 = $("#ak-p2").value;
     if (p1.length < 6 || p1 !== p2) { toast(p1 !== p2 ? "Kedua password tidak sama." : "Password minimal 6 karakter."); return; }
@@ -3203,7 +3211,7 @@ const ONLINE_MS = 4 * 60 * 1000, BEAT_MS = 90 * 1000;
 const VIEW_NAMA = { home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset SIPBMD", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Kertas Kerja", rekon:"Rekon", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
 function akunNama(id) { const a = AK.list.find(x => x._id === id); return a ? (a.nama || shownLogin(a.email)) : (LIVE.on[id] && LIVE.on[id].nama) || "Akun"; }
 const isOnline = o => !!o && !o.off && Date.now() - new Date(o.at).getTime() < ONLINE_MS;
-function onlineList() { return Object.entries(LIVE.on).filter(([, o]) => isOnline(o)).map(([id, o]) => Object.assign({ id }, o)).sort((a, b) => akunNama(a.id).localeCompare(akunNama(b.id))); }
+function onlineList() { return Object.entries(LIVE.on).filter(([id, o]) => isOnline(o) && !(AK.list.find(a => a._id === id) || {}).dihapus && (AK.list.find(a => a._id === id) || {}).aktif !== false).map(([id, o]) => Object.assign({ id }, o)).sort((a, b) => akunNama(a.id).localeCompare(akunNama(b.id))); }
 function agoText(iso) {
   if (!iso) return "belum pernah masuk";
   const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
