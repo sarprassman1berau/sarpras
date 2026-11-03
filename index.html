@@ -581,6 +581,7 @@ function vRingkasan() {
   return `
   <h2>Rekap Data Sarpras</h2>
   <p class="lead">Tulis catatan temuan, lihat rekap aset dan kondisi ruangan, serta siapa saja yang terakhir mengubah data. Angka di halaman ini langsung berubah setiap ada isian baru yang disimpan.</p>
+  <div id="live-status">${liveStatusPanel()}</div>
   ${ctQuickPanel()}
   ${asetRekapPanel()}
   ${ruangRekapPanel(true)}
@@ -2815,6 +2816,136 @@ document.addEventListener("click", async e => {
   }
 });
 
+/* ---------- status terkini (siapa yang sedang membuka aplikasi) & chat tim ---------- */
+const LIVE = { on:{}, chat:[], open:false, started:false, t0:new Date().toISOString(), seen:"", lastBeat:0, sending:false };
+const ONLINE_MS = 4 * 60 * 1000, BEAT_MS = 90 * 1000;
+const VIEW_NAMA = { ringkasan:"Rekap", aset:"Aset SIPBMD", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Kertas Kerja", rekon:"Rekon", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
+function akunNama(id) { const a = AK.list.find(x => x._id === id); return a ? (a.nama || shownLogin(a.email)) : (LIVE.on[id] && LIVE.on[id].nama) || "Akun"; }
+const isOnline = o => !!o && !o.off && Date.now() - new Date(o.at).getTime() < ONLINE_MS;
+function onlineList() { return Object.entries(LIVE.on).filter(([, o]) => isOnline(o)).map(([id, o]) => Object.assign({ id }, o)).sort((a, b) => akunNama(a.id).localeCompare(akunNama(b.id))); }
+function agoText(iso) {
+  if (!iso) return "belum pernah masuk";
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 60) return "aktif " + Math.max(m, 1) + " menit lalu";
+  if (m < 24 * 60) return "aktif " + Math.round(m / 60) + " jam lalu";
+  return "terakhir aktif " + tglJam(iso);
+}
+function liveStatusPanel() {
+  const akun = AK.list.filter(a => a.aktif !== false);
+  const on = onlineList(), onIds = new Set(on.map(o => o.id));
+  const rows = akun.slice().sort((a, b) => (onIds.has(b._id) - onIds.has(a._id)) || String(a.nama || a.email).localeCompare(String(b.nama || b.email)));
+  return `<section class="panel" style="margin-bottom:14px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">Status terkini</h3><span class="muted">${fmt(on.length)} dari ${fmt(akun.length)} akun sedang membuka aplikasi</span><span class="sp" style="flex:1"></span><button class="link" data-chatopen="1">Buka chat tim</button></div>
+    <div class="live-grid">${rows.map(a => { const o = LIVE.on[a._id], live = onIds.has(a._id); return `<div class="live-acc"><span class="live-dot ${live ? "on" : ""}" aria-hidden="true"></span><span><b style="font-weight:500">${esc(a.nama || shownLogin(a.email))}</b>${a._id === S.me ? ' <span class="faint sm">(Anda)</span>' : ""}<br><span class="sm ${live ? "" : "muted"}">${live ? "sedang membuka · " + esc(VIEW_NAMA[o.view] || "Rekap") : esc(agoText(o && o.at))}</span></span></div>`; }).join("") || '<p class="muted" style="margin:0">Belum ada akun.</p>'}</div></section>`;
+}
+function liveRefreshStatus() { const el = document.getElementById("live-status"); if (el) el.innerHTML = liveStatusPanel(); }
+async function liveBeat(off) {
+  if (!LIVE.started || !S.me) return;
+  LIVE.lastBeat = Date.now();
+  try { await fstore.doc("online/" + S.me).set({ nama:akunNama(S.me), at:new Date().toISOString(), view:current, off:!!off }); } catch (e) {}
+}
+function chatSeenKey() { return "sarpras-chat-seen:" + S.me; }
+function chatUnread() { return LIVE.chat.filter(m => m.by !== S.me && m.at > LIVE.seen).length; }
+function chatMarkSeen() { const last = LIVE.chat.length ? LIVE.chat[LIVE.chat.length - 1].at : ""; if (last > LIVE.seen) { LIVE.seen = last; try { localStorage.setItem(chatSeenKey(), last); } catch (e) {} } }
+function chatDayLabel(iso) { const d = new Date(iso), t = new Date(); const same = (a, b) => a.toDateString() === b.toDateString(); const y = new Date(t); y.setDate(t.getDate() - 1); return same(d, t) ? "Hari ini" : same(d, y) ? "Kemarin" : d.getDate() + " " + BULAN[d.getMonth()] + " " + d.getFullYear(); }
+function chatMsgs() {
+  let lastDay = "";
+  return LIVE.chat.map(m => {
+    const day = chatDayLabel(m.at), mine = m.by === S.me, hdr = day !== lastDay ? `<div class="chat-day">${esc(day)}</div>` : ""; lastDay = day;
+    return hdr + `<div class="chat-msg ${mine ? "mine" : ""}"><div class="chat-meta">${mine ? "Anda" : esc(akunNama(m.by))} · ${esc(String(tglJam(m.at)).split(" ").pop())}${isMaster() ? ` <button class="link chat-del" data-chatdel="${esc(m._id)}" title="Hapus pesan">hapus</button>` : ""}</div><div class="chat-bubble">${esc(m.teks)}</div></div>`;
+  }).join("") || '<p class="muted" style="text-align:center;margin:24px 0">Belum ada pesan. Sapa tim Anda.</p>';
+}
+function chatRender(scroll) {
+  const btn = document.getElementById("chat-fab"), n = chatUnread(), on = onlineList().length;
+  if (btn) btn.innerHTML = `Chat tim <span class="chat-on">${on} online</span>${n && !LIVE.open ? `<span class="chat-badge">${n > 99 ? "99+" : n}</span>` : ""}`;
+  const pnl = document.getElementById("chat-panel"); if (!pnl) return;
+  pnl.hidden = !LIVE.open; if (btn) btn.hidden = LIVE.open;
+  if (!LIVE.open) return;
+  const on2 = onlineList();
+  document.getElementById("chat-online").innerHTML = on2.length ? on2.map(o => `<span class="chat-who"><span class="live-dot on"></span>${esc(akunNama(o.id))}${o.id === S.me ? " (Anda)" : ""}</span>`).join("") : '<span class="muted sm">Tidak ada yang online</span>';
+  const box = document.getElementById("chat-list"), atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  box.innerHTML = chatMsgs();
+  if (scroll || atBottom) box.scrollTop = box.scrollHeight;
+  chatMarkSeen();
+}
+async function chatSend() {
+  const ta = document.getElementById("chat-in"), teks = (ta.value || "").trim();
+  if (!teks || LIVE.sending) return;
+  if (teks.length > 2000) { toast("Pesan terlalu panjang (maks. 2.000 huruf)."); return; }
+  LIVE.sending = true;
+  try { await fstore.doc("chat/" + uid("m")).set({ by:S.me, nama:akunNama(S.me), teks, at:new Date().toISOString() }); ta.value = ""; ta.style.height = ""; }
+  catch (e) { toast(e && e.code === "permission-denied" ? "Pesan ditolak. Minta akun master memperbarui aturan Firebase." : "Pesan gagal terkirim. Periksa koneksi."); }
+  LIVE.sending = false; ta.focus();
+}
+function liveStart() {
+  if (LIVE.started) return;
+  if (!S.me || !(isMaster() || S.role === "operator")) { if (!LIVE.tries || LIVE.tries++ < 60) { LIVE.tries = LIVE.tries || 1; setTimeout(liveStart, 1000); } return; }
+  LIVE.started = true;
+  try { LIVE.seen = localStorage.getItem(chatSeenKey()) || ""; } catch (e) {}
+  if (!LIVE.seen) LIVE.seen = LIVE.t0;
+  const st = document.createElement("style");
+  st.textContent = `body{padding-bottom:72px}
+.live-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 16px;margin-top:10px}
+.live-acc{display:flex;gap:8px;align-items:flex-start}
+.live-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--line-strong);margin-top:6px;display:inline-block}
+.live-dot.on{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
+#chat-fab{position:fixed;right:16px;bottom:16px;z-index:40;border-radius:999px;padding:10px 16px;background:var(--accent);color:var(--accent-fg);border:0;box-shadow:0 4px 14px rgba(0,0,0,.18);font-weight:500;display:flex;gap:8px;align-items:center}
+#chat-fab .chat-on{font-weight:400;font-size:12px;opacity:.85}
+.chat-badge{background:var(--bad);color:#fff;border-radius:999px;font-size:11.5px;padding:1px 7px;font-weight:600}
+#chat-panel{position:fixed;right:16px;bottom:16px;z-index:41;width:min(380px,calc(100vw - 32px));height:min(560px,calc(100vh - 96px));background:var(--surface);border:1px solid var(--line-strong);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.22);display:flex;flex-direction:column;overflow:hidden}
+#chat-panel[hidden]{display:none}
+.chat-head{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px;background:var(--sunk)}
+.chat-head .row{display:flex;align-items:center;gap:8px}
+.chat-head h3{margin:0;font-size:15px;flex:1}
+#chat-online{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px}
+.chat-who{display:inline-flex;gap:5px;align-items:center}.chat-who .live-dot{margin-top:0;width:7px;height:7px}
+#chat-list{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.chat-day{align-self:center;font-size:11.5px;color:var(--muted);background:var(--sunk);border-radius:999px;padding:1px 10px;margin:4px 0}
+.chat-msg{max-width:85%;align-self:flex-start;display:flex;flex-direction:column;gap:2px}
+.chat-msg.mine{align-self:flex-end;align-items:flex-end}
+.chat-meta{font-size:11.5px;color:var(--muted)}
+.chat-del{font-size:11px;margin-left:4px}
+.chat-bubble{background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:6px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.chat-msg.mine .chat-bubble{background:var(--accent-soft);border-color:transparent}
+.chat-foot{border-top:1px solid var(--line);padding:8px;display:flex;gap:8px;align-items:flex-end}
+#chat-in{flex:1;resize:none;min-height:38px;max-height:120px;font:inherit}
+@media (max-width:600px){#chat-panel{right:0;bottom:0;width:100vw;height:85vh;border-radius:12px 12px 0 0}#chat-fab{right:12px;bottom:12px}}
+@media print{#chat-fab,#chat-panel{display:none!important}}`;
+  document.head.appendChild(st);
+  const fab = document.createElement("button"); fab.id = "chat-fab"; fab.dataset.chatopen = "1"; document.body.appendChild(fab);
+  const pnl = document.createElement("div"); pnl.id = "chat-panel"; pnl.hidden = true; pnl.setAttribute("role", "dialog"); pnl.setAttribute("aria-label", "Chat tim");
+  pnl.innerHTML = `<div class="chat-head"><div class="row"><h3>Chat tim sarpras</h3><button class="ghost" id="chat-close" aria-label="Tutup chat">Tutup</button></div><div id="chat-online"></div></div>
+    <div id="chat-list"></div>
+    <div class="chat-foot"><textarea id="chat-in" rows="1" placeholder="Tulis pesan… (Enter untuk kirim)"></textarea><button class="primary" id="chat-send">Kirim</button></div>
+    <p class="hint" style="margin:0;padding:0 10px 8px">Pesan bisa dibaca semua akun yang login. Jangan menulis password di sini.</p>`;
+  document.body.appendChild(pnl);
+  fstore.collection("online").onSnapshot({ includeMetadataChanges:true }, snap => { const m = {}; snap.docs.forEach(d => { m[d.id] = d.data(); }); LIVE.on = m; liveRefreshStatus(); chatRender(); }, () => {});
+  fstore.collection("chat").orderBy("at", "desc").limit(200).onSnapshot({ includeMetadataChanges:true }, snap => {
+    const prev = new Set(LIVE.chat.map(m => m._id));
+    LIVE.chat = snap.docs.map(d => Object.assign({ _id:d.id }, d.data())).filter(m => m.at).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const fresh = LIVE.chat.filter(m => !prev.has(m._id) && m.by !== S.me && m.at > LIVE.t0);
+    if (fresh.length && !LIVE.open) toast("Pesan baru dari " + akunNama(fresh[fresh.length - 1].by) + ": " + String(fresh[fresh.length - 1].teks).slice(0, 60));
+    chatRender();
+  }, () => {});
+  liveBeat();
+  setInterval(() => { if (document.visibilityState === "visible") liveBeat(); liveRefreshStatus(); chatRender(); }, BEAT_MS);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") liveBeat(); });
+  window.addEventListener("pagehide", () => liveBeat(true));
+  window.addEventListener("hashchange", () => { if (Date.now() - LIVE.lastBeat > 15000) liveBeat(); });
+  document.addEventListener("click", async e => {
+    const t = e.target.closest("button"); if (!t) return;
+    if (t.dataset.chatopen) { LIVE.open = true; chatRender(true); setTimeout(() => { const i = document.getElementById("chat-in"); if (i) i.focus(); }, 0); }
+    if (t.id === "chat-close") { LIVE.open = false; chatRender(); }
+    if (t.id === "chat-send") chatSend();
+    if (t.dataset.chatdel) { try { await fstore.doc("chat/" + t.dataset.chatdel).delete(); } catch (err) { toast("Pesan gagal dihapus."); } }
+  });
+  pnl.addEventListener("keydown", e => {
+    if (e.target.id === "chat-in" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); chatSend(); }
+    if (e.key === "Escape") { LIVE.open = false; chatRender(); }
+  });
+  pnl.addEventListener("input", e => { if (e.target.id === "chat-in") { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; } });
+  chatRender();
+}
+
 /* ---------- start: wait for sign-in, then run the app ---------- */
 let started = false;
 fauth.onAuthStateChanged(async u => {
@@ -2828,6 +2959,7 @@ fauth.onAuthStateChanged(async u => {
   if (isMasterEmail(u.email) && !AK.list.some(a => a._id === u.uid)) { try { await fstore.doc("akun/" + u.uid).set({ nama:u.email, email:u.email, role:"master", aktif:true, dibuat:new Date().toISOString() }); } catch (e) {} }
   const brand = document.querySelector(".brand"); if (brand && !$("#lg-out-top")) { const b = document.createElement("button"); b.className = "ghost"; b.id = "lg-out-top"; b.textContent = "Keluar"; b.addEventListener("click", async () => { await fauth.signOut(); location.reload(); }); brand.appendChild(b); }
   window.__startApp();
+  liveStart();
 });
 </script>
 

@@ -48,6 +48,17 @@ service cloud.firestore {
         && request.resource.data.data is string
         && request.resource.data.data.size() < 600000;
     }
+    // status terkini: setiap akun hanya memperbarui status dirinya sendiri
+    match /online/{uid} {
+      allow write: if isMember() && request.auth.uid == uid;
+    }
+    // chat tim: semua akun aktif boleh mengirim pesan atas namanya sendiri; hanya master yang menghapus
+    match /chat/{id} {
+      allow create: if isMember()
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.teks is string
+        && request.resource.data.teks.size() <= 2000;
+    }
     // catatan temuan: ditulis langsung oleh operator yang punya hak "catatan"
     match /catatan/{id} {
       allow create: if izin('catatan')

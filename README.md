@@ -67,6 +67,10 @@ Paket: **Staf sarpras** = semua; **Panitia penghapusan** = `aset_kondisi`, `hapu
 ### Catatan temuan
 Menu **Catatan Temuan** dan bagian "Catatan temuan" di detail aset, ruang, dan kartu barang persediaan. Setiap catatan tertaut ke satu data (`target: {t: aset|ruang|barang|umum, id, label}`), punya kategori (Kerusakan, Kehilangan, Perlu perbaikan / perawatan, Tidak sesuai data, Lainnya), status (Terbuka, Ditindaklanjuti, Selesai), tindak lanjut, dan foto opsional. Catatan **langsung tersimpan tanpa validasi**, supaya temuan di lapangan cepat tercatat; operator hanya bisa mengubah status dan tindak lanjutnya, isi catatan tidak bisa diubah, dan hanya master yang bisa menghapus. Halaman awal **Rekap Data Sarpras** memuat kotak tulis catatan temuan (cari aset/ruang/barang, pilih, tulis), catatan terbuka terbaru, rekap aset per golongan dan kondisi, kondisi ruangan, temuan pemeriksa, dan riwayat perubahan terbaru beserta nama akunnya. Aset dan ruang yang punya catatan terbuka diberi tanda "n temuan" di daftarnya.
 
+### Status terkini dan chat tim
+- **Status terkini** (bagian atas Rekap Data Sarpras): daftar akun aktif, siapa yang sedang membuka aplikasi dan di menu apa, atau kapan terakhir aktif. Setiap akun menulis `online/{uid}` (`nama`, `at`, `view`, `off`) saat membuka aplikasi, setiap 90 detik selama halaman terbuka, dan saat menutup halaman (`off: true`). Dianggap online bila `at` kurang dari 4 menit lalu.
+- **Chat tim** (tombol "Chat tim" di kanan bawah setiap halaman): pesan di koleksi `chat` (`by`, `nama`, `teks`, `at`), dibaca semua akun yang login, maks. 2.000 huruf. Yang ditampilkan 200 pesan terakhir. Ada penanda pesan belum dibaca dan pemberitahuan pesan baru. Hanya master yang bisa menghapus pesan.
+
 Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvalidasi), dan `_at` (waktu). Riwayat lengkap ada di koleksi `log` (satu dokumen per hari) dan tampil di menu **Validasi → Riwayat perubahan** serta di detail setiap aset.
 
 ---
@@ -94,6 +98,7 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 | `foto` | Foto (JPEG dikompres, disimpan sebagai data URL, maks. ±420 KB per foto) |
 | `akun` | Akun aplikasi: nama, jabatan, email, peran, aktif, hak akses (`izin`) |
 | `catatan` | Catatan temuan (lihat di atas) |
+| `online`, `chat` | Status terkini dan chat tim (lihat di atas) |
 | `usulan`, `keputusan`, `log` | Alur validasi dan riwayat perubahan |
 | `meta/config` | Pengaturan surat (penandatangan, pola nomor surat) |
 
