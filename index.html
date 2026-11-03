@@ -239,8 +239,10 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
 <nav class="tabs" id="tabs" aria-label="Menu halaman">
   <div class="navhead"><img src="" id="nav-logo" alt="" width="40" height="40" style="flex:none"><div><b id="nav-appname">Aset & Persediaan</b><span id="nav-appdesc">SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD</span></div><button type="button" class="iconbtn" id="nav-close" aria-label="Tutup menu"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
   <a href="#home" data-v="home" class="navhome"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 9.5 10 3.5l7 6V17H12.5v-4.5h-5V17H3z"/></svg>Beranda · pilih aplikasi</a>
-  <div id="nav-app-jadwal"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Jadwal Ruang</p>
-  <div class="navsec"><a href="#jadwal" data-v="jadwal">Jadwal Aula & Multimedia <span id="jbadge"></span></a></div></div>
+  <div id="nav-app-jadwal"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Jadwal Penggunaan Aula dan Multimedia</p>
+  <div class="navsec"><a href="#jadwal" data-v="jadwal">Jadwal Penggunaan Aula dan Multimedia <span id="jbadge"></span></a></div></div>
+  <div id="nav-app-waka"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Waka Sarpras</p>
+  <div class="navsec"><a href="#akun" data-v="akun">Akun & hak akses</a></div></div>
   <div id="nav-app-sarpras"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Aset & Persediaan</p>
   <div class="navsec"><p class="navgroup">Utama</p>
     <a href="#ringkasan" data-v="ringkasan">Rekap Aset dan Persediaan</a>
@@ -259,10 +261,12 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
     <a href="#persediaan-masuk" data-v="persediaan">Persediaan</a>
     <a href="#kertas" data-v="kertas">Kertas Kerja Modal</a>
     <a href="#rekon" data-v="rekon">Rekon Aset</a>
-    <a href="#impor" data-v="impor">Impor SIPBMD</a></div></div>
-  <div class="navsec"><p class="navgroup">Akun</p>
+    <a href="#impor" data-v="impor">Impor SIPBMD</a></div>
+  <div class="navsec"><p class="navgroup">Validasi & pengaturan</p>
     <a href="#validasi" data-v="validasi">Validasi <span id="vbadge"></span></a>
-    <a href="#atur" data-v="atur">Pengaturan</a></div>
+    <a href="#atur" data-v="atur">Pengaturan surat & penerima</a></div></div>
+  <div class="navsec" id="nav-me"><p class="navgroup">Akun saya</p>
+    <a href="#akun" data-v="akun">Akun saya · ganti password</a></div>
 </nav>
 <main class="wrap" id="view"></main>
 <div id="drawerRoot"></div>
@@ -571,7 +575,7 @@ function xlsxSave(filename, sheets) {
 }
 
 /* ================= router ================= */
-const VIEWS = ["home","jadwal","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
+const VIEWS = ["home","jadwal","akun","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
 let current = "ringkasan", sub = "";
 const UI = {
   aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"" },
@@ -589,11 +593,12 @@ function route() {
   if (current === "persediaan" && !["masuk","keluar","mutasi"].includes(sub)) sub = "masuk";
   for (const a of document.querySelectorAll("#tabs a")) { if (a.dataset.v === current) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
   const link = document.querySelector(`#tabs a[data-v="${current}"]`), nama = current === "home" ? "Beranda" : link ? link.firstChild.textContent.trim() : "";
-  const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "atur" || current === "validasi" ? (window.__lastApp || "sarpras") : "sarpras";
+  const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "akun" ? "waka" : "sarpras";
   if (app !== "home") window.__lastApp = app;
-  const APPN = { home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Ruang", "Jadwal Ruang · SMAN 1 Berau", "SMAN 1 Berau · peminjaman Aula dan Ruang Multimedia"] }[app];
+  const APPN = { home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Penggunaan Aula dan Multimedia", "Jadwal Penggunaan Aula dan Multimedia · SMAN 1 Berau", "SMAN 1 Berau · pengajuan dan persetujuan pemakaian Aula dan Ruang Multimedia"], waka:["Waka Sarpras", "Waka Sarpras · SMAN 1 Berau", "SMAN 1 Berau · akun, hak akses, dan administrasi Waka Sarpras"] }[app];
   $(".pageid .app").textContent = APPN[1]; $("#nav-appname").textContent = APPN[0]; $("#nav-appdesc").textContent = APPN[2];
-  $("#nav-app-sarpras").hidden = app === "jadwal"; $("#nav-app-jadwal").hidden = app === "sarpras";
+  for (const a2 of ["sarpras", "jadwal", "waka"]) $("#nav-app-" + a2).hidden = app !== "home" && app !== a2;
+  $("#nav-me").hidden = app === "waka";
   const sb = current === "aset" ? (sub === "tak" ? "Aset tidak tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama) : current === "persediaan" ? ({ masuk:"Persediaan masuk", keluar:"Persediaan keluar", mutasi:"Mutasi persediaan" })[sub] : "";
   $("#pagetitle").textContent = nama; $("#pagesub").textContent = sb;
   document.title = nama + " · " + APPN[0] + (app === "home" ? "" : " SMAN 1 Berau");
@@ -638,9 +643,11 @@ function render(soft) {
     if (S.role === "none") { v.innerHTML = lockScreen(); return; }
     for (const a of document.querySelectorAll("#tabs a")) a.hidden = !canView(a.dataset.v);
     for (const sec of document.querySelectorAll("#tabs .navsec")) sec.hidden = ![...sec.querySelectorAll("a")].some(a => !a.hidden);
+    for (const a2 of ["sarpras", "jadwal", "waka"]) if (!appAccess(a2)) $("#nav-app-" + a2).hidden = true;
+    if (current === "akun" && appAccess("waka")) $("#nav-me").hidden = true;
     if (!canView(current)) { v.innerHTML = `<div class="empty"><b>Menu ini tidak termasuk akses akun Anda</b>Minta akun master menambahkan akses jika Anda perlu membukanya.</div>`; return; }
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
-    if (current === "home" || current === "jadwal") { v.innerHTML = current === "home" ? vHome() : vJadwal(); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); return; }
+    if (current === "home" || current === "jadwal" || current === "akun") { v.innerHTML = current === "home" ? vHome() : current === "akun" ? vAkunPage() : vJadwal(); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
     v.innerHTML = ({ home:vHome, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:vKertas, rekon:vRekon, impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) {} } }
@@ -702,14 +709,16 @@ function kibStrip(mode) {
 const APPS = [
   { id:"sarpras", nama:"Aset & Persediaan", desc:"Pendataan aset SIPBMD, kondisi ruangan, pemeliharaan dan perbaikan, BAST, usulan penghapusan, persediaan, dan kertas kerja modal.", href:"#ringkasan", ac:"var(--accent)", acs:"var(--accent-soft)", siap:true,
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="31" width="25" height="22" rx="2" fill="#d99a4e"/><path d="M9 37h25" stroke="#b97a32" stroke-width="2"/><rect x="18" y="31" width="7" height="8" fill="#f3d6a3"/><rect x="14" y="12" width="21" height="19" rx="2" fill="#e8b46b"/><path d="M14 17h21" stroke="#c98d43" stroke-width="2"/><rect x="21" y="12" width="7" height="7" fill="#f6e0b6"/><rect x="38" y="15" width="19" height="38" rx="3" fill="#fff" stroke="#1e5a4c" stroke-width="2.2"/><rect x="43" y="11" width="9" height="7" rx="2" fill="#1e5a4c"/><path d="m41.5 26 2 2 3.5-4M41.5 35l2 2 3.5-4M41.5 44l2 2 3.5-4" stroke="#2f9a5a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M49 26h5M49 35h5M49 44h5" stroke="#8aa69c" stroke-width="2" stroke-linecap="round"/></svg>' },
-  { id:"jadwal", nama:"Jadwal Ruang", desc:"Jadwal pemakaian Aula dan Ruang Multimedia berdampingan, pengajuan peminjaman, dan persetujuan.", href:"#jadwal", ac:"#7e5bb5", acs:"color-mix(in srgb, #7e5bb5 16%, transparent)", siap:true,
+  { id:"jadwal", nama:"Jadwal Penggunaan Aula dan Multimedia", desc:"Jadwal pemakaian Aula dan Ruang Multimedia berdampingan, pengajuan peminjaman, dan persetujuan.", href:"#jadwal", ac:"#7e5bb5", acs:"color-mix(in srgb, #7e5bb5 16%, transparent)", siap:true,
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="11" width="42" height="41" rx="5" fill="#fff" stroke="#6b4fa0" stroke-width="2.2"/><path d="M6 16a5 5 0 0 1 5-5h32a5 5 0 0 1 5 5v6H6z" fill="#7e5bb5"/><path d="M16 7v8M38 7v8" stroke="#4b3578" stroke-width="3" stroke-linecap="round"/><rect x="11" y="27" width="15" height="7" rx="2" fill="#4caf7a"/><rect x="29" y="27" width="14" height="11" rx="2" fill="#b49be0"/><rect x="11" y="37" width="15" height="9" rx="2" fill="#b49be0"/><rect x="29" y="41" width="14" height="6" rx="2" fill="#4caf7a"/><circle cx="48" cy="46" r="12" fill="#fff" stroke="#6b4fa0" stroke-width="2.2"/><path d="M48 39v7l5 3" stroke="#6b4fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>' },
   { id:"keuangan", nama:"Keuangan", desc:"Perencanaan dan RKAS, usulan kebutuhan dari unit, realisasi belanja, dan laporan.", ac:"var(--info)", acs:"var(--info-soft)", siap:false,
     rencana:["RKAS & perencanaan anggaran", "Usulan kebutuhan (form dari unit/guru)", "Realisasi belanja & SPJ", "Laporan & rekap per sumber dana"],
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="8" width="32" height="44" rx="3" fill="#fff" stroke="#2d5d8a" stroke-width="2.2"/><path d="M14 18h20M14 25h20M14 32h13" stroke="#9db6cf" stroke-width="2.4" stroke-linecap="round"/><text x="14" y="46" font-family="Arial,sans-serif" font-weight="700" font-size="11" fill="#2d5d8a">Rp</text><ellipse cx="46" cy="52" rx="11" ry="4" fill="#d9a520"/><rect x="35" y="44" width="22" height="8" fill="#e9b938"/><ellipse cx="46" cy="44" rx="11" ry="4" fill="#f5cf55" stroke="#c99619" stroke-width="1.2"/><rect x="35" y="36" width="22" height="8" fill="#e9b938"/><ellipse cx="46" cy="36" rx="11" ry="4" fill="#f8d96a" stroke="#c99619" stroke-width="1.2"/></svg>' },
-  { id:"waka", nama:"Waka Sarpras", desc:"Program kerja dan realisasinya, persuratan, proposal, dan laporan Waka Sarpras.", ac:"var(--warn)", acs:"var(--warn-soft)", siap:false,
-    rencana:["Program kerja & realisasi", "Persuratan (agenda surat masuk/keluar)", "Proposal & dokumentasi kegiatan", "Laporan bulanan, semester, tahunan"],
+  { id:"waka", nama:"Waka Sarpras", desc:"Kewenangan Waka Sarpras: akun dan hak akses semua aplikasi, program kerja dan realisasi, persuratan, proposal, dan laporan.", href:"#akun", ac:"var(--warn)", acs:"var(--warn-soft)", siap:true,
+    menu:[["Akun & hak akses", true], ["Program kerja & realisasi", false], ["Persuratan (agenda surat masuk/keluar)", false], ["Proposal & dokumentasi kegiatan", false], ["Laporan bulanan, semester, tahunan", false]],
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><path d="M33 6v12" stroke="#5d675f" stroke-width="2"/><path d="M33 6h10l-2 3 2 3H33z" fill="#d6372b"/><path d="M33 9.5h10" stroke="#fff" stroke-width="1"/><path d="M4 30 32 16l28 14z" fill="#b8402f"/><rect x="8" y="30" width="48" height="24" fill="#f6ecd2" stroke="#9a6a0b" stroke-width="2"/><rect x="13" y="35" width="8" height="7" rx="1" fill="#7fb3dc"/><rect x="43" y="35" width="8" height="7" rx="1" fill="#7fb3dc"/><rect x="27" y="38" width="10" height="16" rx="1" fill="#8a5a2b"/><rect x="13" y="45" width="8" height="6" rx="1" fill="#7fb3dc"/><rect x="43" y="45" width="8" height="6" rx="1" fill="#7fb3dc"/><path d="M4 54h56" stroke="#4caf7a" stroke-width="3"/></svg>' },
+  { id:"outsourcing", nama:"Outsourcing", desc:"Pemantauan laporan hasil kinerja outsourcing bidang kebersihan dan keamanan.", ac:"#3f6fb0", acs:"color-mix(in srgb, #3f6fb0 16%, transparent)", siap:false, rencana:[],
+    icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><path d="M40 8c7 3 13 3 18 2v18c0 13-8 21-18 26-10-5-18-13-18-26V10c5 1 11 1 18-2z" fill="#3f6fb0" stroke="#284b7a" stroke-width="2"/><path d="m31 30 6 6 11-12" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 58 22 26" stroke="#8a5a2b" stroke-width="3.5" stroke-linecap="round"/><path d="M4 56c3-6 8-8 12-6l-2 9c-4 1-8 0-10-3z" fill="#e3b04b" stroke="#a87b22" stroke-width="1.5"/><path d="M7 55l3-4M10 57l3-5" stroke="#a87b22" stroke-width="1.2"/></svg>' },
 ];
 function vHome() {
   const me = AK.list.find(a => a._id === S.me), nama = me ? (me.nama || shownLogin(me.email)) : "";
@@ -722,8 +731,9 @@ function vHome() {
       <div class="ah"><span class="ai" aria-hidden="true">${a.icon}</span><div><h3>${a.nama}</h3>${a.siap ? '<span class="pill ok">Aktif</span>' : '<span class="pill warn">Sedang disiapkan</span>'}</div></div>
       <p class="ad">${a.desc}</p>
       ${a.id === "jadwal" ? (!ok ? "" : `<div class="stats">${stat(fmt(jdToday().length), "pemakaian hari ini")}${stat(fmt(jdActive().filter(b => b.tgl >= ymd(new Date()) && b.tgl <= ymd(addDays(weekStart(new Date()), 6))).length), "jadwal minggu ini")}${stat(fmt(S.pinjam.filter(b => b.st === "Diajukan").length), "menunggu persetujuan")}</div>`) :
-      a.id === "sarpras" ? (!ok ? "" : `<div class="stats">${stat(ready ? fmt(all.length) : "…", "aset tercatat")}${stat(fmt(S.catatan.filter(c => c.st !== "Selesai").length), "catatan temuan terbuka")}${stat(fmt(pendingList().length), "menunggu validasi")}</div>`) : `<div><p class="sectionlabel" style="margin-bottom:4px">Rencana menu</p><ul>${a.rencana.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>`}
-      <div class="go">${a.siap ? (ok ? `<a class="btn primary" href="${a.href}">Buka ${a.nama}</a>` : '<span class="muted sm">Tidak termasuk akses akun Anda</span>') : `<button disabled>Belum tersedia</button>${ok ? '<span class="sm muted">Akun Anda sudah diberi akses</span>' : ""}`}</div>
+      a.menu ? `<div><p class="sectionlabel" style="margin-bottom:4px">Menu</p><ul>${a.menu.map(([m2, on]) => `<li>${esc(m2)} ${on ? '<span class="pill ok">aktif</span>' : '<span class="pill">disiapkan</span>'}</li>`).join("")}</ul></div>` :
+      a.id === "sarpras" ? (!ok ? "" : `<div class="stats">${stat(ready ? fmt(all.length) : "…", "aset tercatat")}${stat(fmt(S.catatan.filter(c => c.st !== "Selesai").length), "catatan temuan terbuka")}${stat(fmt(pendingList().length), "menunggu validasi")}</div>`) : (a.rencana.length ? `<div><p class="sectionlabel" style="margin-bottom:4px">Rencana menu</p><ul>${a.rencana.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>` : '<p class="muted sm" style="margin:0">Isi menu akan diatur kemudian.</p>')}
+      <div class="go">${a.siap ? (ok ? `<a class="btn primary" href="${a.href}" aria-label="Buka ${a.nama}">Buka aplikasi</a>` : '<span class="muted sm">Tidak termasuk akses akun Anda</span>') : `<button disabled>Belum tersedia</button>${ok ? '<span class="sm muted">Akun Anda sudah diberi akses</span>' : ""}`}</div>
     </article>`;
   };
   return `<div class="hero"><img src="${LOGO.sekolah}" alt="Logo SMAN 1 Berau"><div><h2>${salam}${nama ? ", " + esc(nama) : ""}</h2><p class="muted" style="margin:2px 0 0">Pilih aplikasi yang ingin dibuka. Semua aplikasi memakai akun, data pegawai, ruang, kop surat, chat tim, dan catatan temuan yang sama.</p></div></div>
@@ -867,7 +877,7 @@ function vJadwal() {
     return `<td class="jd-cell">${list.map(b => `<button class="jd-b ${b.st === "Disetujui" ? "ok" : "wait"} ${J.sel === b._id ? "sel" : ""}" data-jdsel="${esc(b._id)}"><span class="mono">${esc(b.mulai)}–${esc(b.selesai)}</span><b>${esc(b.kegiatan)}</b><span class="sm">${esc(b.unit || nameOf(b.by))}${b.st === "Diajukan" ? " · menunggu" : ""}</span></button>`).join("") || '<span class="faint sm">kosong</span>'}${canAju && t >= td ? `<button class="link sm jd-add" data-jdadd="${r.id}|${t}">+ ajukan</button>` : ""}</td>`; };
   const sel = J.sel && S.pinjam.find(b => b._id === J.sel);
   const list = S.pinjam.filter(b => (!J.fst || b.st === J.fst) && (!J.mine || b.by === S.me)).sort((a, b) => (a.tgl + a.mulai).localeCompare(b.tgl + b.mulai));
-  return `<h2>Jadwal Aula & Multimedia</h2>
+  return `<h2>Jadwal Penggunaan Aula dan Multimedia</h2>
   <p class="lead">Jadwal pemakaian Aula dan Ruang Multimedia ditampilkan berdampingan supaya jam yang bertabrakan langsung terlihat. Semua akun bisa melihat jadwal; pengajuan dan persetujuan mengikuti hak akses akun.</p>
   ${J.form ? jdFormHtml() : ""}
   <div class="toolbar" style="align-items:center">
@@ -1463,7 +1473,7 @@ function vValidasi() {
   const list = master ? pend : mine;
   const logs = S.log.flatMap(d => d.items || []).sort((a, b) => String(b.t).localeCompare(String(a.t)));
   const lq = UI.val.q, lshow = logs.filter(e => matches(lq, [e.ring, nameOf(e.by), nameOf(e.ok), e.st])).slice(0, 300);
-  return `<h2>Validasi & riwayat perubahan</h2>
+  return `<h2>Validasi & riwayat perubahan</h2><div class="note info" style="margin-bottom:12px">Validasi ini khusus untuk perubahan data di aplikasi <b>Aset & Persediaan</b>. Catatan temuan dan pengajuan Jadwal Penggunaan Aula dan Multimedia tidak melalui validasi ini.</div>
   <p class="lead">${master ? "Anda masuk sebagai <b>akun master</b>. Perubahan dari operator baru tersimpan permanen setelah Anda setujui; perubahan yang ditolak dibuang dari aplikasi. Perubahan yang Anda buat sendiri langsung tersimpan." : "Anda masuk sebagai <b>operator</b>. Setiap perubahan yang Anda simpan dikirim ke akun master dan baru berlaku setelah disetujui."}</p>
   <section class="panel"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0;flex:1">${master ? "Menunggu validasi" : "Usulan saya yang menunggu validasi"} (${fmt(list.length)})</h3>
     ${master && list.length ? `${UI.val.askAll ? `<span class="confirm"><button class="primary" id="v-all-yes">Ya, setujui ${list.length} usulan</button><button id="v-all-no">Batal</button></span>` : `<button class="primary" id="v-all">Setujui semua</button>`}` : ""}</div>
@@ -2404,14 +2414,13 @@ function vRekon() {
 /* ================= pengaturan ================= */
 function vAtur() {
   const c = cfg(), F = (id, label) => `<label class="f">${label}<input id="c-${id}" value="${esc(c[id])}"></label>`;
-  return `<h2>Pengaturan surat</h2><p class="lead">Nama penandatangan dan pola nomor surat yang dipakai di BAST dan bukti pengeluaran persediaan. Berlaku untuk semua pengguna aplikasi ini.</p>
+  return `<h2>Pengaturan surat & penerima</h2><p class="lead">Nama penandatangan dan pola nomor surat yang dipakai di BAST dan bukti pengeluaran persediaan. Berlaku untuk semua pengguna aplikasi ini.</p>
   <section class="panel"><div class="fgrid">${F("waka", "Waka Sarpras")}${F("nipWaka", "NIP Waka Sarpras")}${F("jabWaka", "Jabatan")}<span></span>${F("kepsek", "Kepala Sekolah")}${F("nipKepsek", "NIP Kepala Sekolah")}
   ${F("pengurus", "Pengurus barang (bukti keluar persediaan)")}${F("nipPengurus", "NIP pengurus barang")}
   ${F("klasSerah", "Klasifikasi surat penyerahan")}${F("bagSerah", "Kode bagian penyerahan")}${F("klasTarik", "Klasifikasi surat penarikan")}${F("bagTarik", "Kode bagian penarikan")}
   <label class="f full">Alamat kop<input id="c-alamat" value="${esc(c.alamat)}"></label><label class="f full">Telepon kop<input id="c-kontak" value="${esc(c.kontak)}"></label><label class="f full">Laman kop<input id="c-laman" value="${esc(c.laman)}"></label></div>
   <p class="hint">Contoh nomor berikutnya: <span class="mono">${esc(nextNomor("serah", today()))}</span></p>
   ${isMaster() ? '<button class="primary" id="c-save" style="margin-top:8px">Simpan pengaturan</button>' : '<p class="hint">Hanya akun master yang bisa mengubah pengaturan.</p>'}</section>
-  ${vAkun()}
   ${vPenerima()}`;
 }
 function vAkun() {
@@ -2937,10 +2946,13 @@ function lockScreen() {
     <p>Anda masuk sebagai <b>${esc(u ? shownLogin(u.email) : "")}</b>, tetapi akun ini belum terdaftar sebagai operator sarpras atau sedang dinonaktifkan.</p>
     <p>Minta akun master (Waka Sarpras) mengaktifkan akun Anda di menu Pengaturan → Akun & akses.</p><button id="lg-out">Keluar</button></div>`;
 }
+function vAkunPage() {
+  return `<h2>Akun & hak akses</h2><p class="lead">${isMaster() ? "Kelola akun semua aplikasi SMAN 1 Berau: buat akun baru, ubah nama, jabatan, dan hak akses akun yang sudah terdaftar, nonaktifkan akun, dan ganti password Anda." : "Data akun Anda dan penggantian password. Pengelolaan akun dilakukan oleh Waka Sarpras (akun master)."}</p>${vAkun()}`;
+}
 function vAkun() {
   const u = fauth.currentUser, master = isMaster();
   const list = AK.list.slice().sort((a, b) => (a.role === "master" ? -1 : 1) - (b.role === "master" ? -1 : 1) || String(a.nama).localeCompare(String(b.nama)));
-  return `<section class="panel" style="margin-top:14px" id="akun"><h3>Akun & akses</h3>
+  return `<section class="panel" id="akun"><h3>Akun</h3>
     <p style="margin:0 0 12px">Anda masuk sebagai <b>${esc(akunName(u && u.uid) || shownLogin(u && u.email))}</b> (${esc(shownLogin(u && u.email))}) · ${master ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'} <button class="ghost" id="lg-out">Keluar</button></p>
     ${master ? `<div style="border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--sunk);margin-bottom:12px">
       <p class="sectionlabel">Buat akun operator</p>
@@ -2951,8 +2963,11 @@ function vAkun() {
       <p class="hint">Sampaikan nama pengguna (atau email) dan password awal kepada operator. Operator bisa mengganti passwordnya sendiri setelah masuk. Akun dengan nama pengguna tidak bisa memakai "Lupa password"; jika lupa, nonaktifkan akunnya lalu buat akun baru.</p></div>` : ""}
     <div class="tablebox"><table><thead><tr><th>Nama</th><th>Login</th><th>Peran</th><th>Akses</th><th>Status</th>${master ? "<th></th>" : ""}</tr></thead><tbody>
     ${list.map(a => `<tr><td>${esc(a.nama || "")}<div class="sm">${esc(a.jab || "")}</div></td><td class="sm">${esc(shownLogin(a.email))}${isUsernameAcct(a.email) ? ' <span class="pill">nama pengguna</span>' : ""}</td><td>${a.role === "master" ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'}</td><td class="sm">${a.role === "master" ? "semua" : `${esc(appSummary(a.izin))}<br><span class="muted">Aset & Persediaan: ${esc(izinSummary(a.izin))}</span>`}</td><td>${a.aktif === false ? '<span class="pill bad">nonaktif</span>' : '<span class="pill ok">aktif</span>'}</td>
-      ${master ? `<td style="white-space:nowrap">${a.role === "master" ? "" : `${isUsernameAcct(a.email) ? "" : `<button class="ghost" data-akreset="${esc(a.email || "")}">Kirim reset password</button>`}<button class="ghost" data-akedit="${esc(a._id)}">Atur akses</button><button class="ghost" data-akaktif="${esc(a._id)}">${a.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>`}</td>` : ""}</tr>
-      ${master && UI.akEdit === a._id ? `<tr><td colspan="6" style="background:var(--sunk)"><p class="sectionlabel">Hak akses ${esc(a.nama || shownLogin(a.email))}</p>${izinChecklist("ae-iz", a.izin || PRESET.staf.izin)}<div style="display:flex;gap:8px;margin-top:8px"><button class="primary" data-aesave="${esc(a._id)}">Simpan hak akses</button><button data-aecancel="1">Batal</button></div></td></tr>` : ""}`).join("") || `<tr><td colspan="5" class="muted">Belum ada akun operator.</td></tr>`}
+      ${master ? `<td style="white-space:nowrap">${a.role === "master" ? "" : `${isUsernameAcct(a.email) ? "" : `<button class="ghost" data-akreset="${esc(a.email || "")}">Kirim reset password</button>`}<button class="ghost" data-akedit="${esc(a._id)}">Ubah</button><button class="ghost" data-akaktif="${esc(a._id)}">${a.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>`}</td>` : ""}</tr>
+      ${master && UI.akEdit === a._id ? `<tr><td colspan="6" style="background:var(--sunk)"><p class="sectionlabel">Ubah akun ${esc(a.nama || shownLogin(a.email))}</p>
+        <div class="fgrid" style="margin-bottom:10px"><label class="f">Nama lengkap<input id="ae-nama" value="${esc(a.nama || "")}"></label><label class="f">Jabatan<input id="ae-jab" value="${esc(a.jab || "")}"></label>
+        <label class="f">Login<input value="${esc(shownLogin(a.email))}" disabled><span class="hint">Nama pengguna/email login tidak bisa diubah. Jika perlu login baru, buat akun baru lalu nonaktifkan akun ini.</span></label></div>
+        <p class="sectionlabel">Hak akses</p>${izinChecklist("ae-iz", a.izin || PRESET.staf.izin)}<div style="display:flex;gap:8px;margin-top:8px"><button class="primary" data-aesave="${esc(a._id)}">Simpan perubahan</button><button data-aecancel="1">Batal</button></div></td></tr>` : ""}`).join("") || `<tr><td colspan="5" class="muted">Belum ada akun operator.</td></tr>`}
     </tbody></table></div>
     <div style="margin-top:14px"><p class="sectionlabel">Ganti password saya</p><div class="fgrid"><label class="f">Password baru<input id="ak-p1" type="password" autocomplete="new-password"></label><label class="f">Ulangi password baru<input id="ak-p2" type="password" autocomplete="new-password"></label></div><button id="ak-pw" style="margin-top:8px">Simpan password baru</button></div>
   </section>`;
@@ -2981,12 +2996,12 @@ const PRESET = {
 function myIzin() { const me = AK.list.find(a => a._id === S.me); return me && me.izin ? me.izin : PRESET.staf.izin; }
 function can(k) { return isMaster() || (S.role === "operator" && !!myIzin()[k]); }
 // which applications an account may open (accounts without the setting keep Sarpras only)
-const APP_IZIN = [["app_sarpras", "Aset & Persediaan", "Aset, ruang, pemeliharaan, BAST, persediaan"], ["app_jadwal", "Jadwal Ruang", "Melihat jadwal Aula & Multimedia"], ["app_keuangan", "Keuangan", "RKAS, usulan, realisasi (sedang disiapkan)"], ["app_waka", "Waka Sarpras", "Program kerja, jadwal ruang, surat (sedang disiapkan)"]];
+const APP_IZIN = [["app_sarpras", "Aset & Persediaan", "Aset, ruang, pemeliharaan, BAST, persediaan"], ["app_jadwal", "Jadwal Penggunaan Aula dan Multimedia", "Melihat jadwal Aula & Multimedia"], ["app_keuangan", "Keuangan", "RKAS, usulan, realisasi (sedang disiapkan)"], ["app_waka", "Waka Sarpras", "Akun & hak akses hanya untuk master; menu lain disiapkan"], ["app_outsourcing", "Outsourcing", "Laporan kinerja kebersihan & keamanan (sedang disiapkan)"]];
 const JD_IZIN = [["jadwal_ajukan", "Mengajukan peminjaman", "Mengisi pengajuan pemakaian Aula / Multimedia"], ["jadwal_setuju", "Menyetujui peminjaman", "Menyetujui, menolak, atau membatalkan pengajuan siapa pun"]];
 const APP_DEFAULT_ON = ["sarpras", "jadwal"];
 function appAccess(id) { if (isMaster()) return true; if (S.role !== "operator") return false; const v = myIzin()["app_" + id]; return APP_DEFAULT_ON.includes(id) ? v !== false : !!v; }
 const TAB_IZIN = { bast:"bast", pemegang:"bast", laporan:"bast", hapus:"hapus", persediaan:"persediaan", surat:"surat", kertas:"kertas", rekon:"kertas" };
-function canView(v) { if (v === "home" || v === "atur") return true; if (v === "jadwal") return appAccess("jadwal"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
+function canView(v) { if (v === "home" || v === "akun") return true; if (v === "jadwal") return appAccess("jadwal"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
 function izinSummary(iz) {
   if (!iz) return PRESET.staf.nama;
   for (const p of Object.values(PRESET)) if (IZIN.every(([k]) => !!iz[k] === !!p.izin[k])) return p.nama;
@@ -2997,7 +3012,7 @@ function appSummary(iz) { iz = iz || {}; const on = APP_IZIN.filter(([k]) => APP
 function izinChecklist(prefix, iz) {
   const appOn = k => iz && (APP_DEFAULT_ON.includes(k.slice(4)) ? iz[k] !== false : !!iz[k]);
   return `<p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Aplikasi yang boleh dibuka</b></p><div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 14px;margin-bottom:12px">${APP_IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${(iz ? appOn(k) : APP_DEFAULT_ON.includes(k.slice(4))) ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
-    <p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Hak akses di Jadwal Ruang</b> <span class="hint">semua akun yang terdaftar bisa melihat jadwal</span></p><div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px;margin-bottom:12px">${JD_IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${iz && iz[k] ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
+    <p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Hak akses di Jadwal Penggunaan Aula dan Multimedia</b> <span class="hint">semua akun yang terdaftar bisa melihat jadwal</span></p><div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px;margin-bottom:12px">${JD_IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${iz && iz[k] ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
     <p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Hak akses di aplikasi Aset & Persediaan</b></p>
     <div class="chips" style="margin-bottom:8px">${Object.entries(PRESET).map(([k, p]) => `<button type="button" class="chip" data-preset="${k}" data-for="${prefix}">${p.nama}</button>`).join("")}</div>
     <div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px">${IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${iz && iz[k] ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
@@ -3009,7 +3024,7 @@ document.addEventListener("click", async e => {
   if (t.dataset.preset) { const iz = PRESET[t.dataset.preset].izin; for (const [k] of IZIN) { const el = document.getElementById(t.dataset.for + "-" + k); if (el) el.checked = !!iz[k]; } }
   if (t.dataset.akedit) { UI.akEdit = UI.akEdit === t.dataset.akedit ? null : t.dataset.akedit; render(); }
   if (t.dataset.aecancel) { UI.akEdit = null; render(); }
-  if (t.dataset.aesave) { const a = AK.list.find(x => x._id === t.dataset.aesave); if (!a) return; try { await W.group("Ubah hak akses " + (a.nama || a.email), () => W.update("akun/" + a._id, { izin:readIzin("ae-iz") })); UI.akEdit = null; toast("Hak akses disimpan. Berlaku saat operator memuat ulang aplikasi."); render(); } catch (err) { writeErr(err); } }
+  if (t.dataset.aesave) { const a = AK.list.find(x => x._id === t.dataset.aesave); if (!a) return; try { await W.group("Ubah akun " + (a.nama || a.email), () => W.update("akun/" + a._id, { nama:val("ae-nama") || a.nama || "", jab:val("ae-jab") || "", izin:readIzin("ae-iz") })); UI.akEdit = null; toast("Akun disimpan. Hak akses baru berlaku saat akun itu memuat ulang aplikasi."); render(); } catch (err) { writeErr(err); } }
 });
 
 /* ---------- catatan temuan ---------- */
@@ -3176,7 +3191,7 @@ document.addEventListener("click", async e => {
 /* ---------- status terkini (siapa yang sedang membuka aplikasi) & chat tim ---------- */
 const LIVE = { on:{}, chat:[], open:false, started:false, t0:new Date().toISOString(), seen:"", lastBeat:0, sending:false };
 const ONLINE_MS = 4 * 60 * 1000, BEAT_MS = 90 * 1000;
-const VIEW_NAMA = { home:"Beranda", jadwal:"Jadwal Ruang", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset SIPBMD", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Kertas Kerja", rekon:"Rekon", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
+const VIEW_NAMA = { home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset SIPBMD", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Kertas Kerja", rekon:"Rekon", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
 function akunNama(id) { const a = AK.list.find(x => x._id === id); return a ? (a.nama || shownLogin(a.email)) : (LIVE.on[id] && LIVE.on[id].nama) || "Akun"; }
 const isOnline = o => !!o && !o.off && Date.now() - new Date(o.at).getTime() < ONLINE_MS;
 function onlineList() { return Object.entries(LIVE.on).filter(([, o]) => isOnline(o)).map(([id, o]) => Object.assign({ id }, o)).sort((a, b) => akunNama(a.id).localeCompare(akunNama(b.id))); }
