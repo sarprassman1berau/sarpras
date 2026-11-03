@@ -63,18 +63,18 @@ body.nav-open nav.tabs{transform:none;visibility:visible;transition:transform .1
 .navhead div{flex:1;display:flex;flex-direction:column;gap:2px}.navhead b{font-family:var(--f-head);font-size:15px}.navhead span{font-size:12px;color:var(--muted)}
 .navsec{display:flex;flex-direction:column;gap:1px}
 nav.tabs a.navhome{margin-top:6px;border:1px solid var(--line)}
-.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:6px}
-.appcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:14px}
+.appcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 14px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;position:relative;overflow:hidden}
 .appcard::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:var(--ac)}
-.appcard .ah{display:flex;gap:12px;align-items:center}
-.appcard .ai{width:68px;height:68px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:var(--acs);color:var(--ac);flex:none}
-.appcard h3{margin:0;font-size:18px}.appcard .ad{color:var(--muted);margin:0;font-size:13px}
-.appcard ul{margin:0;padding-left:18px;color:var(--fg);font-size:13px;display:flex;flex-direction:column;gap:3px}
-.appcard .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.appcard .stats div{background:var(--sunk);border-radius:8px;padding:8px}.appcard .stats b{display:block;font-size:18px;font-variant-numeric:tabular-nums}.appcard .stats span{font-size:11.5px;color:var(--muted)}
-.appcard .go{margin-top:auto;display:flex;gap:8px;align-items:center}
-.appcard.soon{background:linear-gradient(var(--surface),var(--surface)) padding-box}
-.hero{display:flex;gap:16px;align-items:center;margin-bottom:18px}.hero img{width:64px;height:64px;flex:none}.hero h2{display:block!important;margin:0}
+.appcard .ai{width:84px;height:84px;border-radius:20px;display:flex;align-items:center;justify-content:center;background:var(--acs);flex:none}
+.appcard .ai svg{width:62px;height:62px}
+.appcard h3{margin:2px 0 0;font-size:16px;line-height:1.3;min-height:2.6em;display:flex;align-items:center}
+.appcard .ast{margin:0;font-size:12.5px;color:var(--muted);min-height:2.8em;display:flex;gap:6px;align-items:flex-start;justify-content:center}
+.adot{width:8px;height:8px;border-radius:50%;background:var(--line-strong);margin-top:5px;flex:none}.adot.on{background:var(--ok)}
+.appcard .ago{width:100%;justify-content:center;margin-top:auto}
+.appcard.soon .ai{filter:saturate(.55)}.appcard.noacc{opacity:.75}
+@media (max-width:640px){.apps{grid-template-columns:repeat(2,1fr);gap:10px}.appcard .ai{width:64px;height:64px}.appcard .ai svg{width:48px;height:48px}.appcard h3{font-size:14px}}
+.hero{display:flex;gap:14px;align-items:center;margin-bottom:16px}.hero img{width:52px;height:52px;flex:none}.hero h2{display:block!important;margin:0}
 .links-note{margin-top:18px}
 table.jd-week{table-layout:fixed}table.jd-week th,table.jd-week td{vertical-align:top}
 table.jd-week thead th{text-align:center;font-size:13px}
@@ -723,23 +723,32 @@ const APPS = [
 function vHome() {
   const me = AK.list.find(a => a._id === S.me), nama = me ? (me.nama || shownLogin(me.email)) : "";
   const jam = new Date().getHours(), salam = jam < 11 ? "Selamat pagi" : jam < 15 ? "Selamat siang" : jam < 18 ? "Selamat sore" : "Selamat malam";
-  const ready = S.ready || S.seed.aset.length, all = ready ? allItems().visible : [];
-  const stat = (n, l) => `<div><b>${n}</b><span>${l}</span></div>`;
+  const ready = S.ready || S.seed.aset.length;
+  const status = a => {
+    if (!a.siap) return "Sedang disiapkan";
+    if (a.id === "sarpras") { const t = S.catatan.filter(c => c.st !== "Selesai").length, v = pendingList().length; return [ready ? fmt(allItems().visible.length) + " aset" : "memuat…", t ? fmt(t) + " temuan terbuka" : "", v ? fmt(v) + " menunggu validasi" : ""].filter(Boolean).join(" · "); }
+    if (a.id === "jadwal") { const h = jdToday().length, w = S.pinjam.filter(b => b.st === "Diajukan").length; return (h ? fmt(h) + " pemakaian hari ini" : "Hari ini kosong") + (w ? " · " + fmt(w) + " menunggu" : ""); }
+    if (a.id === "waka") { const n = AK.list.filter(x => x.aktif !== false).length; return fmt(n) + " akun aktif · " + fmt(typeof onlineList === "function" ? onlineList().length : 0) + " online"; }
+    return "";
+  };
   const card = a => {
     const ok = appAccess(a.id);
-    return `<article class="appcard ${a.siap ? "" : "soon"}" style="--ac:${a.ac};--acs:${a.acs}">
-      <div class="ah"><span class="ai" aria-hidden="true">${a.icon}</span><div><h3>${a.nama}</h3>${a.siap ? '<span class="pill ok">Aktif</span>' : '<span class="pill warn">Sedang disiapkan</span>'}</div></div>
-      <p class="ad">${a.desc}</p>
-      ${a.id === "jadwal" ? (!ok ? "" : `<div class="stats">${stat(fmt(jdToday().length), "pemakaian hari ini")}${stat(fmt(jdActive().filter(b => b.tgl >= ymd(new Date()) && b.tgl <= ymd(addDays(weekStart(new Date()), 6))).length), "jadwal minggu ini")}${stat(fmt(S.pinjam.filter(b => b.st === "Diajukan").length), "menunggu persetujuan")}</div>`) :
-      a.menu ? `<div><p class="sectionlabel" style="margin-bottom:4px">Menu</p><ul>${a.menu.map(([m2, on]) => `<li>${esc(m2)} ${on ? '<span class="pill ok">aktif</span>' : '<span class="pill">disiapkan</span>'}</li>`).join("")}</ul></div>` :
-      a.id === "sarpras" ? (!ok ? "" : `<div class="stats">${stat(ready ? fmt(all.length) : "…", "aset tercatat")}${stat(fmt(S.catatan.filter(c => c.st !== "Selesai").length), "catatan temuan terbuka")}${stat(fmt(pendingList().length), "menunggu validasi")}</div>`) : (a.rencana.length ? `<div><p class="sectionlabel" style="margin-bottom:4px">Rencana menu</p><ul>${a.rencana.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>` : '<p class="muted sm" style="margin:0">Isi menu akan diatur kemudian.</p>')}
-      <div class="go">${a.siap ? (ok ? `<a class="btn primary" href="${a.href}" aria-label="Buka ${a.nama}">Buka aplikasi</a>` : '<span class="muted sm">Tidak termasuk akses akun Anda</span>') : `<button disabled>Belum tersedia</button>${ok ? '<span class="sm muted">Akun Anda sudah diberi akses</span>' : ""}`}</div>
+    return `<article class="appcard ${a.siap ? "" : "soon"} ${ok ? "" : "noacc"}" style="--ac:${a.ac};--acs:${a.acs}">
+      <span class="ai" aria-hidden="true">${a.icon}</span>
+      <h3>${a.nama}</h3>
+      <p class="ast"><span class="adot ${a.siap && ok ? "on" : ""}"></span>${esc(a.siap && !ok ? "Tidak termasuk akses akun Anda" : status(a))}</p>
+      ${a.siap ? `<button class="${ok ? "primary" : ""} ago" data-appgo="${a.id}">${ok ? "Buka aplikasi" : "Tidak ada akses"}</button>` : '<button class="ago" disabled>Segera hadir</button>'}
     </article>`;
   };
-  return `<div class="hero"><img src="${LOGO.sekolah}" alt="Logo SMAN 1 Berau"><div><h2>${salam}${nama ? ", " + esc(nama) : ""}</h2><p class="muted" style="margin:2px 0 0">Pilih aplikasi yang ingin dibuka. Semua aplikasi memakai akun, data pegawai, ruang, kop surat, chat tim, dan catatan temuan yang sama.</p></div></div>
-  <div class="apps">${APPS.map(card).join("")}</div>
-  <div class="note info links-note">Aplikasi saling tertaut: belanja modal di Keuangan akan mengalir ke Kertas Kerja Modal dan aset Sarpras; catatan kondisi Aula dan Multimedia sesudah dipakai bisa masuk Catatan Temuan; proposal rehabilitasi bisa menarik data ruang rusak dan foto temuan.</div>`;
+  return `<div class="hero"><img src="${LOGO.sekolah}" alt="Logo SMAN 1 Berau"><div><h2>${salam}${nama ? ", " + esc(nama) : ""}</h2><p class="muted" style="margin:2px 0 0">Pilih aplikasi yang ingin dibuka.</p></div></div>
+  <div class="apps">${APPS.map(card).join("")}</div>`;
 }
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-appgo]"); if (!b) return;
+  const a = APPS.find(x => x.id === b.dataset.appgo); if (!a) return;
+  if (!appAccess(a.id)) { toast("Akses ditolak. Akun Anda tidak memiliki hak membuka aplikasi " + a.nama + ". Hubungi Waka Sarpras (akun master)."); return; }
+  location.hash = a.href;
+});
 
 /* ================= view: pemeliharaan & perbaikan ================= */
 // Rusak Sedang (aset and ruang) enters automatically; Rusak Berat aset goes to penghapusan instead,
