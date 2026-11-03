@@ -1,0 +1,44 @@
+rules_version = '2';
+// Aturan keamanan Sarpras SMAN 1 Berau.
+// - Master  : email di daftar isMaster(). Membaca dan menulis semua data.
+// - Operator: punya dokumen akun/{uid} dengan aktif == true. Membaca semua data,
+//             tetapi hanya boleh menulis usulannya sendiri (usulan/{uid}) dan foto baru.
+//             Perubahan operator baru berlaku setelah master menyetujuinya di aplikasi.
+// - Selain itu: tidak bisa membaca atau menulis apa pun.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isMaster() {
+      return signedIn() && request.auth.token.email != null
+        && request.auth.token.email.lower() in ["sarpras.sman1berau@gmail.com"];
+    }
+    function isOperator() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/akun/$(request.auth.uid))
+        && get(/databases/$(database)/documents/akun/$(request.auth.uid)).data.aktif == true;
+    }
+    function isMember() { return isMaster() || isOperator(); }
+
+    // semua data: anggota membaca, hanya master menulis
+    match /{document=**} {
+      allow read: if isMember();
+      allow write: if isMaster();
+    }
+    // daftar akun: dibaca anggota (untuk menampilkan nama), dibaca juga oleh pemilik akunnya
+    match /akun/{uid} {
+      allow read: if isMember() || (signedIn() && request.auth.uid == uid);
+    }
+    // usulan perubahan: operator menulis dokumen usulannya sendiri
+    match /usulan/{uid} {
+      allow write: if isOperator() && request.auth.uid == uid;
+    }
+    // foto: operator boleh menambah foto baru (ukuran dibatasi), tidak boleh mengubah/menghapus
+    match /foto/{id} {
+      allow create: if isOperator()
+        && request.resource.data.keys().hasOnly(["data", "by", "at"])
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 600000;
+    }
+  }
+}
