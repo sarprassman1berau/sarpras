@@ -334,7 +334,7 @@ let loadTimer = null;
 const setSync = t => { $("#sync").textContent = t; };
 async function boot() {
   route();
-  loadTimer = setTimeout(() => { if (!S.ready) { setSync("data belum terjangkau, periksa koneksi"); render(); } }, 10000);
+  loadTimer = setTimeout(() => { if (!S.ready) { setSync("data belum terjangkau"); S.loadErr = "Data belum diterima dari Firebase setelah 15 detik. Periksa koneksi internet. Jika koneksi baik, pastikan database Firestore sudah dibuat (Databases & Storage → Firestore Database) dan aturan keamanan (tab Rules) sudah di-Publish."; render(); } }, 15000);
   if (!window.claude || !window.claude.use) { setSync("layanan data belum siap"); render(); return; }
   const use = n => Promise.resolve().then(() => window.claude.use(n)).catch(() => null);
   // optional capabilities load on their own so a slow one never holds up the data
@@ -362,7 +362,7 @@ async function boot() {
     S.seed = seed; cache = null; penCache = null;
     if (!snap.metadata.fromCache) { S.ready = true; clearTimeout(loadTimer); setSync("tersinkron · " + seed.aset.length.toLocaleString("id-ID") + " aset SIPBMD"); }
     render();
-  }, err => { setSync("gagal memuat (" + err.code + ")"); render(); });
+  }, err => { clearTimeout(loadTimer); setSync("gagal memuat (" + err.code + ")"); S.loadErr = LOAD_HINT[err.code] || ("Firebase menolak permintaan data (" + err.code + "): " + (err.message || "")); console.error("seed", err); render(); });
   const sub = (path, fn) => db.collection(path).onSnapshot(snap => { fn(snap.docs.map(d => Object.assign({ _id:d.id }, d.data()))); cache = null; render(true); }, () => {});
   sub("upd", rows => { const m = {}; for (const r of rows) { const id = r._id; delete r._id; m[id] = r; } S.upd = m; });
   sub("aset_baru", rows => { S.baru = rows; });
@@ -528,6 +528,13 @@ function route() {
 }
 window.addEventListener("hashchange", route);
 let renderQueued = false;
+const LOAD_HINT = {
+  "permission-denied":"Firebase menolak membuka data (permission-denied). Biasanya karena aturan keamanan belum dipasang: buka Firebase → Databases & Storage → Firestore Database → tab Rules, hapus isinya, tempel seluruh isi file firestore.rules dari GitHub, lalu klik Publish. Tunggu 1 menit, lalu muat ulang halaman ini.",
+  "not-found":"Database Firestore tidak ditemukan. Pastikan database sudah dibuat di Firebase → Databases & Storage → Firestore Database dengan ID (default).",
+  "failed-precondition":"Database Firestore belum siap atau belum dibuat. Buka Firebase → Databases & Storage → Firestore Database dan pastikan database dengan ID (default) sudah ada.",
+  "unavailable":"Firebase tidak bisa dihubungi. Periksa koneksi internet lalu muat ulang halaman.",
+  "unauthenticated":"Sesi login berakhir. Klik Keluar lalu masuk lagi.",
+};
 function lockScreen() {
   return `<div class="empty" style="max-width:560px;margin:40px auto;text-align:left"><b style="font-size:20px">Aplikasi ini terkunci</b>
     <p>Data sarpras SMAN 1 Berau hanya bisa dibuka oleh akun yang sudah diundang oleh pengelola (Waka Sarpras).</p>
@@ -541,6 +548,7 @@ function render(soft) {
     const v = $("#view"), ae = document.activeElement;
     const focusId = ae && v.contains(ae) ? ae.id : null; let sel = null; try { sel = ae.selectionStart; } catch (e) {}
     if (S.role === "none") { v.innerHTML = lockScreen(); return; }
+    if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p><button onclick="location.reload()">Muat ulang</button></div>`; return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
     v.innerHTML = ({ ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:vKertas, rekon:vRekon, impor:vImpor, validasi:vValidasi, atur:vAtur })[current]();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) {} } }
