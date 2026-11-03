@@ -2376,6 +2376,11 @@ window.__fsProbe = async () => {
   catch (e) { console.error("probe", e); return (e.code ? e.code + ": " : "") + (e.message || String(e)); }
 };
 const FS = firebase.firestore;
+// operators may log in with a plain username; it is stored in Firebase as <username>@USER_DOMAIN (no mailbox)
+const USER_DOMAIN = "pengguna.sarpras-sman1berau.firebaseapp.com";
+const toLoginEmail = s => { const t = String(s || "").trim().toLowerCase(); return t.includes("@") ? t : t + "@" + USER_DOMAIN; };
+const isUsernameAcct = email => String(email || "").toLowerCase().endsWith("@" + USER_DOMAIN);
+const shownLogin = email => isUsernameAcct(email) ? String(email).split("@")[0] : String(email || "");
 const isMasterEmail = email => MASTER_EMAILS.map(e => e.toLowerCase()).includes(String(email || "").toLowerCase());
 const plain = d => JSON.parse(JSON.stringify(d === undefined ? null : d));
 
@@ -2512,7 +2517,7 @@ function loginScreen(msg) {
   $("#view").innerHTML = `<div style="max-width:400px;margin:40px auto">
     <section class="panel"><h2 style="margin-bottom:2px">Masuk</h2><p class="muted" style="margin:0 0 14px">Sarpras SMAN 1 Berau · khusus tim sarana dan prasarana</p>
     <form id="lg-form" class="fgrid" style="grid-template-columns:1fr">
-      <label class="f">Email<input id="lg-email" type="email" autocomplete="username" required></label>
+      <label class="f">Email atau nama pengguna<input id="lg-email" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
       <label class="f">Password<input id="lg-pass" type="password" autocomplete="current-password" required></label>
       ${msg ? `<div class="note bad">${esc(msg)}</div>` : ""}
       <button class="primary" id="lg-go" type="submit">Masuk</button>
@@ -2527,13 +2532,14 @@ document.addEventListener("submit", async e => {
   if (e.target.id !== "lg-form") return;
   e.preventDefault();
   const btn = $("#lg-go"); btn.disabled = true; btn.textContent = "Memeriksa…";
-  try { await fauth.signInWithEmailAndPassword(val("lg-email"), $("#lg-pass").value); }
+  try { await fauth.signInWithEmailAndPassword(toLoginEmail(val("lg-email")), $("#lg-pass").value); }
   catch (err) { loginScreen(authErr(err)); }
 });
 document.addEventListener("click", async e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.id === "lg-forgot") {
     const email = val("lg-email"); if (!email) { toast("Isi email dulu, lalu klik Lupa password."); return; }
+    if (!email.includes("@")) { toast("Akun dengan nama pengguna tidak bisa atur ulang password lewat email. Minta akun master membuatkan akun baru."); return; }
     try { await fauth.sendPasswordResetEmail(email); toast("Tautan atur ulang password dikirim ke " + email + ". Periksa juga folder spam."); } catch (err) { toast(authErr(err)); }
   }
   if (t.id === "lg-out") { try { await fauth.signOut(); } catch (err) {} location.reload(); }
@@ -2543,23 +2549,23 @@ document.addEventListener("click", async e => {
 function lockScreen() {
   const u = fauth.currentUser;
   return `<div class="empty" style="max-width:560px;margin:40px auto;text-align:left"><b style="font-size:20px">Akun belum aktif</b>
-    <p>Anda masuk sebagai <b>${esc(u ? u.email : "")}</b>, tetapi akun ini belum terdaftar sebagai operator sarpras atau sedang dinonaktifkan.</p>
+    <p>Anda masuk sebagai <b>${esc(u ? shownLogin(u.email) : "")}</b>, tetapi akun ini belum terdaftar sebagai operator sarpras atau sedang dinonaktifkan.</p>
     <p>Minta akun master (Waka Sarpras) mengaktifkan akun Anda di menu Pengaturan → Akun & akses.</p><button id="lg-out">Keluar</button></div>`;
 }
 function vAkun() {
   const u = fauth.currentUser, master = isMaster();
   const list = AK.list.slice().sort((a, b) => (a.role === "master" ? -1 : 1) - (b.role === "master" ? -1 : 1) || String(a.nama).localeCompare(String(b.nama)));
   return `<section class="panel" style="margin-top:14px" id="akun"><h3>Akun & akses</h3>
-    <p style="margin:0 0 12px">Anda masuk sebagai <b>${esc(akunName(u && u.uid) || (u && u.email))}</b> (${esc(u && u.email)}) · ${master ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'} <button class="ghost" id="lg-out">Keluar</button></p>
+    <p style="margin:0 0 12px">Anda masuk sebagai <b>${esc(akunName(u && u.uid) || shownLogin(u && u.email))}</b> (${esc(shownLogin(u && u.email))}) · ${master ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'} <button class="ghost" id="lg-out">Keluar</button></p>
     ${master ? `<div style="border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--sunk);margin-bottom:12px">
       <p class="sectionlabel">Buat akun operator</p>
       <div class="fgrid"><label class="f">Nama lengkap<input id="ak-nama"></label><label class="f">Jabatan<input id="ak-jab" placeholder="mis. Staf Sarpras"></label>
-        <label class="f">Email<input id="ak-email" type="email" autocomplete="off"></label><label class="f">Password awal (min. 6 karakter)<input id="ak-pass" type="text" autocomplete="off"></label></div>
+        <label class="f">Nama pengguna atau email<input id="ak-email" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="mis. jamir, atau jamir@gmail.com"></label><label class="f">Password awal (min. 6 karakter)<input id="ak-pass" type="text" autocomplete="off"></label></div>
       <button class="primary" id="ak-new" style="margin-top:10px">Buat akun</button>
-      <p class="hint">Sampaikan email dan password awal kepada operator. Operator bisa mengganti passwordnya sendiri setelah masuk.</p></div>` : ""}
-    <div class="tablebox"><table><thead><tr><th>Nama</th><th>Email</th><th>Peran</th><th>Status</th>${master ? "<th></th>" : ""}</tr></thead><tbody>
-    ${list.map(a => `<tr><td>${esc(a.nama || "")}<div class="sm">${esc(a.jab || "")}</div></td><td class="sm">${esc(a.email || "")}</td><td>${a.role === "master" ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'}</td><td>${a.aktif === false ? '<span class="pill bad">nonaktif</span>' : '<span class="pill ok">aktif</span>'}</td>
-      ${master ? `<td style="white-space:nowrap">${a.role === "master" ? "" : `<button class="ghost" data-akreset="${esc(a.email || "")}">Kirim reset password</button><button class="ghost" data-akaktif="${esc(a._id)}">${a.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>`}</td>` : ""}</tr>`).join("") || `<tr><td colspan="5" class="muted">Belum ada akun operator.</td></tr>`}
+      <p class="hint">Sampaikan nama pengguna (atau email) dan password awal kepada operator. Operator bisa mengganti passwordnya sendiri setelah masuk. Akun dengan nama pengguna tidak bisa memakai "Lupa password"; jika lupa, nonaktifkan akunnya lalu buat akun baru.</p></div>` : ""}
+    <div class="tablebox"><table><thead><tr><th>Nama</th><th>Login</th><th>Peran</th><th>Status</th>${master ? "<th></th>" : ""}</tr></thead><tbody>
+    ${list.map(a => `<tr><td>${esc(a.nama || "")}<div class="sm">${esc(a.jab || "")}</div></td><td class="sm">${esc(shownLogin(a.email))}${isUsernameAcct(a.email) ? ' <span class="pill">nama pengguna</span>' : ""}</td><td>${a.role === "master" ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'}</td><td>${a.aktif === false ? '<span class="pill bad">nonaktif</span>' : '<span class="pill ok">aktif</span>'}</td>
+      ${master ? `<td style="white-space:nowrap">${a.role === "master" ? "" : `${isUsernameAcct(a.email) ? "" : `<button class="ghost" data-akreset="${esc(a.email || "")}">Kirim reset password</button>`}<button class="ghost" data-akaktif="${esc(a._id)}">${a.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>`}</td>` : ""}</tr>`).join("") || `<tr><td colspan="5" class="muted">Belum ada akun operator.</td></tr>`}
     </tbody></table></div>
     <div style="margin-top:14px"><p class="sectionlabel">Ganti password saya</p><div class="fgrid"><label class="f">Password baru<input id="ak-p1" type="password" autocomplete="new-password"></label><label class="f">Ulangi password baru<input id="ak-p2" type="password" autocomplete="new-password"></label></div><button id="ak-pw" style="margin-top:8px">Simpan password baru</button></div>
   </section>`;
@@ -2569,8 +2575,10 @@ document.addEventListener("click", async e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.id === "ak-new") {
     if (!isMaster()) return;
-    const nama = val("ak-nama"), email = val("ak-email").toLowerCase(), pass = $("#ak-pass").value, jab = val("ak-jab");
-    if (!nama || !email || pass.length < 6) { toast("Isi nama, email, dan password awal minimal 6 karakter."); return; }
+    const raw = val("ak-email").toLowerCase(), pass = $("#ak-pass").value, nama = val("ak-nama"), jab = val("ak-jab");
+    if (!nama || !raw || pass.length < 6) { toast("Isi nama, nama pengguna atau email, dan password awal minimal 6 karakter."); return; }
+    if (!raw.includes("@") && !/^[a-z0-9][a-z0-9._-]{2,29}$/.test(raw)) { toast("Nama pengguna 3–30 karakter: huruf kecil, angka, titik, garis bawah, atau tanda hubung, tanpa spasi."); return; }
+    const email = toLoginEmail(raw);
     t.disabled = true;
     try {
       // a second Firebase instance creates the account without signing the master out
@@ -2578,7 +2586,7 @@ document.addEventListener("click", async e => {
       const cred = await secondary.auth().createUserWithEmailAndPassword(email, pass);
       const uid = cred.user.uid; await secondary.auth().signOut();
       await W.set("akun/" + uid, { nama, jab, email, role:"operator", aktif:true, dibuat:new Date().toISOString() });
-      toast("Akun " + email + " dibuat."); ["ak-nama", "ak-email", "ak-pass", "ak-jab"].forEach(i => { const el = document.getElementById(i); if (el) el.value = ""; });
+      toast("Akun " + shownLogin(email) + " dibuat."); ["ak-nama", "ak-email", "ak-pass", "ak-jab"].forEach(i => { const el = document.getElementById(i); if (el) el.value = ""; });
     } catch (err) { toast(authErr(err)); }
     t.disabled = false;
   }
