@@ -2392,12 +2392,12 @@ function qWrap(q) {
     orderBy:(f, dir) => qWrap(q.orderBy(f, dir || "asc")), limit:n => qWrap(q.limit(n)),
     where:(f, op, v) => qWrap(q.where(f, op, v)),
     get:async () => wrapQuery(await q.get()),
-    onSnapshot:(next, err) => q.onSnapshot(qs => next(wrapQuery(qs)), e => err && err({ code:e.code, message:e.message })),
+    onSnapshot:(next, err) => q.onSnapshot({ includeMetadataChanges:true }, qs => next(wrapQuery(qs)), e => err && err({ code:e.code, message:e.message })),
   };
 }
 const updCollection = {
   onSnapshot(next, err) {
-    return fstore.collection("updb").onSnapshot(qs => {
+    return fstore.collection("updb").onSnapshot({ includeMetadataChanges:true }, qs => {
       const docs = [];
       qs.docs.forEach(b => { const m = (b.data() || {}).m || {}; for (const v of Object.values(m)) if (v && v._did) docs.push({ id:v._did, exists:true, data:() => strip(v), metadata:qs.metadata }); });
       next({ docs, size:docs.length, empty:!docs.length, metadata:qs.metadata, docChanges:() => [] });
@@ -2414,7 +2414,7 @@ function updDoc(id) {
     async set(data) { const val = Object.assign(plain(data), { _did:id }); try { await ref.update(path, val); } catch (e) { if (e.code === "not-found") await ref.set({ m:{ [fid]:val } }, { merge:true }); else throw e; } },
     async update(data) { const cur = await read(); if (!cur) throw { code:"invalid_argument", message:"not found" }; return this.set(Object.assign(strip(cur), plain(data))); },
     async delete() { try { await ref.update(path, FS.FieldValue.delete()); } catch (e) { if (e.code !== "not-found") throw e; } },
-    onSnapshot(next) { return ref.onSnapshot(b => { const v = b.exists ? ((b.data() || {}).m || {})[fid] : undefined; next({ id, exists:!!v, data:() => strip(v), metadata:b.metadata }); }); },
+    onSnapshot(next) { return ref.onSnapshot({ includeMetadataChanges:true }, b => { const v = b.exists ? ((b.data() || {}).m || {})[fid] : undefined; next({ id, exists:!!v, data:() => strip(v), metadata:b.metadata }); }); },
   };
 }
 const dbShim = {
@@ -2428,7 +2428,7 @@ const dbShim = {
       set:d => r.set(plain(d)),
       update:d => r.update(plain(d)),
       delete:() => r.delete(),
-      onSnapshot:(next, err) => r.onSnapshot(s => next(wrapSnap(s)), e => err && err({ code:e.code, message:e.message })),
+      onSnapshot:(next, err) => r.onSnapshot({ includeMetadataChanges:true }, s => next(wrapSnap(s)), e => err && err({ code:e.code, message:e.message })),
     };
   },
 };
