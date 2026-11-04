@@ -2653,6 +2653,59 @@ function vAkun() {
     </ul>
     ${ids.length ? `<p class="sectionlabel">Akun yang pernah mengubah data</p><div class="chips">${ids.map(i => `<span class="pill ${i === S.me ? "acc" : ""}">${esc(nameOf(i))}</span>`).join("")}</div>` : ""}</section>`;
 }
+/* impor daftar pegawai: kolom Nama, NIP, Jabatan, Status (judul kolom dikenali otomatis) */
+const nipKey = v => String(v || "").replace(/\D/g, "");
+function prImpPlan() {
+  const I = UI.pr.imp; if (!I || !I.rows) return null;
+  const cur = penerimaList(), out = [];
+  for (const r of I.rows) {
+    const ex = (r.nip && cur.find(p => nipKey(p.nip) === nipKey(r.nip))) || cur.find(p => norm(p.nama) === norm(r.nama)) || (S.penerima.find(p => p._id === "pg_" + hash(norm(r.nama))));
+    const id = ex ? ex._id : "pg_" + hash(norm(r.nama));
+    const doc = { nama:r.nama, nip:r.nip, jab:(ex && ex.jab) || r.jab || "", st:r.st || (ex && ex.st) || "", kel:r.kel || (ex && ex.kel) || "", untuk:(ex && ex.untuk) || "", aktif:true, diubah:new Date().toISOString() };
+    const same = ex && ["nama", "nip", "jab", "st", "kel"].every(k => String(ex[k] || "") === String(doc[k] || "")) && ex.aktif !== false && !ex.base;
+    out.push({ id, doc, st:!ex ? "baru" : same ? "sama" : "ubah" });
+  }
+  return out;
+}
+function prImpPanel() {
+  const I = UI.pr.imp; if (!I) return "";
+  if (I.err) return `<div class="note bad" style="margin-bottom:12px">${esc(I.err)} <button class="link" id="pr-imp-x">Tutup</button></div>`;
+  const plan = prImpPlan(), n = k => plan.filter(x => x.st === k).length;
+  return `<div style="border:1px solid var(--accent);border-radius:var(--r);padding:12px;margin-bottom:12px;background:var(--accent-soft)">
+    <b>${esc(I.file)}</b> · ${fmt(plan.length)} pegawai terbaca: <b>${fmt(n("baru"))}</b> baru, <b>${fmt(n("ubah"))}</b> diperbarui (NIP/jabatan/status), ${fmt(n("sama"))} sudah sama.
+    <div class="tablebox" style="margin-top:8px;max-height:260px;overflow:auto"><table><thead><tr><th>Nama</th><th>NIP</th><th>Jabatan</th><th>Status</th><th></th></tr></thead><tbody>${plan.map(x => `<tr><td>${esc(x.doc.nama)}</td><td class="mono sm">${esc(x.doc.nip || "—")}</td><td>${esc(x.doc.jab)}</td><td class="sm">${esc([x.doc.st, x.doc.kel].filter(Boolean).join(" · "))}</td><td>${x.st === "baru" ? '<span class="pill ok">baru</span>' : x.st === "ubah" ? '<span class="pill warn">diperbarui</span>' : '<span class="pill">sama</span>'}</td></tr>`).join("")}</tbody></table></div>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="primary" id="pr-imp-go" ${I.busy || !(n("baru") + n("ubah")) ? "disabled" : ""}>${I.busy ? "Menyimpan…" : `Simpan ${fmt(n("baru") + n("ubah"))} pegawai`}</button><button id="pr-imp-x">Batal</button><span class="hint" style="align-self:center">Jabatan dan peruntukan bawaan yang sudah diisi (mis. Waka Sarpras) tetap dipertahankan; NIP dan status diperbarui dari file. Pegawai yang tidak ada di file tidak dihapus.</span></div></div>`;
+}
+async function prReadFile(file) {
+  UI.pr.imp = { file:file.name };
+  if (!window.XLSX) { UI.pr.imp.err = "Modul pembaca Excel belum termuat. Muat ulang halaman."; render(); return; }
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type:"array" }), rows = [];
+    for (const name of wb.SheetNames) {
+      const a = XLSX.utils.sheet_to_json(wb.Sheets[name], { header:1, raw:false, defval:"", blankrows:false });
+      const h = a.findIndex(r => (r || []).some(c => /^nama(\s*(lengkap|pegawai))?$/i.test(String(c).trim())));
+      if (h < 0) continue;
+      const hd = a[h].map(c => String(c).trim()), col = re => hd.findIndex(c => re.test(c));
+      const cN = col(/^nama/i), cP = col(/^(nip|nippk|nipppk|nip\s*\/\s*nippk)/i), cJ = col(/^jabatan/i), cS = col(/^status(\s*kepegawaian)?$/i), cK = col(/^kelompok|^status\s*2|^jenis/i);
+      for (const r of a.slice(h + 1)) {
+        const nama = String(r[cN] || "").replace(/\s+/g, " ").trim(); if (!nama || /^\d+$/.test(nama)) continue;
+        const nip = cP >= 0 ? String(r[cP] || "").replace(/\s+/g, " ").trim() : "";
+        rows.push({ nama, nip:nip === "-" ? "" : nip, jab:cJ >= 0 ? String(r[cJ] || "").trim() : "", st:cS >= 0 ? String(r[cS] || "").trim() : "", kel:cK >= 0 ? String(r[cK] || "").trim() : "" });
+      }
+    }
+    if (!rows.length) UI.pr.imp.err = "Tidak menemukan daftar pegawai. Pastikan ada kolom berjudul \"Nama\" (dan sebaiknya \"NIP\", \"Jabatan\", \"Status\").";
+    else UI.pr.imp.rows = rows;
+  } catch (e) { UI.pr.imp.err = "File tidak bisa dibaca (" + (e.message || e) + ")."; }
+  render();
+}
+document.addEventListener("change", e => { if (e.target.id === "pr-file") { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) prReadFile(f); } });
+document.addEventListener("click", async e => {
+  const b = e.target.closest("#pr-imp-go, #pr-imp-x"); if (!b) return;
+  if (b.id === "pr-imp-x") { UI.pr.imp = null; render(); return; }
+  const plan = prImpPlan().filter(x => x.st !== "sama"); UI.pr.imp.busy = true; render();
+  try { await W.group(`Impor daftar pegawai (${plan.length} orang)`, async () => { for (const x of plan) await W.set("penerima/" + x.id, x.doc); }); toast(plan.length + " pegawai tersimpan di daftar penerima."); UI.pr.imp = null; render(); }
+  catch (err) { UI.pr.imp.busy = false; writeErr(err); render(); }
+});
 function vPenerima() {
   const e = UI.pr.edit, list = penerimaList().filter(p => matches(UI.pr.q, [p.nama, p.jab, p.nip, p.untuk, p.st]));
   const cur = e ? (e === "new" ? {} : penerimaList().find(p => p._id === e) || {}) : null;
@@ -2664,9 +2717,10 @@ function vPenerima() {
     <label class="f">Jabatan<input id="pr-jab" value="${esc(cur.jab || "")}" placeholder="mis. Guru Fisika, Kepala Laboratorium"></label><label class="f">Peruntukan bawaan<input id="pr-untuk" list="dl-untuk" value="${esc(cur.untuk || "")}"></label>
     <div class="full" style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary" id="pr-save">Simpan penerima</button><button id="pr-cancel">Batal</button>${e !== "new" ? '<button class="danger" id="pr-off">Nonaktifkan (pindah/purna tugas)</button>' : ""}</div>
     <datalist id="dl-st">${["PNS","PPPK","Honorer","Guru Tamu","Outsourcing","Unit/Ruang"].map(x => `<option value="${x}">`).join("")}</datalist>${untukList()}</div>` : ""}
-  <div class="toolbar"><label class="f grow">Cari<input id="pr-q" type="search" value="${esc(UI.pr.q)}" placeholder="nama, jabatan, NIP…"></label><span class="sp"></span>${isMaster() ? '<button id="pr-new">Tambah penerima</button>' : ""}</div>
+  <div class="toolbar"><label class="f grow">Cari<input id="pr-q" type="search" value="${esc(UI.pr.q)}" placeholder="nama, jabatan, NIP…"></label><span class="sp"></span>${isMaster() ? '<label class="btn" for="pr-file" style="cursor:pointer">Impor daftar pegawai (Excel)</label><input id="pr-file" type="file" accept=".xlsx,.xls,.csv" hidden><button id="pr-new">Tambah penerima</button>' : ""}</div>
+  ${prImpPanel()}
   <div class="tablebox"><table><thead><tr><th>Nama</th><th>Jabatan</th><th class="hide-sm">NIP</th><th class="hide-sm">Peruntukan bawaan</th><th class="num">Memegang</th><th></th></tr></thead><tbody>
-  ${list.map(p => { const n = allItems().visible.filter(x => x.pj === p.nama).length; return `<tr><td>${esc(p.nama)}<div class="sm">${esc(p.st || "")}</div></td><td>${esc(p.jab || "")}</td><td class="hide-sm mono">${esc(p.nip || "")}</td><td class="hide-sm">${esc(p.untuk || "")}</td><td class="num">${fmt(n)}</td><td>${isMaster() ? `<button class="ghost" data-predit="${esc(p._id)}">Ubah</button>` : ""}</td></tr>`; }).join("")}
+  ${list.map(p => { const n = allItems().visible.filter(x => x.pj === p.nama).length; return `<tr><td>${esc(p.nama)}<div class="sm">${esc([p.st, p.kel].filter(Boolean).join(" · "))}</div></td><td>${esc(p.jab || "")}</td><td class="hide-sm mono">${esc(p.nip || "")}</td><td class="hide-sm">${esc(p.untuk || "")}</td><td class="num">${fmt(n)}</td><td>${isMaster() ? `<button class="ghost" data-predit="${esc(p._id)}">Ubah</button>` : ""}</td></tr>`; }).join("")}
   </tbody></table></div></section>`;
 }
 
