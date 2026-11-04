@@ -79,6 +79,9 @@ nav.tabs a.navhome{margin-top:6px;border:1px solid var(--line)}
 tbody tr.unchecked td{background:var(--bad-soft)}tbody tr.unchecked td:first-child{box-shadow:inset 4px 0 0 var(--bad)}tbody tr.unchecked:hover td{background:color-mix(in srgb, var(--bad) 18%, var(--surface))}
 .show-sm{display:none}@media (max-width:640px){.show-sm{display:block}}
 .dsum{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:13px}.dsum span b{font-weight:600}
+.selc{width:30px;text-align:center}.selc input{width:16px;height:16px;cursor:pointer}
+tbody tr.selrow td{background:var(--accent-soft)!important}
+.selbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 12px;margin-bottom:10px;border:1px solid var(--accent);border-radius:var(--r);background:var(--accent-soft);position:sticky;top:70px;z-index:5}
 .ukgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}.ukgrid .panel{margin:0}.ukwide{grid-column:1/-1}
 .kibcard{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 18px;border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--sunk)}
 .kibg{margin:0 0 4px;font-weight:600;font-size:12.5px;color:var(--accent)}
@@ -1029,6 +1032,83 @@ const kibCell = (x, re, unit) => kibFmtVal(kibVal(x, re, kibLabelOf(x, re)).v, u
 
 function rekonTabs() { return `<nav class="chips" aria-label="Rekon" style="margin-bottom:14px"><a class="chip" href="#kertas" aria-pressed="${current === "kertas"}" style="text-decoration:none">Kertas Kerja Modal</a><a class="chip" href="#rekon" aria-pressed="${current === "rekon"}" style="text-decoration:none">Rekon Aset</a></nav>`; }
 
+/* ================= isi sekaligus (beberapa aset terpilih) ================= */
+UI.sel = new Set(); UI.selSub = null; UI.bulk = { open:false, busy:false, v:{} };
+const bkv = id => esc((UI.bulk.v || {})[id] || "");
+function selItems() { return [...UI.sel].map(k => allItems().byKey.get(k)).filter(Boolean); }
+function selBar(rows) {
+  if (UI.selSub !== sub) { UI.sel = new Set(); UI.selSub = sub; UI.bulk.open = false; }
+  const n = UI.sel.size, canU = can("aset_ubah"), canK = can("aset_kondisi");
+  if (!canU && !canK) return "";
+  if (!n) return `<p class="hint" style="margin:0 0 8px">Centang beberapa aset untuk mengisi kelengkapan data yang sama sekaligus. <button class="link" id="sel-all">Pilih semua hasil filter (${fmt(rows.length)})</button></p>`;
+  return `<div class="selbar"><b>${fmt(n)} aset dipilih</b><button class="link" id="sel-all">Pilih semua hasil filter (${fmt(rows.length)})</button><button class="link" id="sel-none">Batal pilih</button><span class="sp"></span><button class="primary" id="bulk-open">Isi sekaligus untuk ${fmt(n)} aset</button></div>${UI.bulk.open ? bulkPanel() : ""}`;
+}
+function bulkPanel() {
+  const items = selItems(), kats = [...new Set(items.map(x => x.kat))], kat = kats.length === 1 ? kats[0] : null, canU = can("aset_ubah"), canK = can("aset_kondisi");
+  const fields = kat ? kibFields(kat).filter(f => !f.ro) : [];
+  const inp = (id, label, type = "text", extra = "") => `<label class="f">${label}<input id="${id}" data-bk="1" type="${type}" ${extra} value="${bkv(id)}" placeholder="kosong = tidak diubah"></label>`;
+  return `<section class="panel" style="margin-bottom:14px;border-color:var(--accent)">
+    <div style="display:flex;gap:8px;align-items:baseline"><h3 style="margin:0;flex:1">Isi sekaligus untuk ${fmt(items.length)} aset</h3><button class="ghost" id="bulk-close">Tutup</button></div>
+    <p class="hint" style="margin:4px 0 10px">Hanya kolom yang Anda isi yang diterapkan ke semua aset terpilih; kolom yang dibiarkan kosong tidak mengubah data. ${isMaster() ? "" : "Perubahan dikirim sebagai satu usulan dan berlaku setelah divalidasi master."}</p>
+    <details style="margin-bottom:10px"><summary class="sm">Lihat aset terpilih</summary><ul class="sm" style="margin:6px 0 0;padding-left:18px;max-height:160px;overflow:auto">${items.map(x => `<li>${esc(itemNama(x))} <span class="mono faint">${esc(idLabel(x) || "")}</span></li>`).join("")}</ul></details>
+    ${canU && fields.length ? `<p class="sectionlabel">Kelengkapan · ${esc(KIB_FMT[kat].judul)}</p><div class="fgrid">${fields.map((f, i) => `<label class="f">${esc(f.l)}<input id="bk-${i}" data-bk="1" data-bkl="${esc(f.l)}" type="${f.u === "tgl" ? "date" : "text"}" value="${bkv("bk-" + i)}" placeholder="kosong = tidak diubah"></label>`).join("")}</div>` : canU && !kat ? '<div class="note info">Aset terpilih berasal dari beberapa golongan, jadi kelengkapan data KIB tidak bisa diisi sekaligus. Kolom di bawah tetap bisa.</div>' : ""}
+    ${canU ? `<p class="sectionlabel" style="margin-top:12px">Pencatatan & penempatan</p><div class="fgrid">
+      <label class="f">Diserahkan ke<select id="bk-pj" data-bk="1">${penerimaOptions((UI.bulk.v || {})["bk-pj"] || "", "— tidak diubah —")}</select></label>
+      ${inp("bk-lok", "Posisi / lokasi", "text", 'list="dl-ruangbk"')}<datalist id="dl-ruangbk">${ruangList().map(r => `<option value="${esc(r)}">`).join("")}</datalist>
+      ${inp("bk-untuk", "Peruntukan", "text", 'list="dl-untuk"')}${untukList()}
+      <label class="f">Sumber dana<input id="bk-sumber" data-bk="1" list="dl-sumberbk" value="${bkv("bk-sumber")}" placeholder="kosong = tidak diubah"><datalist id="dl-sumberbk">${SUMBER_DANA.map(o => `<option value="${esc(o)}">`).join("")}</datalist></label>
+      ${inp("bk-spj", "No. SPJ / kuitansi")}</div>` : ""}
+    ${canK ? `<p class="sectionlabel" style="margin-top:12px">Cek fisik</p><div class="fgrid">
+      <label class="f">Kondisi<select id="bk-kond" data-bk="1"><option value="">— tidak diubah —</option>${KOND.map(k => `<option ${(UI.bulk.v || {})["bk-kond"] === k ? "selected" : ""}>${k}</option>`).join("")}</select></label>
+      ${inp("bk-tcek", "Tanggal cek", "date")}${inp("bk-cek", "Pemeriksa")}</div>` : ""}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="primary" id="bulk-go" ${UI.bulk.busy ? "disabled" : ""}>${UI.bulk.busy ? "Menyimpan…" : isMaster() ? `Terapkan ke ${fmt(items.length)} aset` : `Kirim usulan untuk ${fmt(items.length)} aset`}</button><button id="bulk-close">Batal</button></div>
+  </section>`;
+}
+async function bulkApply() {
+  const items = selItems(); if (!items.length) return;
+  const canU = can("aset_ubah"), canK = can("aset_kondisi");
+  const kib = {}; for (const el of document.querySelectorAll("[data-bkl]")) { const v = el.value.trim(); if (v) kib[el.dataset.bkl] = v; }
+  const common = {};
+  if (canU) { const pjN = val("bk-pj"); if (pjN) { const pg = findPeg(pjN); Object.assign(common, { pj:pjN, nip:(pg && pg.nip) || "", jab:(pg && pg.jab) || "" }); } for (const [id, f] of [["bk-lok", "lokasi"], ["bk-untuk", "untuk"], ["bk-sumber", "sumber"], ["bk-spj", "spj"]]) { const v = val(id); if (v) common[f] = v; } }
+  if (canK) { for (const [id, f] of [["bk-kond", "kond"], ["bk-tcek", "tcek"], ["bk-cek", "cek"]]) { const v = val(id); if (v) common[f] = v; } if (common.kond && !common.tcek) common.tcek = today(); }
+  if (!Object.keys(kib).length && !Object.keys(common).length) { toast("Isi minimal satu kolom yang ingin diterapkan."); return; }
+  const same = (a, b) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
+  const work = [];
+  for (const x of items) {
+    const patch = {};
+    for (const [k, v] of Object.entries(common)) if (!same(x[k], v)) patch[k] = v;
+    if (canU && Object.keys(kib).length && KIB_FMT[x.kat]) {
+      const nk = Object.assign({}, x.kib || {});
+      for (const f of kibFields(x.kat)) { if (!(f.l in kib) || f.ro) continue; const sip = kibVal(x, f.src, null).v, v = kib[f.l]; if (!kibEmpty(sip) && (norm(String(sip)) === norm(v) || (f.u === "tgl" && parseTgl(String(sip)) === v))) delete nk[f.l]; else nk[f.l] = v; }
+      if (!same(nk, x.kib || {})) patch.kib = nk;
+    }
+    if (Object.keys(patch).length) work.push([x, patch]);
+  }
+  if (!work.length) { toast("Semua aset terpilih sudah berisi data tersebut."); return; }
+  UI.bulk.busy = true; render();
+  try {
+    await W.group(`Isi sekaligus ${work.length} aset: ${[...Object.keys(common).map(f => FIELD_LABEL[f] || f), ...(Object.keys(kib).length ? ["kelengkapan data KIB (" + Object.keys(kib).join(", ") + ")"] : [])].join(", ")}`, async () => { for (const [x, patch] of work) { const ok = await saveUpd(x.key, patch); if (!ok) throw new Error("gagal menyimpan " + itemNama(x)); } });
+    toast(isMaster() ? `${work.length} aset diperbarui sekaligus.` : `Usulan untuk ${work.length} aset dikirim ke akun master.`);
+    UI.sel = new Set(); UI.bulk = { open:false, busy:false, v:{} }; render();
+  } catch (e) { UI.bulk.busy = false; render(); writeErr(e); }
+}
+// typed values survive live re-renders
+const bkKeep = e => { const t = e.target; if (t.dataset && t.dataset.bk) { UI.bulk.v = UI.bulk.v || {}; UI.bulk.v[t.id] = t.value; } };
+document.addEventListener("input", bkKeep);
+document.addEventListener("change", e => {
+  bkKeep(e); const t = e.target;
+  if (t.dataset && t.dataset.selkey) { if (t.checked) UI.sel.add(t.dataset.selkey); else UI.sel.delete(t.dataset.selkey); render(); }
+  if (t.id === "sel-page") { const f = UI.aset, rows = filterAset(), per = 60, slice = rows.slice(f.page * per, (f.page + 1) * per); for (const x of slice) { if (t.checked) UI.sel.add(x.key); else UI.sel.delete(x.key); } render(); }
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id === "sel-all") { for (const x of filterAset()) UI.sel.add(x.key); render(); }
+  if (b.id === "sel-none") { UI.sel = new Set(); UI.bulk.open = false; render(); }
+  if (b.id === "bulk-open") { UI.bulk.open = !UI.bulk.open; render(); }
+  if (b.id === "bulk-close") { UI.bulk.open = false; render(); }
+  if (b.id === "bulk-go") bulkApply();
+});
+
 /* ================= buku induk ================= */
 UI.bi = { open:false, dari:"", sampai:"", sumber:"", st:"", kond:"", lok:"", pj:"", foto:false, busy:false };
 function biItems() {
@@ -1303,9 +1383,11 @@ function vAset() {
     <span class="sp"></span><button class="primary" id="a-bi" aria-expanded="${!!UI.bi.open}">Unduh Buku Induk</button><button id="a-xlsx">Unduh Excel (${fmt(rows.length)})</button><button id="a-kir">Unduh KIR per ruang/pemegang</button>
   </div>
   ${UI.bi.open ? biPanel() : ""}
+  ${selBar(rows)}
   <div class="tablebox"><table>
-    <thead><tr><th></th><th>Kode · No. registrasi</th><th>Aset</th><th>Status</th>${sub === "tanah" ? '<th class="num hide-sm">Luas</th><th class="hide-sm">Dokumen kepemilikan</th>' : sub === "gedung" ? '<th class="num hide-sm">Luas bangunan</th><th class="hide-sm">Konstruksi · status tanah</th>' : '<th class="hide-sm">Diserahkan ke</th><th class="hide-sm">Posisi</th>'}<th>Kondisi</th><th class="num">Nilai</th></tr></thead>
-    <tbody>${slice.map(x => `<tr class="rowlink ${x.kond ? "" : "unchecked"}" tabindex="0" data-key="${esc(x.key)}" ${x.kond ? "" : 'title="Kondisi belum dikonfirmasi"'}>
+    <thead><tr><th class="selc"><input type="checkbox" id="sel-page" aria-label="Pilih semua di halaman ini" ${slice.length && slice.every(x => UI.sel.has(x.key)) ? "checked" : ""}></th><th></th><th>Kode · No. registrasi</th><th>Aset</th><th>Status</th>${sub === "tanah" ? '<th class="num hide-sm">Luas</th><th class="hide-sm">Dokumen kepemilikan</th>' : sub === "gedung" ? '<th class="num hide-sm">Luas bangunan</th><th class="hide-sm">Konstruksi · status tanah</th>' : '<th class="hide-sm">Diserahkan ke</th><th class="hide-sm">Posisi</th>'}<th>Kondisi</th><th class="num">Nilai</th></tr></thead>
+    <tbody>${slice.map(x => `<tr class="rowlink ${x.kond ? "" : "unchecked"} ${UI.sel.has(x.key) ? "selrow" : ""}" tabindex="0" data-key="${esc(x.key)}" ${x.kond ? "" : 'title="Kondisi belum dikonfirmasi"'}>
+      <td class="selc"><input type="checkbox" data-selkey="${esc(x.key)}" aria-label="Pilih ${esc(itemNama(x))}" ${UI.sel.has(x.key) ? "checked" : ""}></td>
       <td>${(x.fotos || []).length ? `<img class="thumb" src="${fotoSrc(x.fotos[0])}" data-foto="${esc(x.fotos[0])}" alt="" loading="lazy">` : `<span class="thumb" aria-hidden="true"></span>`}</td>
       <td><span class="mono">${esc(x.sip ? x.kode : (x.reg || x.kode || "—"))}</span><div class="sm mono">${x.sip ? "No. " + esc(x.noreg) + (x.reg ? " · " + esc(x.reg) : "") : esc(x.srcSheet ? x.srcSheet.join(", ") : x.gedung || "")}</div></td>
       <td><div class="nm">${esc(itemNama(x))}${ntBadge("aset", x.key)}</div>${sub === "pm" || sub === "atl" || sub === "tak" ? `<div class="sm show-sm">${esc(x.pj || "belum diserahkan")} · ${esc(x.lokasi || "tanpa lokasi")}</div>` : ""}<div class="sm">${esc([sub === "tak" && KATMAP[x.kat] ? KATMAP[x.kat].kib : "", x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div></td>
@@ -1315,7 +1397,7 @@ function vAset() {
         `<td class="hide-sm">${x.pj ? esc(x.pj) + `<div class="sm">${esc([x.jab, x.untuk].filter(Boolean).join(" · "))}</div>` : '<span class="pill line">belum diserahkan</span>'}</td>
       <td class="hide-sm">${esc(x.lokasi) || '<span class="faint">—</span>'}</td>`}
       <td>${kondPill(x.kond)}${usulHapus(x) ? '<div class="sm" style="color:var(--bad)">usul hapus</div>' : ""}</td>
-      <td class="num">${itemNilai(x) ? rp(itemNilai(x)) : '<span class="faint">—</span>'}</td></tr>`).join("") || `<tr><td colspan="8"><div class="empty"><b>Tidak ada aset yang cocok</b>Ubah kata kunci atau filter, atau tambah aset baru.</div></td></tr>`}</tbody>
+      <td class="num">${itemNilai(x) ? rp(itemNilai(x)) : '<span class="faint">—</span>'}</td></tr>`).join("") || `<tr><td colspan="9"><div class="empty"><b>Tidak ada aset yang cocok</b>Ubah kata kunci atau filter, atau tambah aset baru.</div></td></tr>`}</tbody>
   </table></div>
   <div class="pager"><span>${fmt(rows.length)} catatan · ${rp(rows.reduce((t, x) => t + itemNilai(x), 0))}</span><span><button id="a-prev" ${f.page===0?"disabled":""}>Sebelumnya</button> Hal. ${f.page+1}/${pages} <button id="a-next" ${f.page>=pages-1?"disabled":""}>Berikutnya</button></span></div>`;
 }
@@ -3004,7 +3086,7 @@ document.addEventListener("keydown", e => {
 document.addEventListener("click", async e => {
   const t = e.target.closest("button, tr.rowlink, a[data-gsel]"); if (!t) return;
   const d = t.dataset;
-  if (t.matches("tr.rowlink")) { if (e.target.closest("a") || d.pl || d.jdrow) return; if (d.go) { location.hash = d.go; return; } if (d.ruang) { openRuang(d.ruang); }
+  if (t.matches("tr.rowlink")) { if (e.target.closest("a") || e.target.closest(".selc") || d.pl || d.jdrow) return; if (d.go) { location.hash = d.go; return; } if (d.ruang) { openRuang(d.ruang); }
     else if (d.kk) { openKK(d.kk); }
     else if (d.pem != null) { UI.pem.sel = d.pem; UI.pem.kat = ""; render(); }
     else if (d.kartu) { drawer = { mode:"psd", id:d.kartu, fresh:true }; renderDrawer(); } else if (d.lap) { drawer = { mode:"lap", id:d.lap, fresh:true }; renderDrawer(); } else openItem(d.key); return; }
