@@ -1322,7 +1322,8 @@ async function biPdf() {
     y += 2; if (y > 165) { doc.addPage(); y = 25; }
     const sb = (x, lab, nama, nip) => { doc.setFontSize(10); doc.text(lab, x, y, { align:"center" }); doc.setFont("helvetica", "bold"); doc.text(nama || "", x, y + 24, { align:"center" }); const w = doc.getTextWidth(nama || ""); doc.setLineWidth(0.25); if (nama) doc.line(x - w / 2, y + 25, x + w / 2, y + 25); doc.setFont("helvetica", "normal"); doc.text("NIP. " + (nip || "-"), x, y + 29.5, { align:"center" }); };
     doc.setFontSize(10); doc.text("Tanjung Redeb, " + tglID(today()), Wp - 60, y, { align:"center" }); y += 5;
-    sb(60, "Pengurus Barang,", c.pengurus, c.nipPengurus); sb(Wp / 2, "Waka Sarpras,", c.waka, c.nipWaka); sb(Wp - 60, "Kepala Sekolah\nselaku Kuasa Pengguna Barang,", c.kepsek, c.nipKepsek);
+    // pimpinan di kiri: Kepala Sekolah · Waka Sarpras · Pengurus Barang (label rata bawah supaya nama sejajar)
+    sb(60, "Kepala Sekolah\nselaku Kuasa Pengguna Barang,", c.kepsek, c.nipKepsek); sb(Wp / 2, "\nWaka Sarpras,", c.waka, c.nipWaka); sb(Wp - 60, "\nPengurus Barang,", c.pengurus, c.nipPengurus);
     saveFile(`Buku Induk ${biNama()} ${today()}.pdf`, pdfFinish(doc).output("blob"));
   } catch (e) { toast("Buku induk gagal disusun (" + (e.message || e) + ")."); }
   UI.bi.busy = false; render();
