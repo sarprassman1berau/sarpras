@@ -76,6 +76,10 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 'okBy', 'okAt']));
     }
     // catatan temuan: ditulis langsung oleh operator yang punya hak "catatan"
+    // riwayat cetak BAST: setiap akun mencatat cetakannya sendiri
+    match /cetak/{id} {
+      allow create: if isMember() && request.resource.data.by == request.auth.uid;
+    }
     match /catatan/{id} {
       allow create: if izin('catatan')
         && request.resource.data.by == request.auth.uid

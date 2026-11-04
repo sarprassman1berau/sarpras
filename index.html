@@ -55,7 +55,10 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;backgroun
 .pageid .pagesub{font-size:12.5px;color:var(--accent);line-height:1.2}
 .pageid .pagesub:empty{display:none}
 .brand .sync{margin-left:auto;font-size:12px;color:var(--faint);font-family:var(--f-mono);text-align:right}
-body:not([data-view="atur"]) #view > h2:first-child{display:none}
+body:not([data-view="atur"]) #view > .pinwrap:first-child + h2{display:none}
+.pinwrap:empty{display:none}.pinwrap{margin-bottom:12px}
+.pinnote{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--warn);border-left-width:5px;border-radius:var(--r);background:var(--warn-soft)}
+.pinnote svg{flex:none;color:var(--warn);margin-top:2px}.pinnote .t{flex:1;white-space:pre-wrap}
 #nav-scrim{position:fixed;inset:0;background:rgba(10,20,15,.35);z-index:49}
 nav.tabs{position:fixed;top:0;left:0;bottom:0;width:min(290px,86vw);background:var(--surface);border-right:1px solid var(--line);z-index:50;display:flex;flex-direction:column;gap:2px;overflow-y:auto;padding:max(12px,env(safe-area-inset-top,0px)) 10px max(16px,env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));transform:translateX(-104%);visibility:hidden;transition:transform .18s ease-out,visibility 0s linear .18s;box-shadow:4px 0 24px rgba(0,0,0,.12)}
 body.nav-open nav.tabs{transform:none;visibility:visible;transition:transform .18s ease-out}
@@ -79,6 +82,8 @@ nav.tabs a.navhome{margin-top:6px;border:1px solid var(--line)}
 tbody tr.unchecked td{background:var(--bad-soft)}tbody tr.unchecked td:first-child{box-shadow:inset 4px 0 0 var(--bad)}tbody tr.unchecked:hover td{background:color-mix(in srgb, var(--bad) 18%, var(--surface))}
 .show-sm{display:none}@media (max-width:640px){.show-sm{display:block}}
 .dsum{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:13px}.dsum span b{font-weight:600}
+.askbox{position:fixed;inset:0;background:rgba(10,20,15,.45);z-index:80;display:flex;align-items:center;justify-content:center;padding:16px}
+.askcard{background:var(--surface);border-radius:12px;padding:18px;max-width:460px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,.3)}
 .selc{width:30px;text-align:center}.selc input{width:16px;height:16px;cursor:pointer}
 tbody tr.selrow td{background:var(--accent-soft)!important}
 .selbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 12px;margin-bottom:10px;border:1px solid var(--accent);border-radius:var(--r);background:var(--accent-soft);position:sticky;top:70px;z-index:5}
@@ -126,7 +131,8 @@ section.panel{background:var(--surface);border:1px solid var(--line);border-radi
 .kib{display:grid;grid-template-columns:repeat(7,minmax(128px,1fr));gap:0;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow-x:auto;margin-bottom:14px}
 .kib a{display:flex;flex-direction:column;gap:1px;padding:10px 12px;text-decoration:none;color:var(--fg);border-right:1px solid var(--line);min-width:128px;position:relative}
 .kib a:last-child{border-right:0}
-.kib a.kib-tak{background:var(--warn-soft)}.kib a.kib-tak .n{color:var(--warn)}
+.kib a.kib-tak{background:var(--warn-soft)}.kib a.kib-tak .n{color:var(--warn)}.kib a.kib-bos{background:var(--info-soft)}.kib a.kib-bos .n{color:var(--info)}
+.sipmark{display:inline-block;font-family:var(--f-body);font-size:9.5px;font-weight:700;letter-spacing:.04em;color:var(--info);border:1px solid currentColor;border-radius:4px;padding:0 4px;line-height:1.4;vertical-align:1px}
 .kib a .h{font-family:var(--f-mono);font-size:11px;color:var(--muted);letter-spacing:.04em}
 .kib a .n{font-weight:600;font-size:13px;line-height:1.25}
 .kib a .c{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -224,7 +230,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
 .suggest button:last-child{border-bottom:0}
 .suggest button:hover{background:var(--accent-soft)}
 .sheet{background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:12px;overflow-x:auto}
-.letter{background:#fff;color:#111;max-width:640px;min-width:480px;margin:0 auto;padding:30px 36px 34px;font-size:12px;line-height:1.55;box-shadow:0 2px 10px rgba(0,0,0,.12);font-family:"Times New Roman",Georgia,serif}
+.letter{aspect-ratio:210/297;background:#fff;color:#111;max-width:640px;min-width:480px;margin:0 auto;padding:30px 36px 34px;font-size:12px;line-height:1.55;box-shadow:0 2px 10px rgba(0,0,0,.12);font-family:"Times New Roman",Georgia,serif}
 .letter .kop{display:flex;align-items:center;gap:12px;border-bottom:3px double #111;padding-bottom:6px;margin-bottom:12px;text-align:center}
 .letter .kop img{height:64px;width:auto;flex:none}.letter .kop .kt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
 .letter .kop .kt span{font-size:12px}.letter .kop .kt .d{font-weight:700;font-size:12.5px}.letter .kop b{font-size:16px;letter-spacing:.02em}.letter .kop small{font-size:9.5px;color:#333}
@@ -239,6 +245,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
 .letter .dok{margin-top:10px;border-top:1px solid #999;padding-top:6px}.letter .dok>p{font-weight:700;margin:0 0 4px;font-size:11px}
 .letter .dokg{display:grid;gap:6px}.letter .dokg figure{margin:0;text-align:center}.letter .dokg img{width:100%;aspect-ratio:4/3;object-fit:contain;background:#f3f3f3;border:1px solid #bbb}.letter .dokg figcaption{font-size:9.5px;color:#333}
 .bfoto{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.heldbox{margin-top:14px;padding:10px 12px;border:1px solid var(--accent);border-radius:var(--r);background:var(--accent-soft)}
+.heldlist{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px}
 .letter table td,.letter table th{border:1px solid #555;position:static;padding:3px 5px;color:#111}
 .sign{display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:center;margin-top:18px}
 .sign div{min-height:96px;display:flex;flex-direction:column;justify-content:space-between}
@@ -263,13 +271,13 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
   <div id="nav-app-jadwal"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Jadwal Penggunaan Aula dan Multimedia</p>
   <div class="navsec"><a href="#jadwal" data-v="jadwal">Jadwal Penggunaan Aula dan Multimedia <span id="jbadge"></span></a></div></div>
   <div id="nav-app-waka"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Waka Sarpras</p>
-  <div class="navsec"><a href="#akun" data-v="akun">Akun & hak akses</a></div></div>
+  <div class="navsec"><a href="#surat" data-v="surat">Surat Keluar</a><a href="#akun" data-v="akun">Akun & hak akses</a></div></div>
   <div id="nav-app-sarpras"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Aset & Persediaan</p>
   <div class="navsec"><p class="navgroup">Utama</p>
     <a href="#ringkasan" data-v="ringkasan">Rekap Aset dan Persediaan</a>
     <a href="#catatan" data-v="catatan">Catatan Temuan</a></div>
   <div class="navsec"><p class="navgroup">Aset & ruang</p>
-    <a href="#aset-pm" data-v="aset">Aset SIPBMD</a>
+    <a href="#aset-pm" data-v="aset">Aset/Modal</a>
     <a href="#unduhkib" data-v="unduhkib">Unduh KIB</a>
     <a href="#ruang" data-v="ruang">Kondisi Ruangan</a>
     <a href="#pelihara" data-v="pelihara">Pemeliharaan & Perbaikan</a>
@@ -277,13 +285,12 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
   <div class="navsec"><p class="navgroup">Penyerahan barang</p>
     <a href="#bast" data-v="bast">BAST</a>
     <a href="#pemegang" data-v="pemegang">Per Pemegang</a>
-    <a href="#laporan" data-v="laporan">Laporan BAST</a>
-    <a href="#surat" data-v="surat">Surat Keluar</a></div>
+    <a href="#laporan" data-v="laporan">Laporan BAST</a></div>
   <div class="navsec"><p class="navgroup">Persediaan</p>
     <a href="#persediaan-masuk" data-v="persediaan">Persediaan</a></div>
   <div class="navsec"><p class="navgroup">Rekon</p>
     <a href="#rekon" data-v="rekon">Rekon</a>
-    <a href="#impor" data-v="impor">Impor SIPBMD</a></div>
+    <a href="#impor" data-v="impor">Import SIPBMD</a></div>
   <div class="navsec"><p class="navgroup">Validasi & pengaturan</p>
     <a href="#validasi" data-v="validasi">Validasi <span id="vbadge"></span></a>
     <a href="#atur" data-v="atur">Pengaturan surat & penerima</a></div></div>
@@ -340,12 +347,12 @@ const GOL = {"1.3.2.02":"Alat Angkutan","1.3.2.03":"Alat Bengkel & Alat Ukur","1
 const golOf = kode => { const k = String(kode || "").split(".").slice(0, 4).join("."); return GOL[k] || (k ? "Kode " + k : "Tanpa kode"); };
 const KOND = ["Baik","Rusak Sedang","Rusak Berat","Hilang"];
 const kondPill = k => !k ? '<span class="pill bad">Belum dicek</span>' : `<span class="pill ${k==="Baik"?"ok":k==="Rusak Berat"||k==="Hilang"?"bad":"warn"}">${esc(k)}</span>`;
-const statusPill = x => x.sip ? '<span class="pill info">SIPBMD</span>' : '<span class="pill warn">Tidak tercatat</span>';
+const statusPill = x => x.grp === "bospda" ? '<span class="pill warn" style="background:var(--info-soft);color:var(--info)">BOSP Daerah · menunggu SIPBMD</span>' : x.sip ? '<span class="pill info">SIPBMD</span>' : '<span class="pill warn">Tidak tercatat</span>';
 const usulHapus = x => (x.kond === "Rusak Berat" || x.kond === "Hilang") && !x.rehab;
 const BUKU_RE = /\b(buku|novel|bahan ajar|monograf|kamus|ensiklopedi|atlas|majalah|modul|komik|antologi)\b/i;
 
 /* ================= state ================= */
-const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
+const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], cetak:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
 const CFG_DEFAULT = {
   kepsek:"Dr. H. Saleh, S.T., M.Pd.", nipKepsek:"19780708 200604 1 004",
   waka:"Ika Novita Mulia, S.Pd.", nipWaka:"199211102022212025", jabWaka:"Wakil Kepala Sekolah Sarana dan Prasarana",
@@ -462,6 +469,8 @@ async function boot() {
   sub("kk", rows => { S.kk = rows; });
   sub("gdg", rows => { S.gdg = rows; });
   sub("pinjam", rows => { S.pinjam = rows; });
+  sub("cetak", rows => { S.cetak = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
+  sub("pengingat", rows => { S.pengingat = rows; });
   sub("catatan", rows => { S.catatan = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
   sub("ruang", rows => { S.ruang = rows; });
   sub("impor", rows => { S.impor = rows.sort((a, b) => String(b.tgl).localeCompare(String(a.tgl))); });
@@ -501,7 +510,7 @@ async function saveUpd(key, patch) {
     return true;
   } catch (e) { writeErr(e); return false; }
 }
-const FIELD_LABEL = { kib:"kelengkapan data KIB", pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
+const FIELD_LABEL = { grp:"kelompok BOSP Daerah", kib:"kelengkapan data KIB", pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
 
 /* ================= change layer: master writes directly, operators propose ================= */
 const isMaster = () => S.role === "master";
@@ -611,18 +620,18 @@ function route() {
   const [v, s] = h.split("-");
   current = VIEWS.includes(v) ? v : h ? "ringkasan" : "home";
   sub = s || (current === "aset" ? "pm" : current === "persediaan" ? "masuk" : "");
-  if (current === "aset" && !KATMAP[sub] && sub !== "tak") sub = "pm";
+  if (current === "aset" && !KATMAP[sub] && !isSpecialSub(sub)) sub = "pm";
   if (current === "persediaan" && !["masuk","keluar","mutasi"].includes(sub)) sub = "masuk";
   const navV = current === "kertas" ? "rekon" : current;
   for (const a of document.querySelectorAll("#tabs a")) { if (a.dataset.v === navV) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
   const link = document.querySelector(`#tabs a[data-v="${navV}"]`), nama = current === "home" ? "Beranda" : link ? link.firstChild.textContent.trim() : "";
-  const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "akun" ? "waka" : "sarpras";
+  const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "akun" || current === "surat" ? "waka" : "sarpras";
   if (app !== "home") window.__lastApp = app;
   const APPN = { home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Penggunaan Aula dan Multimedia", "Jadwal Penggunaan Aula dan Multimedia · SMAN 1 Berau", "SMAN 1 Berau · pengajuan dan persetujuan pemakaian Aula dan Ruang Multimedia"], waka:["Waka Sarpras", "Waka Sarpras · SMAN 1 Berau", "SMAN 1 Berau · akun, hak akses, dan administrasi Waka Sarpras"] }[app];
   $(".pageid .app").textContent = APPN[1]; $("#nav-appname").textContent = APPN[0]; $("#nav-appdesc").textContent = APPN[2];
   for (const a2 of ["sarpras", "jadwal", "waka"]) $("#nav-app-" + a2).hidden = app !== "home" && app !== a2;
   $("#nav-me").hidden = app === "waka";
-  const sb = current === "aset" ? (sub === "tak" ? "Aset tidak tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama) : current === "persediaan" ? ({ masuk:"Persediaan masuk", keluar:"Persediaan keluar", mutasi:"Mutasi persediaan" })[sub] : current === "kertas" ? "Kertas Kerja Modal" : current === "rekon" ? "Rekon Aset" : "";
+  const sb = current === "aset" ? (sub === "tak" ? "Aset tidak tercatat di SIPBMD (semua golongan)" : sub === "bospda" ? "Aset BOSP Daerah belum tercatat di SIPBMD" : KATMAP[sub].kib + " · " + KATMAP[sub].nama + " · data SIPBMD") : current === "persediaan" ? ({ masuk:"Persediaan masuk", keluar:"Persediaan keluar", mutasi:"Mutasi persediaan" })[sub] : current === "kertas" ? "Kertas Kerja Modal" : current === "rekon" ? "Rekon Aset" : "";
   $("#pagetitle").textContent = nama; $("#pagesub").textContent = sb;
   document.title = nama + " · " + APPN[0] + (app === "home" ? "" : " SMAN 1 Berau");
   document.body.dataset.view = current;
@@ -670,9 +679,9 @@ function render(soft) {
     if (current === "akun" && appAccess("waka")) $("#nav-me").hidden = true;
     if (!canView(current)) { v.innerHTML = `<div class="empty"><b>Menu ini tidak termasuk akses akun Anda</b>Minta akun master menambahkan akses jika Anda perlu membukanya.</div>`; return; }
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
-    if (current === "home" || current === "jadwal" || current === "akun") { v.innerHTML = current === "home" ? vHome() : current === "akun" ? vAkunPage() : vJadwal(); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); return; }
+    if (current === "home" || current === "jadwal" || current === "akun") { v.innerHTML = pinBar() + (current === "home" ? vHome() : current === "akun" ? vAkunPage() : vJadwal()); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
-    v.innerHTML = ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
+    v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) {} } }
     const nb = $("#vbadge"), np = pendingList().length; if (nb) nb.innerHTML = np ? `<span class="pill ${isMaster() ? "bad" : "warn"}">${np}</span>` : "";
     const nd = $("#nav-dot"); if (nd) nd.hidden = !(np && isMaster());
@@ -718,14 +727,13 @@ function vRingkasan() {
   ${riwayatRekapPanel()}`;
 }
 function katCounts() {
-  const c = Object.fromEntries(KAT.map(k => [k.id, { n:0, v:0, sip:0, tak:0 }]));
-  for (const x of allItems().visible) { const o = c[x.kat]; if (!o) continue; o.n += x.src === "P" ? 1 : 1; o.v += itemNilai(x); if (x.sip) o.sip++; else o.tak++; }
+  const c = Object.fromEntries(KAT.map(k => [k.id, { n:0, v:0 }]));
+  for (const x of allItems().visible) { const o = c[x.kat]; if (!o || !x.sip || isBospda(x)) continue; o.n++; o.v += itemNilai(x); }
   return c;
 }
 function kibStrip(mode) {
-  const c = katCounts();
-  const tak = takItems(), tv = tak.reduce((t, x) => t + itemNilai(x), 0);
-  return `<nav class="kib" aria-label="Golongan aset">${KAT.map(k => `<a href="#aset-${k.id}" ${mode === "aset" && sub === k.id ? 'aria-current="page"' : ""}><span class="h">${k.kib} · ${k.kode}</span><span class="n">${k.nama}</span><span class="c">${fmt(c[k.id].n)} catatan${c[k.id].v ? " · " + rp(c[k.id].v) : ""}</span></a>`).join("")}<a href="#aset-tak" class="kib-tak" ${mode === "aset" && sub === "tak" ? 'aria-current="page"' : ""}><span class="h">Semua golongan</span><span class="n">Aset tidak tercatat</span><span class="c">${fmt(tak.length)} aset${tv ? " · " + rp(tv) : ""}</span></a></nav>`;
+  const c = katCounts(), card = (href, cls, on, h, n, list) => { const v = list.reduce((t, x) => t + itemNilai(x), 0); return `<a href="${href}" class="${cls}" ${on ? 'aria-current="page"' : ""}><span class="h">${h}</span><span class="n">${n}</span><span class="c">${fmt(list.length)} aset${v ? " · " + rp(v) : ""}</span></a>`; };
+  return `<nav class="kib" aria-label="Golongan aset">${KAT.map(k => `<a href="#aset-${k.id}" ${mode === "aset" && sub === k.id ? 'aria-current="page"' : ""}><span class="h">${k.kib} · ${k.kode} <span class="sipmark" title="Data tercatat di SIPBMD">SIPBMD</span></span><span class="n">${k.nama}</span><span class="c">${fmt(c[k.id].n)} aset${c[k.id].v ? " · " + rp(c[k.id].v) : ""}</span></a>`).join("")}${card("#aset-tak", "kib-tak", mode === "aset" && sub === "tak", "Semua golongan", "Aset tidak tercatat", takItems())}${card("#aset-bospda", "kib-tak kib-bos", mode === "aset" && sub === "bospda", "Belanja cabang dinas", "Aset BOSP Daerah belum tercatat di SIPBMD", bospdaItems())}</nav>`;
 }
 
 /* ================= view: beranda (ruang aplikasi) ================= */
@@ -738,7 +746,7 @@ const APPS = [
     rencana:["RKAS & perencanaan anggaran", "Usulan kebutuhan (form dari unit/guru)", "Realisasi belanja & SPJ", "Laporan & rekap per sumber dana"],
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="8" width="32" height="44" rx="3" fill="#fff" stroke="#2d5d8a" stroke-width="2.2"/><path d="M14 18h20M14 25h20M14 32h13" stroke="#9db6cf" stroke-width="2.4" stroke-linecap="round"/><text x="14" y="46" font-family="Arial,sans-serif" font-weight="700" font-size="11" fill="#2d5d8a">Rp</text><ellipse cx="46" cy="52" rx="11" ry="4" fill="#d9a520"/><rect x="35" y="44" width="22" height="8" fill="#e9b938"/><ellipse cx="46" cy="44" rx="11" ry="4" fill="#f5cf55" stroke="#c99619" stroke-width="1.2"/><rect x="35" y="36" width="22" height="8" fill="#e9b938"/><ellipse cx="46" cy="36" rx="11" ry="4" fill="#f8d96a" stroke="#c99619" stroke-width="1.2"/></svg>' },
   { id:"waka", nama:"Waka Sarpras", desc:"Kewenangan Waka Sarpras: akun dan hak akses semua aplikasi, program kerja dan realisasi, persuratan, proposal, dan laporan.", href:"#akun", ac:"var(--warn)", acs:"var(--warn-soft)", siap:true,
-    menu:[["Akun & hak akses", true], ["Program kerja & realisasi", false], ["Persuratan (agenda surat masuk/keluar)", false], ["Proposal & dokumentasi kegiatan", false], ["Laporan bulanan, semester, tahunan", false]],
+    menu:[["Akun & hak akses", true], ["Surat Keluar", true], ["Program kerja & realisasi", false], ["Persuratan (agenda surat masuk/keluar)", false], ["Proposal & dokumentasi kegiatan", false], ["Laporan bulanan, semester, tahunan", false]],
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><path d="M33 6v12" stroke="#5d675f" stroke-width="2"/><path d="M33 6h10l-2 3 2 3H33z" fill="#d6372b"/><path d="M33 9.5h10" stroke="#fff" stroke-width="1"/><path d="M4 30 32 16l28 14z" fill="#b8402f"/><rect x="8" y="30" width="48" height="24" fill="#f6ecd2" stroke="#9a6a0b" stroke-width="2"/><rect x="13" y="35" width="8" height="7" rx="1" fill="#7fb3dc"/><rect x="43" y="35" width="8" height="7" rx="1" fill="#7fb3dc"/><rect x="27" y="38" width="10" height="16" rx="1" fill="#8a5a2b"/><rect x="13" y="45" width="8" height="6" rx="1" fill="#7fb3dc"/><rect x="43" y="45" width="8" height="6" rx="1" fill="#7fb3dc"/><path d="M4 54h56" stroke="#4caf7a" stroke-width="3"/></svg>' },
   { id:"outsourcing", nama:"Outsourcing", desc:"Pemantauan laporan hasil kinerja outsourcing bidang kebersihan dan keamanan.", ac:"#3f6fb0", acs:"color-mix(in srgb, #3f6fb0 16%, transparent)", siap:false, rencana:[],
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><path d="M40 8c7 3 13 3 18 2v18c0 13-8 21-18 26-10-5-18-13-18-26V10c5 1 11 1 18-2z" fill="#3f6fb0" stroke="#284b7a" stroke-width="2"/><path d="m31 30 6 6 11-12" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 58 22 26" stroke="#8a5a2b" stroke-width="3.5" stroke-linecap="round"/><path d="M4 56c3-6 8-8 12-6l-2 9c-4 1-8 0-10-3z" fill="#e3b04b" stroke="#a87b22" stroke-width="1.5"/><path d="M7 55l3-4M10 57l3-5" stroke="#a87b22" stroke-width="1.2"/></svg>' },
@@ -1109,10 +1117,43 @@ document.addEventListener("click", e => {
   if (b.id === "bulk-go") bulkApply();
 });
 
+/* ================= catatan pengingat per menu (ditulis akun master) ================= */
+UI.pinEdit = false;
+const pinKey = () => (current === "aset" || current === "persediaan") ? current + "-" + sub : current;
+const PIN_SVG = '<svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M7 2.5h6l-1 5 3 3H5l3-3z"/><path d="M10 10.5V17"/></svg>';
+function pinBar() {
+  const k = pinKey(), n = (S.pengingat || []).find(x => x._id === k), m = isMaster();
+  if (m && UI.pinEdit === k) return `<div class="pinwrap"><div class="pinnote">${PIN_SVG}<div style="flex:1"><b>Catatan pengingat untuk menu ini</b><textarea id="pin-teks" style="width:100%;margin-top:6px;min-height:70px" placeholder="mis. Cek fisik KIB B wajib selesai sebelum 30 November; foto setiap laptop yang diserahkan">${esc(n ? n.teks : "")}</textarea><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><button class="primary" id="pin-save">Simpan pengingat</button>${n ? '<button class="ghost danger" id="pin-del">Hapus pengingat</button>' : ""}<button id="pin-cancel">Batal</button><span class="hint" style="align-self:center">Tampil di menu ini untuk semua akun.</span></div></div></div></div>`;
+  if (n) return `<div class="pinwrap"><div class="pinnote">${PIN_SVG}<div class="t"><b>Pengingat:</b> ${esc(n.teks)}<div class="sm muted" style="white-space:normal">${esc(nameOf(n.by))} · ${esc(tglJam(n.at))}</div></div>${m ? '<button class="link sm" id="pin-edit">Ubah</button>' : ""}</div></div>`;
+  return m ? `<div class="pinwrap"><button class="link sm" id="pin-edit">+ Tambah catatan pengingat untuk menu ini</button></div>` : '<div class="pinwrap"></div>';
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("#pin-edit, #pin-save, #pin-del, #pin-cancel"); if (!b || !isMaster()) return;
+  const k = pinKey();
+  if (b.id === "pin-edit") { UI.pinEdit = k; render(); setTimeout(() => { const t = $("#pin-teks"); if (t) t.focus(); }, 0); return; }
+  if (b.id === "pin-cancel") { UI.pinEdit = false; render(); return; }
+  try {
+    if (b.id === "pin-del") await db.doc("pengingat/" + k).delete();
+    else { const teks = val("pin-teks"); if (!teks) { toast("Tulis isi pengingatnya."); return; } await db.doc("pengingat/" + k).set({ teks, by:S.me || "", at:new Date().toISOString() }); }
+    UI.pinEdit = false; toast(b.id === "pin-del" ? "Pengingat dihapus." : "Pengingat disimpan."); render();
+  } catch (err) { writeErr(err); }
+});
+
+/* ================= konfirmasi (tanpa dialog browser) ================= */
+function askConfirm(html, okLabel = "Lanjutkan") {
+  return new Promise(res => {
+    const box = document.createElement("div"); box.className = "askbox";
+    box.innerHTML = `<div class="askcard" role="dialog" aria-modal="true"><div>${html}</div><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button id="ask-no">Batal</button><button class="primary" id="ask-ok">${esc(okLabel)}</button></div></div>`;
+    const done = v => { box.remove(); res(v); };
+    box.addEventListener("click", e => { if (e.target === box || e.target.id === "ask-no") done(false); if (e.target.id === "ask-ok") done(true); });
+    document.body.appendChild(box); box.querySelector("#ask-ok").focus();
+  });
+}
+
 /* ================= buku induk ================= */
 UI.bi = { open:false, dari:"", sampai:"", sumber:"", st:"", kond:"", lok:"", pj:"", foto:false, busy:false };
 function biItems() {
-  const B = UI.bi, base = sub === "tak" ? takItems() : allItems().visible.filter(x => x.kat === sub);
+  const B = UI.bi, base = subItems(sub);
   return base.filter(x => {
     const t = tahunOf(x);
     if ((B.dari || B.sampai) && (!t || (B.dari && t < +B.dari) || (B.sampai && t > +B.sampai))) return false;
@@ -1135,11 +1176,11 @@ function biFilterText() {
   return f.join(" · ") || "semua data";
 }
 function biPanel() {
-  const B = UI.bi, base = sub === "tak" ? takItems() : allItems().visible.filter(x => x.kat === sub), list = biItems();
+  const B = UI.bi, base = subItems(sub), list = biItems();
   const years = [...new Set(base.map(tahunOf).filter(Boolean))].sort((a, b) => a - b), sumber = [...new Set([...SUMBER_DANA, ...base.map(x => x.sumber).filter(Boolean)])];
   const yo = (id, v, ph) => `<select id="${id}"><option value="">${ph}</option>${years.map(y => `<option ${String(y) === String(v) ? "selected" : ""}>${y}</option>`).join("")}</select>`;
   const nf = list.filter(x => (x.fotos || []).length).length;
-  return `<section class="panel" style="margin-bottom:14px;border-color:var(--accent)"><div style="display:flex;gap:8px;align-items:baseline"><h3 style="margin:0;flex:1">Unduh Buku Induk · ${esc(sub === "tak" ? "Aset tidak tercatat" : KATMAP[sub].kib + " " + KATMAP[sub].nama)}</h3><button class="ghost" id="bi-close">Tutup</button></div>
+  return `<section class="panel" style="margin-bottom:14px;border-color:var(--accent)"><div style="display:flex;gap:8px;align-items:baseline"><h3 style="margin:0;flex:1">Unduh Buku Induk · ${esc(isSpecialSub(sub) ? subMeta(sub).nama : KATMAP[sub].kib + " " + KATMAP[sub].nama)}</h3><button class="ghost" id="bi-close">Tutup</button></div>
     <p class="hint" style="margin:4px 0 10px">Berisi seluruh data yang tercatat di aplikasi (data SIPBMD, isian sekolah, sumber dana, nilai, kondisi, pemegang, lokasi) beserta foto aset, dengan kop dan judul "Buku Induk Barang".</p>
     <div class="fgrid">
       <div class="fgrid" style="grid-template-columns:1fr 1fr;gap:10px"><label class="f">Tahun perolehan dari${yo("bi-dari", B.dari, "awal")}</label><label class="f">sampai${yo("bi-sampai", B.sampai, "akhir")}</label></div>
@@ -1168,7 +1209,7 @@ async function biPdf() {
     const foto = new Map();
     for (const x of list) if ((x.fotos || []).length) { const [f] = await pdfFotos([{ id:x.fotos[0] }]); if (f) foto.set(x.key, f); }
     const c = cfg(), { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4", orientation:"landscape" }), Wp = 297;
-    const gol = sub === "tak" ? "Aset Tidak Tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama + " (kode " + KATMAP[sub].kode + ")";
+    const gol = sub === "tak" ? "Aset Tidak Tercatat di SIPBMD (semua golongan)" : sub === "bospda" ? "Aset BOSP Daerah Belum Tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama + " (kode " + KATMAP[sub].kode + ")";
     let y = pdfKop(doc);
     y = pdfJudul(doc, y, ["BUKU INDUK BARANG MILIK DAERAH"], gol);
     doc.setFontSize(9.5);
@@ -1179,7 +1220,7 @@ async function biPdf() {
       styles:{ fontSize:7.4, cellPadding:1.2, lineColor:[60,60,60], lineWidth:0.12, textColor:[20,20,20], valign:"top", overflow:"linebreak" },
       headStyles:{ fillColor:[225,225,225], textColor:[20,20,20], fontStyle:"bold", halign:"center", valign:"middle" },
       head:[["No", "Kode Barang / No. Register", "Nama Barang", "Spesifikasi / Data KIB", "Tahun / Tgl Perolehan", "Sumber Dana / Asal Usul", "Nilai Perolehan (Rp)", "Kondisi", "Pemegang / Lokasi", "Foto"]],
-      body:[...list.map((x, n) => [n + 1, (x.kode || "-") + (x.noreg ? "\nNo. " + x.noreg : "") + (x.reg ? "\nReg. " + x.reg : "") + (x.sip ? "" : "\n(tidak tercatat SIPBMD)"), itemNama(x) + (sub === "tak" && KATMAP[x.kat] ? "\n" + KATMAP[x.kat].kib : ""), biSpes(x) || "-", (tahunOf(x) || "-") + (x.tgl && String(x.tgl).length > 4 ? "\n" + tglID(parseTgl(String(x.tgl))) : ""), [x.sumber, x.asal].filter(Boolean).join("\n") || "-", fm(itemNilai(x)) + (x.jml > 1 ? "\n(" + fmt(x.jml) + " unit)" : ""), (x.kond || "Belum dicek") + (x.ksip ? "\nSIPBMD: " + x.ksip : ""), [x.pj, x.lokasi].filter(Boolean).join("\n") || "-", foto.has(x.key) ? "" : "-"]),
+      body:[...list.map((x, n) => [n + 1, (x.kode || "-") + (x.noreg ? "\nNo. " + x.noreg : "") + (x.reg ? "\nReg. " + x.reg : "") + (x.sip ? "" : "\n(tidak tercatat SIPBMD)"), itemNama(x) + (isSpecialSub(sub) && KATMAP[x.kat] ? "\n" + KATMAP[x.kat].kib : ""), biSpes(x) || "-", (tahunOf(x) || "-") + (x.tgl && String(x.tgl).length > 4 ? "\n" + tglID(parseTgl(String(x.tgl))) : ""), [x.sumber, x.asal].filter(Boolean).join("\n") || "-", fm(itemNilai(x)) + (x.jml > 1 ? "\n(" + fmt(x.jml) + " unit)" : ""), (x.kond || "Belum dicek") + (x.ksip ? "\nSIPBMD: " + x.ksip : ""), [x.pj, x.lokasi].filter(Boolean).join("\n") || "-", foto.has(x.key) ? "" : "-"]),
         [{ content:"JUMLAH", colSpan:6, styles:{ fontStyle:"bold", halign:"right" } }, { content:fm(total), styles:{ fontStyle:"bold", halign:"right" } }, { content:"", colSpan:3 }]],
       columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 1:{ cellWidth:30 }, 2:{ cellWidth:38 }, 3:{ cellWidth:62 }, 4:{ cellWidth:20, halign:"center" }, 5:{ cellWidth:24 }, 6:{ cellWidth:24, halign:"right" }, 7:{ cellWidth:18 }, 8:{ cellWidth:29 }, 9:{ cellWidth:24, halign:"center" } },
       didParseCell:d => { if (d.section === "body" && d.column.index === 9 && list[d.row.index] && foto.has(list[d.row.index].key)) d.cell.styles.minCellHeight = 20; },
@@ -1190,14 +1231,14 @@ async function biPdf() {
     const sb = (x, lab, nama, nip) => { doc.setFontSize(10); doc.text(lab, x, y, { align:"center" }); doc.setFont("helvetica", "bold"); doc.text(nama || "", x, y + 24, { align:"center" }); const w = doc.getTextWidth(nama || ""); doc.setLineWidth(0.25); if (nama) doc.line(x - w / 2, y + 25, x + w / 2, y + 25); doc.setFont("helvetica", "normal"); doc.text("NIP. " + (nip || "-"), x, y + 29.5, { align:"center" }); };
     doc.setFontSize(10); doc.text("Tanjung Redeb, " + tglID(today()), Wp - 60, y, { align:"center" }); y += 5;
     sb(60, "Pengurus Barang,", c.pengurus, c.nipPengurus); sb(Wp / 2, "Waka Sarpras,", c.waka, c.nipWaka); sb(Wp - 60, "Kepala Sekolah\nselaku Kuasa Pengguna Barang,", c.kepsek, c.nipKepsek);
-    const nm = sub === "tak" ? "Aset Tidak Tercatat" : KATMAP[sub].kib + " " + KATMAP[sub].nama;
+    const nm = isSpecialSub(sub) ? subMeta(sub).nama : KATMAP[sub].kib + " " + KATMAP[sub].nama;
     saveFile(`Buku Induk ${nm} ${today()}.pdf`, pdfFinish(doc).output("blob"));
   } catch (e) { toast("Buku induk gagal disusun (" + (e.message || e) + ")."); }
   UI.bi.busy = false; render();
 }
 function biExcel() {
   const list = biItems(); if (!list.length) return;
-  const nm = sub === "tak" ? "Aset Tidak Tercatat" : KATMAP[sub].kib + " " + KATMAP[sub].nama;
+  const nm = isSpecialSub(sub) ? subMeta(sub).nama : KATMAP[sub].kib + " " + KATMAP[sub].nama;
   const rows = list.map((x, i) => Object.assign(kibRow(x, KIB_KOLOM.map(k => k[0]), i + 1), { "Sumber Dana":x.sumber || "", "Nilai (Rp)":itemNilai(x), "Jumlah Foto":(x.fotos || []).length }));
   const info = [{ "Buku Induk Barang Milik Daerah":"SMA Negeri 1 Berau" }, { "Buku Induk Barang Milik Daerah":nm }, { "Buku Induk Barang Milik Daerah":"Data: " + biFilterText() }, { "Buku Induk Barang Milik Daerah":"Keadaan per " + tglID(today()) + " · " + fmt(list.length) + " barang" }];
   xlsxSave(`Buku Induk ${nm} ${today()}.xlsx`, [["Buku Induk", rows], ["Identitas", info]]);
@@ -1227,7 +1268,7 @@ UI.uk = { q:"", sel:null, dari:"", sampai:"", pkat:"", ckat:[], cst:"", ckond:""
 const tahunOf = x => +(String(x.th || "").slice(0, 4) || String(x.tgl || "").slice(0, 4)) || 0;
 function kibRow(x, cols, n) {
   const r = {}, on = k => cols.includes(k);
-  if (on("id")) Object.assign(r, { "No":n, "Kode Aset":x.kode || "", "No Register":x.noreg || "", "No Registrasi Internal":x.reg || "", "Nama Aset":x.nama || "", "Golongan":KATMAP[x.kat] ? KATMAP[x.kat].kib + " " + KATMAP[x.kat].nama : "", "Status Pencatatan":x.sip ? "Tercatat SIPBMD" : "Tidak tercatat" });
+  if (on("id")) Object.assign(r, { "No":n, "Kode Aset":x.kode || "", "No Register":x.noreg || "", "No Registrasi Internal":x.reg || "", "Nama Aset":x.nama || "", "Golongan":KATMAP[x.kat] ? KATMAP[x.kat].kib + " " + KATMAP[x.kat].nama : "", "Status Pencatatan":isBospda(x) ? "BOSP Daerah, menunggu SIPBMD" : x.sip ? "Tercatat SIPBMD" : "Tidak tercatat" });
   if (on("kib")) for (const f of kibFields(x.kat)) { const v = kibVal(x, f.src, f.l).v; r[f.l] = f.u === "rp" ? numVal(v) : f.u === "tgl" ? (parseTgl(String(v || "")) || v || "") : (kibEmpty(v) ? "" : v); }
   if (on("beda")) r["Isian sekolah berbeda dari SIPBMD"] = kibFields(x.kat).map(f => { const k = kibVal(x, f.src, f.l); return k.isi ? `${f.l}: ${kibEmpty(k.sip) ? "(kosong)" : k.sip} → ${k.v}` : ""; }).filter(Boolean).join("; ");
   if (on("serah")) Object.assign(r, { "Diserahkan ke":x.pj || "", "Jabatan":x.jab || "", "NIP":x.nip || "", "Peruntukan":x.untuk || "", "Posisi Barang (Lokasi Sekolah)":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "" });
@@ -1334,18 +1375,22 @@ document.addEventListener("change", e => {
 
 /* ================= view: aset ================= */
 // assets that physically exist but have no record in SIPBMD (all golongan)
-const takItems = () => allItems().visible.filter(x => !x.sip && x.src !== "G");
+const takItems = () => allItems().visible.filter(x => !x.sip && x.src !== "G" && x.grp !== "bospda");
 const KAT_TAK = { id:"tak", kib:"Semua golongan", nama:"Aset tidak tercatat di SIPBMD", kode:"—" };
+const KAT_BOSPDA = { id:"bospda", kib:"Belanja cabang dinas", nama:"Aset BOSP Daerah belum tercatat di SIPBMD", kode:"—" };
+const isBospda = x => x.grp === "bospda";
+const bospdaItems = () => allItems().visible.filter(isBospda);
+const isSpecialSub = s2 => s2 === "tak" || s2 === "bospda";
+const subMeta = s2 => s2 === "tak" ? KAT_TAK : s2 === "bospda" ? KAT_BOSPDA : KATMAP[s2];
+// golongan pages show SIPBMD records only; the two special pages hold everything else
+function subItems(s2) { return s2 === "tak" ? takItems() : s2 === "bospda" ? bospdaItems() : allItems().visible.filter(x => x.kat === s2 && x.sip && !isBospda(x)); }
 const FLAGS = { nopj:["Belum diserahkan ke siapa pun", x => !x.pj], noloc:["Tanpa posisi", x => !x.lokasi], nofoto:["Tanpa foto", x => !x.foto && !(x.fotos || []).length], kib:["Dokumen hanya Data KIB", x => /^data kib$/i.test(x.nodok || "")], intra:["Intrakomptabel", x => /intra/i.test(x.kap || "")] };
 function filterAset() {
   const f = UI.aset;
   return allItems().visible.filter(x => {
-    if (sub === "tak") { if (x.sip || x.src === "G") return false; if (f.kat && x.kat !== f.kat) return false; }
-    else {
-    if (x.kat !== sub) return false;
-    if (f.st === "sip" && !x.sip) return false;
-    if (f.st === "tak" && x.sip) return false;
-    }
+    if (sub === "tak") { if (x.sip || x.src === "G" || isBospda(x)) return false; if (f.kat && x.kat !== f.kat) return false; }
+    else if (sub === "bospda") { if (!isBospda(x)) return false; if (f.kat && x.kat !== f.kat) return false; }
+    else if (x.kat !== sub || !x.sip || isBospda(x)) return false;
     if (f.kond === "-" ? x.kond : (f.kond && x.kond !== f.kond)) return false;
     if (f.gol && golOf(x.kode) !== f.gol) return false;
     if (f.gedung && x.gedung !== f.gedung) return false;
@@ -1354,7 +1399,7 @@ function filterAset() {
   });
 }
 function vAset() {
-  const isTak = sub === "tak", f = UI.aset, k = isTak ? KAT_TAK : KATMAP[sub], inKat = isTak ? takItems() : allItems().visible.filter(x => x.kat === sub), rows = filterAset();
+  const isSpecial = isSpecialSub(sub), isTak = sub === "tak", isBos = sub === "bospda", f = UI.aset, k = subMeta(sub), inKat = subItems(sub), rows = filterAset();
   const per = 60, pages = Math.max(1, Math.ceil(rows.length / per)); f.page = Math.min(f.page, pages - 1);
   const slice = rows.slice(f.page * per, (f.page + 1) * per);
   const nSip = inKat.filter(x => x.sip).length, nTak = inKat.length - nSip;
@@ -1363,14 +1408,15 @@ function vAset() {
   const unit = sub === "atl" ? "kelompok" : sub === "gedung" ? "ruang/bangunan" : isTak ? "aset" : "barang";
   return `
   ${kibStrip("aset")}
-  <div class="toolbar" style="align-items:center"><div><h2 style="margin:0">${k.nama}</h2><span class="muted">${k.kib} · kode ${k.kode} · ${fmt(inKat.length)} ${unit}</span></div><span class="sp"></span>
-    ${isMaster() ? '<a class="btn" href="#impor">Impor dari SIPBMD</a>' : ""}${can("aset_tambah") ? '<button class="primary" id="a-new">Tambah aset</button>' : ""}</div>
+  <div class="toolbar" style="align-items:center"><div><h2 style="margin:0">${k.nama} ${isSpecial ? "" : '<span class="pill info" title="Data tercatat di SIPBMD">Data SIPBMD</span>'}</h2><span class="muted">${isSpecial ? k.kib : k.kib + " · kode " + k.kode + " · tercatat di SIPBMD"} · ${fmt(inKat.length)} ${unit}</span></div><span class="sp"></span>
+    ${isMaster() && !isSpecial ? '<a class="btn" href="#impor">Import</a>' : ""}${can("aset_tambah") ? '<button class="primary" id="a-new">Tambah aset</button>' : ""}</div>
   ${sub === "gedung" ? `<div class="note info" style="margin-bottom:12px">Golongan ini khusus aset Gedung dan Bangunan yang tercatat di SIPBMD. Kondisi tiap ruangan untuk Dapodik diisi di menu <a href="#ruang">Kondisi Ruangan</a>.</div>` : ""}
   ${isTak ? `<div class="note info" style="margin-bottom:12px">Aset yang ada di sekolah tetapi belum tercatat di SIPBMD, dari semua golongan. Jika kemudian catatannya ditemukan di SIPBMD, buka asetnya lalu ubah <b>Status pencatatan</b> menjadi <b>Sudah tercatat di SIPBMD</b> (isi kode aset dan no. register), atau pasangkan ke data impor SIPBMD. Aset itu lalu pindah dari daftar ini ke golongannya.</div>` : ""}
-  ${inKat.length || isTak ? "" : `<div class="note info" style="margin-bottom:12px">Belum ada data ${k.nama.toLowerCase()}. Unggah file Excel unduhan SIPBMD lewat <a href="#impor">Impor SIPBMD</a>, atau tambahkan satu per satu dengan tombol Tambah aset.</div>`}
+  ${isBos ? `<div class="note warn" style="margin-bottom:12px">Aset dari belanja <b>BOSP Daerah</b> yang dibelanjakan oleh cabang dinas (mulai 2025) dan <b>belum tercatat di SIPBMD</b> sekolah. Dicatat terpisah supaya tidak mengganggu menu lain. Jika nanti sudah tercatat di SIPBMD milik BPKAD, buka asetnya lalu ubah <b>Status pencatatan</b> menjadi <b>Sudah tercatat di SIPBMD</b> (isi kode aset dan no. register) atau <b>Tidak tercatat</b>; aset otomatis pindah ke menu yang sesuai.</div>` : ""}
+  ${inKat.length || isSpecial ? "" : `<div class="note info" style="margin-bottom:12px">Belum ada data ${k.nama.toLowerCase()}. Unggah file Excel unduhan SIPBMD lewat menu <a href="#impor">Import SIPBMD</a>, atau tambahkan satu per satu dengan tombol Tambah aset.</div>`}
   <div class="toolbar">
-    ${isTak ? `<label class="f">Golongan<select id="a-kat"><option value="">Semua golongan · ${fmt(inKat.length)}</option>${KAT.map(g => { const n = inKat.filter(x => x.kat === g.id).length; return n ? `<option value="${g.id}" ${f.kat === g.id ? "selected" : ""}>${g.kib} · ${g.nama} · ${fmt(n)}</option>` : ""; }).join("")}</select></label>` :
-    `<div class="chips" role="group" aria-label="Status pencatatan"><button class="chip" data-st="" aria-pressed="${!f.st}">Semua · ${fmt(inKat.length)}</button><button class="chip" data-st="sip" aria-pressed="${f.st==="sip"}">SIPBMD · ${fmt(nSip)}</button><button class="chip" data-st="tak" aria-pressed="${f.st==="tak"}">Tak tercatat · ${fmt(nTak)}</button></div>`}
+    ${isSpecial ? `<label class="f">Golongan<select id="a-kat"><option value="">Semua golongan · ${fmt(inKat.length)}</option>${KAT.map(g => { const n = inKat.filter(x => x.kat === g.id).length; return n ? `<option value="${g.id}" ${f.kat === g.id ? "selected" : ""}>${g.kib} · ${g.nama} · ${fmt(n)}</option>` : ""; }).join("")}</select></label>` :
+    `<span class="muted sm">Aset golongan ini yang belum tercatat di SIPBMD ada di <a href="#aset-tak">Aset tidak tercatat</a>${bospdaItems().some(x => x.kat === sub) ? ` dan <a href="#aset-bospda">Aset BOSP Daerah</a>` : ""}.</span>`}
   </div>
   <div class="toolbar">
     <label class="f grow">Cari<input id="a-q" type="search" placeholder="nama, merek, kode, no. registrasi, pemegang, ruang…" value="${esc(f.q)}"></label>
@@ -1390,7 +1436,7 @@ function vAset() {
       <td class="selc"><input type="checkbox" data-selkey="${esc(x.key)}" aria-label="Pilih ${esc(itemNama(x))}" ${UI.sel.has(x.key) ? "checked" : ""}></td>
       <td>${(x.fotos || []).length ? `<img class="thumb" src="${fotoSrc(x.fotos[0])}" data-foto="${esc(x.fotos[0])}" alt="" loading="lazy">` : `<span class="thumb" aria-hidden="true"></span>`}</td>
       <td><span class="mono">${esc(x.sip ? x.kode : (x.reg || x.kode || "—"))}</span><div class="sm mono">${x.sip ? "No. " + esc(x.noreg) + (x.reg ? " · " + esc(x.reg) : "") : esc(x.srcSheet ? x.srcSheet.join(", ") : x.gedung || "")}</div></td>
-      <td><div class="nm">${esc(itemNama(x))}${ntBadge("aset", x.key)}</div>${sub === "pm" || sub === "atl" || sub === "tak" ? `<div class="sm show-sm">${esc(x.pj || "belum diserahkan")} · ${esc(x.lokasi || "tanpa lokasi")}</div>` : ""}<div class="sm">${esc([sub === "tak" && KATMAP[x.kat] ? KATMAP[x.kat].kib : "", x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div></td>
+      <td><div class="nm">${esc(itemNama(x))}${ntBadge("aset", x.key)}</div>${sub === "pm" || sub === "atl" || isSpecialSub(sub) ? `<div class="sm show-sm">${esc(x.pj || "belum diserahkan")} · ${esc(x.lokasi || "tanpa lokasi")}</div>` : ""}<div class="sm">${esc([isSpecialSub(sub) && KATMAP[x.kat] ? KATMAP[x.kat].kib : "", x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div></td>
       <td>${statusPill(x)}</td>
       ${sub === "tanah" ? `<td class="num hide-sm">${esc(kibCell(x, /^(luas|jumlah\s*\(luas\))/i, "m²")) || '<span class="faint">—</span>'}</td><td class="hide-sm">${esc([kibCell(x, /^(nama\s*dokumen|hak|jenis\s*dokumen)/i), x.nodok ? "No. " + x.nodok : ""].filter(Boolean).join(" · ")) || '<span class="faint">—</span>'}<div class="sm">${esc(kibCell(x, /^(tanggal|tgl\.?)\s*(dokumen|sertifikat)/i, "tgl"))}</div></td>` :
         sub === "gedung" ? `<td class="num hide-sm">${esc(kibCell(x, /luas/i, "m²")) || '<span class="faint">—</span>'}</td><td class="hide-sm sm">${esc([kibCell(x, /bertingkat/i) === "Ya" ? "Bertingkat" : kibCell(x, /bertingkat/i) ? "Tidak bertingkat" : "", kibCell(x, /^beton/i) === "Ya" ? "Beton" : kibCell(x, /^beton/i) ? "Bukan beton" : ""].filter(Boolean).join(", ")) || "—"}<div>${esc(kibCell(x, /status\s*tanah/i))}</div></td>` :
@@ -1510,8 +1556,8 @@ function drawerItem(x) {
       <div><p class="sectionlabel">Pencatatan</p>
         <fieldset class="fgrid fs" ${drawerItem.canU ? "" : "disabled"}>
           ${x.src === "S" || x.src === "P" ? "" : `<div class="full"><span class="f" style="margin-bottom:6px;display:block">Status pencatatan</span>
-            <div class="seg" id="d-sipseg"><button type="button" data-sipv="0" aria-pressed="${!x.sip}">Tidak tercatat di SIPBMD</button><button type="button" data-sipv="1" aria-pressed="${!!x.sip}">Sudah tercatat di SIPBMD</button></div><input type="hidden" id="d-sip" value="${x.sip ? "1" : "0"}">
-            <span class="hint">${x.sip ? "Aset ini sudah dinyatakan tercatat di SIPBMD." : "Jika kemudian catatannya ditemukan di SIPBMD, pilih <b>Sudah tercatat di SIPBMD</b>, isi kode aset dan no. register, lalu Simpan."}</span></div>
+            <div class="seg" id="d-sipseg"><button type="button" data-sipv="0" aria-pressed="${!x.sip && !isBospda(x)}">Tidak tercatat di SIPBMD</button><button type="button" data-sipv="bospda" aria-pressed="${isBospda(x)}">BOSP Daerah · menunggu SIPBMD</button><button type="button" data-sipv="1" aria-pressed="${!!x.sip && !isBospda(x)}">Sudah tercatat di SIPBMD</button></div><input type="hidden" id="d-sip" value="${isBospda(x) ? "bospda" : x.sip ? "1" : "0"}">
+            <span class="hint">${isBospda(x) ? "Aset belanja BOSP Daerah oleh cabang dinas yang belum tercatat di SIPBMD. Jika sudah tercatat di SIPBMD BPKAD, pilih <b>Sudah tercatat di SIPBMD</b> dan isi kode aset serta no. register." : x.sip ? "Aset ini sudah dinyatakan tercatat di SIPBMD." : "Jika kemudian catatannya ditemukan di SIPBMD, pilih <b>Sudah tercatat di SIPBMD</b>, isi kode aset dan no. register, lalu Simpan."}</span></div>
           <div class="full fgrid" id="d-sipf" ${x.sip ? "" : "hidden"}><label class="f">Kode aset SIPBMD<input id="d-kode" class="mono" value="${esc(x.kode || "")}" placeholder="mis. 1.3.2.10.01.02.002"></label><label class="f">No. register SIPBMD<input id="d-noreg" class="mono" value="${esc(x.noreg || "")}"></label></div>`}
           <label class="f">No. registrasi internal<input id="d-reg" class="mono" value="${esc(x.reg || "")}"></label>
           <label class="f">No. SPJ / kuitansi<input id="d-spj" value="${esc(x.spj || "")}"></label>
@@ -1531,13 +1577,13 @@ function drawerItem(x) {
 function drawerNew() {
   return `<div class="dh"><div><p class="sectionlabel" style="margin:0 0 2px">Aset baru</p><h3>Tambah aset</h3></div><button class="x" id="d-close">Tutup</button></div>
   <div class="db"><div class="fgrid">
-    <label class="f full">Golongan<select id="n-kat">${KAT.map(k => `<option value="${k.id}" ${k.id === (sub === "tak" ? "pm" : sub) ? "selected" : ""}>${k.kib} · ${k.nama}</option>`).join("")}</select></label>
+    <label class="f full">Golongan<select id="n-kat">${KAT.map(k => `<option value="${k.id}" ${k.id === (isSpecialSub(sub) ? "pm" : sub) ? "selected" : ""}>${k.kib} · ${k.nama}</option>`).join("")}</select></label>
     <label class="f full">Nama aset<input id="n-nama" placeholder="mis. Laptop, Tanah Sekolah, Pagar Keliling"></label>
     <label class="f">Merek / tipe<input id="n-merek"></label><label class="f">Spesifikasi / ukuran / luas<input id="n-spes"></label>
     <label class="f">Jumlah<input id="n-jml" type="number" min="1" value="1"></label><label class="f">Harga satuan (Rp)<input id="n-harga" type="number" min="0" value="0"></label>
     <label class="f">Tanggal perolehan<input id="n-tgl" type="date"></label>${sumberField("n-sumber", "")}
     <label class="f">No. SPJ / kuitansi<input id="n-spj"></label><label class="f">No. registrasi internal<input id="n-reg" class="mono"></label>
-    <label class="f full">Status pencatatan<select id="n-sip"><option value="0" ${sub === "tak" ? "selected" : ""}>Tidak tercatat di SIPBMD</option><option value="1">Sudah tercatat di SIPBMD (isi kode dan no. register)</option></select></label>
+    <label class="f full">Status pencatatan<select id="n-sip"><option value="0" ${sub === "tak" ? "selected" : ""}>Tidak tercatat di SIPBMD</option><option value="bospda" ${sub === "bospda" ? "selected" : ""}>BOSP Daerah oleh cabang dinas · menunggu SIPBMD</option><option value="1">Sudah tercatat di SIPBMD (isi kode dan no. register)</option></select></label>
     <label class="f">Kode aset SIPBMD<input id="n-kode" class="mono"></label><label class="f">No. register SIPBMD<input id="n-noreg" class="mono"></label>
     <label class="f full">Posisi / letak<input id="n-lok" list="dl-ruang"></label>
   </div><div><button class="primary" id="n-save">Simpan aset</button></div></div>`;
@@ -1597,18 +1643,24 @@ function vBast() {
       </div>
       ${untukList()}
       <datalist id="dl-ruang2">${ruangList().map(r => `<option value="${esc(r)}">`).join("")}</datalist>
+      ${f.p ? (() => { const held = allItems().visible.filter(x => x.pj === f.p && !picked.has(x.key)); if (!held.length) return ""; const hs = f.hsel || (f.hsel = new Set());
+        return `<div class="heldbox"><p class="sectionlabel" style="margin:0 0 6px">Barang yang tercatat diserahkan ke ${esc(f.p.split(",")[0])} (${held.length}) · pilih yang dibuatkan BAST</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px"><button class="link sm" id="bh-nobast">Centang yang belum ber-BAST (${held.filter(x => !x.bast).length})</button><button class="link sm" id="bh-all">Centang semua</button><button class="link sm" id="bh-none">Kosongkan centang</button></div>
+        <div class="heldlist">${held.map(x => `<label class="ck"><input type="checkbox" data-bh="${esc(x.key)}" ${hs.has(x.key) ? "checked" : ""}><span><b style="font-weight:500">${esc(itemNama(x))}</b> ${tahunOf(x) ? `<span class="pill">Tahun ${tahunOf(x)}</span>` : ""}<br><span class="sm muted">${esc(idLabel(x) || "tanpa nomor")}${x.lokasi ? " · " + esc(x.lokasi) : ""} · ${x.bast ? "BAST " + esc(x.bast) : '<b style="color:var(--warn)">belum ada BAST</b>'}</span></span></label>`).join("")}</div>
+        <button class="primary" id="bh-add" style="margin-top:8px" ${hs.size ? "" : "disabled"}>Tambahkan ${hs.size} barang ke BAST ini</button></div>`; })() : ""}
       <p class="sectionlabel" style="margin-top:16px">Barang (${f.items.length})</p>
       <div class="picked">${f.items.map((i, n) => `<div class="it"><div><b>${esc(i.nama)}</b>${i.th ? ` <span class="pill">Tahun ${esc(i.th)}</span>` : ""}<div class="mono faint">${esc(i.reg || (i.kode ? i.kode + " / " + i.noreg : "tanpa nomor registrasi"))}</div></div><input id="b-jml-${n}" type="number" min="1" value="${i.jml}" aria-label="Jumlah"><button class="ghost" data-unpick="${n}">Hapus</button></div>`).join("") || '<p class="muted" style="margin:0">Belum ada barang dipilih.</p>'}</div>
-      <label class="f" style="margin-top:10px">Tambah barang${tarik && f.p ? ` <button class="link" type="button" id="b-ofpeg">tampilkan barang yang dipegang ${esc(f.p.split(",")[0])}</button>` : ""}<input id="b-q" type="search" value="${esc(f.q)}" placeholder="cari nama, merek, no. registrasi, serial, pemegang…"></label>
+      <label class="f" style="margin-top:10px">Tambah barang${f.p ? ` <span class="hint">atau cari barang lain</span>` : ""}<input id="b-q" type="search" value="${esc(f.q)}" placeholder="cari nama, merek, no. registrasi, serial, pemegang…"></label>
       ${cands.length ? `<div class="suggest" style="margin-top:6px">${cands.map(x => `<button data-pick="${esc(x.key)}"><span><b>${esc(itemNama(x))}</b> <span class="pill">${tahunOf(x) ? "Tahun " + tahunOf(x) : "tahun ?"}</span><br><span class="mono faint">${esc(idLabel(x))}</span> ${x.pj ? '<span class="faint">· ' + esc(x.pj) + "</span>" : ""}${x.lokasi ? '<span class="faint"> · ' + esc(x.lokasi) + "</span>" : ""}</span><span class="num">${rp(bastItem(x).nilai)}</span></button>`).join("")}</div>` : ""}
       <p class="sectionlabel" style="margin-top:16px">Dokumentasi (dicetak sebagai lampiran BAST)</p>
-      <div class="bfoto">${[["barang", "Foto barang"], ["proses", tarik ? "Foto proses penarikan" : "Foto proses penyerahan"]].map(([j, l]) => { const fs = (f.fotos || []).filter(x => x.j === j); return `<div><span class="f" style="display:block;margin-bottom:4px">${l} <span class="hint">(maks. 2)</span></span><div class="photos" style="grid-template-columns:repeat(3,minmax(0,1fr))">${fs.map(x => `<figure><img src="${fotoSrc(x.id)}" data-foto="${esc(x.id)}" alt="${l}"><button data-bfdel="${esc(x.id)}" aria-label="Hapus foto">Hapus</button></figure>`).join("")}${fs.length < 2 && assets ? `<label class="upload" for="bf-${j}" style="min-height:70px">${UI.bast.up === j ? "Mengunggah…" : "<b>+ Foto</b>"}<input id="bf-${j}" data-bfj="${j}" type="file" accept="image/*" capture="environment" multiple></label>` : ""}</div></div>`; }).join("")}</div>
+      ${(() => { const af = bastAsetFotos(buildBast()); return af.length ? `<div style="margin-bottom:8px"><span class="f" style="display:block;margin-bottom:4px">Foto barang dari data aset <span class="hint">(otomatis ikut, ${af.length} foto)</span></span><div class="photos" style="grid-template-columns:repeat(6,minmax(0,1fr))">${af.map(x => `<figure title="${esc(x.cap)}"><img src="${fotoSrc(x.id)}" data-foto="${esc(x.id)}" alt="${esc(x.cap)}"></figure>`).join("")}</div></div>` : `<p class="hint" style="margin:0 0 8px">Foto yang sudah diunggah di data aset otomatis ikut ke lampiran. Barang yang dipilih belum punya foto.</p>`; })()}
+      <div class="bfoto">${[["barang", "Foto barang tambahan"], ["proses", tarik ? "Foto proses penarikan" : "Foto proses penyerahan"]].map(([j, l]) => { const fs = (f.fotos || []).filter(x => x.j === j); return `<div><span class="f" style="display:block;margin-bottom:4px">${l} <span class="hint">(maks. 2)</span></span><div class="photos" style="grid-template-columns:repeat(3,minmax(0,1fr))">${fs.map(x => `<figure><img src="${fotoSrc(x.id)}" data-foto="${esc(x.id)}" alt="${l}"><button data-bfdel="${esc(x.id)}" aria-label="Hapus foto">Hapus</button></figure>`).join("")}${fs.length < 2 && assets ? `<label class="upload" for="bf-${j}" style="min-height:70px">${UI.bast.up === j ? "Mengunggah…" : "<b>+ Foto</b>"}<input id="bf-${j}" data-bfj="${j}" type="file" accept="image/*" capture="environment" multiple></label>` : ""}</div></div>`; }).join("")}</div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="primary" id="b-save" ${f.items.length && f.p ? "" : "disabled"}>Simpan & unduh PDF</button><button id="b-pdf" ${f.items.length ? "" : "disabled"}>Unduh PDF saja</button><button class="ghost" id="b-reset">Kosongkan</button></div>
     </section>
     <section style="min-width:0">${letterPreview(buildBast())}</section>
   </div>
   <section class="panel" style="margin-top:14px"><h3>BAST yang dibuat di aplikasi</h3>
-    ${S.trx.length ? `<div class="tablebox"><table><thead><tr><th>Tanggal</th><th>Nomor</th><th>Jenis</th><th>Pegawai</th><th class="num">Barang</th><th></th></tr></thead><tbody>${S.trx.map(t => `<tr><td>${esc(tglID(t.tgl))}</td><td class="mono">${esc(t.nomor)}</td><td>${t.jenis === "tarik" ? '<span class="pill warn">Penarikan</span>' : '<span class="pill acc">Penyerahan</span>'}</td><td>${esc(t.jenis === "tarik" ? t.p1.nama : t.p2.nama)}</td><td class="num">${t.items.length}</td><td><button class="ghost" data-repdf="${esc(t._id)}">PDF</button></td></tr>`).join("")}</tbody></table></div>` : '<p class="muted" style="margin:0">Belum ada.</p>'}
+    ${S.trx.length ? `<div class="tablebox"><table><thead><tr><th>Tanggal</th><th>Nomor</th><th>Jenis</th><th>Pegawai</th><th class="num">Barang</th><th>Riwayat cetak</th><th></th></tr></thead><tbody>${S.trx.map(t => { const ct = cetakOf(t.nomor); return `<tr><td>${esc(tglID(t.tgl))}</td><td class="mono">${esc(t.nomor)}</td><td>${t.jenis === "tarik" ? '<span class="pill warn">Penarikan</span>' : '<span class="pill acc">Penyerahan</span>'}</td><td>${esc(t.jenis === "tarik" ? t.p1.nama : t.p2.nama)}</td><td class="num">${t.items.length}</td><td class="sm">${ct.length ? `<span class="pill ${ct.length > 1 ? "warn" : "ok"}">${ct.length}× dicetak</span><div class="muted">terakhir ${esc(tglJam(ct[0].at))} · ${esc(nameOf(ct[0].by))}</div>` : '<span class="pill">belum dicetak</span>'}</td><td><button class="ghost" data-repdf="${esc(t._id)}">${ct.length ? "Cetak ulang" : "Cetak PDF"}</button></td></tr>`; }).join("")}</tbody></table></div>` : '<p class="muted" style="margin:0">Belum ada.</p>'}
   </section>`;
 }
 function buildBast() {
@@ -1624,7 +1676,7 @@ function letterKop() {
 function letterPreview(b) {
   const total = b.items.reduce((t, i) => t + (i.nilai || 0) * (i.jml || 1), 0), fm = n => Math.round(n || 0).toLocaleString("id-ID");
   const pihak = (no, p, ket) => `<div class="pihak"><span>${no}</span><table><tr><td>Nama</td><td>: <b>${esc(p.nama || "…")}</b></td></tr><tr><td>NIP</td><td>: ${esc(p.nip || "-")}</td></tr><tr><td>Jabatan</td><td>: ${esc(p.jab || "-")}</td></tr></table></div><p class="ket">${ket}</p>`;
-  const tarik = b.jenis === "tarik", fotos = b.fotos || [];
+  const tarik = b.jenis === "tarik", fotos = [...bastAsetFotos(b), ...(b.fotos || [])];
   return `<div class="sheet"><div class="letter">${letterKop()}
     <p class="judul">BERITA ACARA<br><u>${tarik ? "PENARIKAN BARANG INVENTARIS" : "PENYERAHAN, PENGELOLAAN DAN PEMINJAMAN BARANG"}</u></p><p class="no">Nomor: ${esc(b.nomor || "…")}</p>
     <p>Pada hari ini ${esc(hariID(b.tgl))}, tanggal ${esc(tglID(b.tgl))}, bertempat di SMAN 1 Berau, kami yang bertanda tangan di bawah ini:</p>
@@ -1636,7 +1688,7 @@ function letterPreview(b) {
     <div class="sign3"><div><p class="lb">PIHAK PERTAMA,</p><span><b>${esc(b.p1.nama || "")}</b><br>NIP. ${esc(b.p1.nip || "")}</span></div><div><p class="lb">Mengetahui,<br>Kepala Sekolah</p><span><b>${esc(b.kepsek.nama || "")}</b><br>NIP. ${esc(b.kepsek.nip || "")}</span></div><div><p class="lb">PIHAK KEDUA,</p><span><b>${esc(b.p2.nama || "")}</b><br>NIP. ${esc(b.p2.nip || "")}</span></div></div>
   </div>
   ${fotos.length ? `<div class="letter" style="margin-top:14px">${letterKop()}<p class="judul">LAMPIRAN DOKUMENTASI<br><u>BERITA ACARA ${tarik ? "PENARIKAN BARANG INVENTARIS" : "PENYERAHAN BARANG"}</u></p><p class="no">Nomor: ${esc(b.nomor || "…")}</p>
-    ${[["barang", "Foto barang"], ["proses", tarik ? "Foto proses penarikan" : "Foto proses penyerahan"]].map(([j, l]) => { const fs = fotos.filter(x => x.j === j); return fs.length ? `<div class="dok"><p>${l}</p><div class="dokg" style="grid-template-columns:repeat(${Math.max(fs.length, 1)},minmax(0,1fr))">${fs.map(x => `<figure><img src="${fotoSrc(x.id)}" data-foto="${esc(x.id)}" alt="${l}"></figure>`).join("")}</div></div>` : ""; }).join("")}
+    ${[["aset", "Foto barang (dari data aset)", 3], ["barang", "Foto barang", 2], ["proses", tarik ? "Foto proses penarikan" : "Foto proses penyerahan", 2]].map(([j, l, per]) => { const fs = fotos.filter(x => x.j === j); return fs.length ? `<div class="dok"><p>${l}</p><div class="dokg" style="grid-template-columns:repeat(${per},minmax(0,1fr))">${fs.map(x => `<figure><img src="${fotoSrc(x.id)}" data-foto="${esc(x.id)}" alt="${l}">${x.cap ? `<figcaption>${esc(x.cap)}</figcaption>` : ""}</figure>`).join("")}</div></div>` : ""; }).join("")}
     <div class="sign3" style="grid-template-columns:1fr 1fr"><div><p class="lb">PIHAK PERTAMA,</p><span><b>${esc(b.p1.nama || "")}</b><br>NIP. ${esc(b.p1.nip || "")}</span></div><div><p class="lb">PIHAK KEDUA,</p><span><b>${esc(b.p2.nama || "")}</b><br>NIP. ${esc(b.p2.nip || "")}</span></div></div></div>` : ""}
   </div>`;
 }
@@ -1649,6 +1701,28 @@ document.addEventListener("change", async e => {
   UI.bast.up = null; render();
 });
 document.addEventListener("click", e => { const b = e.target.closest("button[data-bfdel]"); if (!b) return; UI.bast.fotos = (UI.bast.fotos || []).filter(x => x.id !== b.dataset.bfdel); render(); });
+const cetakOf = nomor => (S.cetak || []).filter(c => c.jenis === "BAST" && c.nomor === nomor);
+async function cetakBast(b, first) {
+  const prev = cetakOf(b.nomor);
+  if (prev.length && !first) {
+    const ok = await askConfirm(`<b>BAST Nomor ${esc(b.nomor)} sudah pernah dicetak ${prev.length} kali.</b><ul class="sm" style="margin:8px 0 0;padding-left:18px">${prev.slice(0, 5).map(c => `<li>${esc(tglJam(c.at))} oleh ${esc(nameOf(c.by))}</li>`).join("")}</ul><p class="sm muted" style="margin:8px 0 0">Cetak ulang hanya bila memang diperlukan (misalnya lembar rusak atau hilang). Cetak ulang juga tercatat di riwayat.</p>`, "Cetak ulang");
+    if (!ok) return;
+  }
+  await bastPdf(b);
+  try { await db.doc("cetak/" + uid("c")).set({ jenis:"BAST", nomor:b.nomor || "", ke:(b.jenis === "tarik" ? b.p1.nama : b.p2.nama) || "", ulang:prev.length > 0, by:S.me || "", at:new Date().toISOString() }); } catch (e) {}
+}
+document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.bh) { const hs = UI.bast.hsel || (UI.bast.hsel = new Set()); if (t.checked) hs.add(t.dataset.bh); else hs.delete(t.dataset.bh); render(); } });
+document.addEventListener("click", e => {
+  const b = e.target.closest("#bh-add, #bh-all, #bh-none, #bh-nobast"); if (!b) return;
+  const f = UI.bast, picked = new Set(f.items.map(i => i.key)), held = allItems().visible.filter(x => x.pj === f.p && !picked.has(x.key));
+  if (b.id === "bh-all") f.hsel = new Set(held.map(x => x.key));
+  if (b.id === "bh-none") f.hsel = new Set();
+  if (b.id === "bh-nobast") f.hsel = new Set(held.filter(x => !x.bast).map(x => x.key));
+  if (b.id === "bh-add") { for (const x of held) if (f.hsel.has(x.key)) f.items.push(bastItem(x)); f.hsel = new Set(); toast("Barang ditambahkan ke BAST."); }
+  render();
+});
+// first photo of each BAST item, taken from the asset record
+function bastAsetFotos(b) { return (b.items || []).map(i => { const x = i.key && allItems().byKey.get(i.key); return x && (x.fotos || []).length ? { id:x.fotos[0], j:"aset", cap:i.nama } : null; }).filter(Boolean); }
 function bastKalimat(b) {
   return b.jenis === "tarik"
     ? `PIHAK PERTAMA menyerahkan kembali barang inventaris sekolah kepada PIHAK KEDUA${b.untuk ? " dengan alasan " + b.untuk : ""}, sebagaimana tercantum pada tabel di bawah ini.`
@@ -1711,7 +1785,7 @@ async function bastPdf(b) {
   if (!window.jspdf) { toast("Modul PDF belum termuat. Coba lagi sebentar."); return; }
   const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit:"mm", format:"a4" });
   const W = 210, L = 20, R = 190, tarik = b.jenis === "tarik";
-  const fotos = await pdfFotos(b.fotos);
+  const fotos = await pdfFotos([...bastAsetFotos(b), ...(b.fotos || [])]);
   let y = pdfKop(doc);
   y = pdfJudul(doc, y, ["BERITA ACARA", tarik ? "PENARIKAN BARANG INVENTARIS" : "PENYERAHAN, PENGELOLAAN DAN PEMINJAMAN BARANG"], "Nomor: " + b.nomor);
   doc.setFontSize(10.5);
@@ -1735,12 +1809,13 @@ async function bastPdf(b) {
     doc.addPage(); y = pdfKop(doc);
     y = pdfJudul(doc, y, ["LAMPIRAN DOKUMENTASI", "BERITA ACARA " + (tarik ? "PENARIKAN BARANG INVENTARIS" : "PENYERAHAN BARANG")], "Nomor: " + b.nomor);
     doc.setFontSize(10); y = pdfPara(doc, y, `Tanggal ${tglID(b.tgl)} · ${tarik ? "Dikembalikan oleh" : "Diserahkan kepada"} ${(tarik ? b.p1 : b.p2).nama || "-"} · ${b.items.length} barang`);
-    for (const [j, judul] of [["barang", "Foto barang"], ["proses", tarik ? "Foto proses penarikan" : "Foto proses penyerahan"]]) {
+    for (const [j, judul, per, hh] of [["aset", "Foto barang (dari data aset)", 3, 44], ["barang", "Foto barang", 2, 60], ["proses", tarik ? "Foto proses penarikan" : "Foto proses penyerahan", 2, 60]]) {
       const fs = fotos.filter(f => f.j === j); if (!fs.length) continue;
-      if (y + 75 > 282) { doc.addPage(); y = 22; }
-      doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text(judul, L, y); doc.setFont("helvetica", "normal"); y += 3;
-      const two = fs.length > 1 ? fs : [fs[0]];
-      y = pdfFotoRow(doc, y, two, f => judul + (two.length > 1 ? " " + (two.indexOf(f) + 1) : ""), 64);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); if (y + hh + 14 > 282) { doc.addPage(); y = 22; } doc.text(judul, L, y); doc.setFont("helvetica", "normal"); y += 3;
+      for (let i = 0; i < fs.length; i += per) {
+        const row = fs.slice(i, i + per); if (y + hh + 8 > 284) { doc.addPage(); y = 22; }
+        y = pdfFotoRow(doc, y, row.length < per && per === 3 ? [...row] : row, f => f.cap || (judul + (fs.length > 1 ? " " + (fs.indexOf(f) + 1) : "")), hh);
+      }
       y += 2;
     }
     if (y + 40 > 284) { doc.addPage(); y = 22; }
@@ -1784,7 +1859,7 @@ async function saveBast0() {
     await W.set("trx/" + id, Object.assign({}, b, { dibuat:now, oleh:S.me || "" }));
     await W.set("surat/" + id, { tgl:b.tgl, nomor:b.nomor, hal:b.jenis === "tarik" ? "BERITA ACARA PENARIKAN BARANG" : "BERITA ACARA PENYERAHAN BARANG", ke:b.jenis === "tarik" ? b.p1.nama : b.p2.nama, reg:b.items.map(i => i.reg || i.kode + "/" + i.noreg).join(", "), ket:b.items.map(i => i.nama).join("; "), dibuat:now });
     for (const i of b.items) await saveUpd(i.key, b.jenis === "tarik" ? { pj:"", nip:"", jab:"", untuk:"", stpj:"Ditarik dari " + b.p1.nama, lokasi:"Gudang Sarpras", bast:b.nomor, tbast:b.tgl } : Object.assign({ pj:b.p2.nama, nip:b.p2.nip, jab:b.p2.jab, stpj:"", untuk:b.untuk || "", bast:b.nomor, tbast:b.tgl }, b.lok ? { lokasi:b.lok } : {}));
-    bastPdf(b);
+    cetakBast(b, true);
     toast("BAST tersimpan dan pemegang barang diperbarui.");
     UI.bast = { jenis:b.jenis, items:[], p:"", q:"", tgl:today(), untuk:"", fotos:[] };
     render();
@@ -2017,10 +2092,11 @@ function kondBar(rooms) {
 function asetRekapPanel() {
   const all = allItems().visible, kc = (a, k) => a.filter(x => (x.kond || "") === k).length;
   const row = (label, a, href) => `<tr${href ? ` class="rowlink" tabindex="0" data-go="${href}"` : ""}><td>${label}</td><td class="num">${fmt(a.length)}<div class="sm">${fmt(a.filter(x => x.sip).length)} SIPBMD · ${fmt(a.filter(x => !x.sip).length)} tak tercatat</div></td><td class="num hide-sm">${rp(a.reduce((t, x) => t + itemNilai(x), 0))}</td>${KOND.map(k => `<td class="num">${kc(a, k) || '<span class="faint">0</span>'}</td>`).join("")}<td class="num">${kc(a, "") || '<span class="faint">0</span>'}</td></tr>`;
-  return `<section class="panel" style="margin-bottom:14px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">Aset dan kondisinya</h3><span class="muted">${fmt(all.length)} aset · ${rp(all.reduce((t, x) => t + itemNilai(x), 0))}</span><span class="sp" style="flex:1"></span><a href="#aset-pm">Buka Aset SIPBMD</a></div>
+  return `<section class="panel" style="margin-bottom:14px"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0">Aset dan kondisinya</h3><span class="muted">${fmt(all.length)} aset · ${rp(all.reduce((t, x) => t + itemNilai(x), 0))}</span><span class="sp" style="flex:1"></span><a href="#aset-pm">Buka Aset/Modal</a></div>
     <div class="chips" style="margin-top:10px">${KOND.map(k => `<span class="pill ${k === "Baik" ? "ok" : k === "Rusak Sedang" ? "warn" : "bad"}">${k} ${fmt(kc(all, k))}</span>`).join("")}<span class="pill">Belum dicek ${fmt(kc(all, ""))}</span></div>
     <div class="tablebox" style="margin-top:10px"><table><thead><tr><th>Golongan</th><th class="num">Jumlah</th><th class="num hide-sm">Nilai</th>${KOND.map(k => `<th class="num">${k}</th>`).join("")}<th class="num">Belum dicek</th></tr></thead><tbody>
-    ${KAT.map(k => row(`<b style="font-weight:500">${k.kib}</b> ${esc(k.nama)}`, all.filter(x => x.kat === k.id), "#aset-" + k.id)).join("")}
+    ${KAT.map(k => row(`<b style="font-weight:500">${k.kib}</b> ${esc(k.nama)} <span class="sipmark">SIPBMD</span>`, all.filter(x => x.kat === k.id && x.sip && !isBospda(x)), "#aset-" + k.id)).join("")}
+    ${row('<span style="color:var(--warn)">Aset tidak tercatat</span>', takItems(), "#aset-tak")}${row('<span style="color:var(--info)">Aset BOSP Daerah belum tercatat</span>', bospdaItems(), "#aset-bospda")}
     </tbody><tfoot>${row("<b>Jumlah</b>", all)}</tfoot></table></div></section>`;
 }
 function riwayatRekapPanel() {
@@ -2047,7 +2123,7 @@ function vRuang() {
   const byLt = {}; for (const r of rooms) (byLt[r.lantai || "1"] = byLt[r.lantai || "1"] || []).push(r);
   return `<h2>Kondisi ruangan per gedung</h2>
   <p class="lead">Data prasarana untuk isian Dapodik: bangunan, ruang di setiap lantai, ukuran, jenis prasarana, dan kondisinya. Data ini terpisah dari aset Gedung dan Bangunan di SIPBMD.</p>
-  <div class="toolbar"><span class="sp"></span>${isMaster() ? '<button id="rg-imp">Impor daftar ruang (Excel)</button>' : ""}<button id="rg-xlsx" ${S.ruang.length ? "" : "disabled"}>Unduh untuk Dapodik (Excel)</button>${can("ruang") ? '<button class="primary" id="rg-newg">Tambah gedung</button>' : ""}</div>
+  <div class="toolbar"><span class="sp"></span>${isMaster() ? '<button id="rg-imp">Import</button>' : ""}<button id="rg-xlsx" ${S.ruang.length ? "" : "disabled"}>Unduh untuk Dapodik (Excel)</button>${can("ruang") ? '<button class="primary" id="rg-newg">Tambah gedung</button>' : ""}</div>
   ${f.imp ? ruangImportPanel() : ""}
   ${gl.length ? `<nav class="kib" style="grid-template-columns:repeat(${Math.min(gl.length, 8)},minmax(140px,1fr))" aria-label="Gedung">${gl.map(x => { const rs = ruangOf(x._id); return `<a href="#ruang" data-gsel="${esc(x._id)}" ${x._id === f.g ? 'aria-current="page"' : ""}><span class="h">${esc(x.kode || "")}${x.lantai ? " · " + esc(x.lantai) + " lantai" : ""}</span><span class="n">${esc(x.nama)}</span><span class="c">${fmt(rs.length)} ruang · ${fmt(rs.filter(r => r.kond === "Rusak Berat").length)} rusak berat</span><div style="margin-top:4px">${kondBar(rs)}</div></a>`; }).join("")}</nav>` : `<div class="empty"><b>Belum ada gedung</b>Tambah gedung, lalu isi ruangan di setiap lantainya. Daftar ruang yang sudah ada di Excel bisa diimpor sekaligus.</div>`}
   ${g ? `<section class="panel">
@@ -2213,7 +2289,7 @@ function vKertas() {
       ${sumberField("kk-sumber", f.sumber)}
       <label class="f">Tahun<select id="kk-tahun">${[...new Set([...yrs, ...per.map(p => p.tahun), f.tahun])].sort().reverse().map(y => `<option ${y === f.tahun ? "selected" : ""}>${y}</option>`).join("")}</select></label>
       <label class="f">Semester<select id="kk-smt"><option value="1" ${f.smt === "1" ? "selected" : ""}>Semester 1 (Jan–Jun)</option><option value="2" ${f.smt === "2" ? "selected" : ""}>Semester 2 (Jul–Des)</option></select></label>
-      <span class="sp"></span>${isMaster() ? '<button id="kk-imp">Impor kertas kerja lama</button>' : ""}<button class="primary" id="kk-new">Tambah pekerjaan</button>
+      <span class="sp"></span>${isMaster() ? '<button id="kk-imp">Import</button>' : ""}<button class="primary" id="kk-new">Tambah pekerjaan</button>
     </div>
     ${per.length ? `<div class="chips">${per.map(p => `<button class="chip" data-kkper="${esc(kkPeriod(p))}" aria-pressed="${kkPeriod(p) === kkPeriod(f)}">${esc(p.sumber)} ${esc(p.tahun)} · Smt ${esc(p.smt)} · ${p.n}</button>`).join("")}</div>` : ""}
   </section>
@@ -3006,7 +3082,7 @@ function vPenerima() {
     <label class="f">Jabatan<input id="pr-jab" value="${esc(cur.jab || "")}" placeholder="mis. Guru Fisika, Kepala Laboratorium"></label><label class="f">Peruntukan bawaan<input id="pr-untuk" list="dl-untuk" value="${esc(cur.untuk || "")}"></label>
     <div class="full" style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary" id="pr-save">Simpan penerima</button><button id="pr-cancel">Batal</button>${e !== "new" ? '<button class="danger" id="pr-off">Nonaktifkan (pindah/purna tugas)</button>' : ""}</div>
     <datalist id="dl-st">${["PNS","PPPK","Honorer","Guru Tamu","Outsourcing","Unit/Ruang"].map(x => `<option value="${x}">`).join("")}</datalist>${untukList()}</div>` : ""}
-  <div class="toolbar"><label class="f grow">Cari<input id="pr-q" type="search" value="${esc(UI.pr.q)}" placeholder="nama, jabatan, NIP…"></label><span class="sp"></span>${isMaster() ? '<label class="btn" for="pr-file" style="cursor:pointer">Impor daftar pegawai (Excel)</label><input id="pr-file" type="file" accept=".xlsx,.xls,.csv" hidden><button id="pr-new">Tambah penerima</button>' : ""}</div>
+  <div class="toolbar"><label class="f grow">Cari<input id="pr-q" type="search" value="${esc(UI.pr.q)}" placeholder="nama, jabatan, NIP…"></label><span class="sp"></span>${isMaster() ? '<label class="btn" for="pr-file" style="cursor:pointer" title="Import daftar pegawai dari Excel">Import</label><input id="pr-file" type="file" accept=".xlsx,.xls,.csv" hidden><button id="pr-new">Tambah penerima</button>' : ""}</div>
   ${prImpPanel()}
   <div class="tablebox"><table><thead><tr><th>Nama</th><th>Jabatan</th><th class="hide-sm">NIP</th><th class="hide-sm">Peruntukan bawaan</th><th class="num">Memegang</th><th></th></tr></thead><tbody>
   ${list.map(p => { const n = allItems().visible.filter(x => x.pj === p.nama).length; return `<tr><td>${esc(p.nama)}<div class="sm">${esc([p.st, p.kel].filter(Boolean).join(" · "))}</div></td><td>${esc(p.jab || "")}</td><td class="hide-sm mono">${esc(p.nip || "")}</td><td class="hide-sm">${esc(p.untuk || "")}</td><td class="num">${fmt(n)}</td><td>${isMaster() ? `<button class="ghost" data-predit="${esc(p._id)}">Ubah</button>` : ""}</td></tr>`; }).join("")}
@@ -3029,7 +3105,7 @@ document.addEventListener("input", e => {
   else if (id === "pm-q") { UI.pem.q = t.value; render(); }
   else if (id === "pr-q") { UI.pr.q = t.value; render(); }
   else if (id === "l-q") { UI.lap.q = t.value; render(); }
-  else if (id === "b-p") { UI.bast.p = t.value; const p = findPeg(t.value); UI.bast.nip = p ? p.nip : ""; UI.bast.jab = p ? p.jab : ""; if (p && p.untuk && UI.bast.jenis === "serah" && !UI.bast.untuk) UI.bast.untuk = p.untuk; render(); }
+  else if (id === "b-p") { UI.bast.hsel = new Set(); UI.bast.p = t.value; const p = findPeg(t.value); UI.bast.nip = p ? p.nip : ""; UI.bast.jab = p ? p.jab : ""; if (p && p.untuk && UI.bast.jenis === "serah" && !UI.bast.untuk) UI.bast.untuk = p.untuk; render(); }
   else if (id === "b-nip") UI.bast.nip = t.value, render();
   else if (id === "b-jab") UI.bast.jab = t.value, render();
   else if (id === "b-untuk") UI.bast.untuk = t.value, render();
@@ -3113,8 +3189,8 @@ document.addEventListener("click", async e => {
   if (d.lap) { drawer = { mode:"lap", id:d.lap, fresh:true }; renderDrawer(); return; }
   if (d.lapj != null) { UI.lap.jenis = d.lapj; render(); return; }
   if (d.lapst != null) { UI.lap.st = d.lapst; render(); return; }
-  if (d.lappdf) { const r = bastReport().find(x => x.id === d.lappdf); if (r) bastPdf(reportToBast(r)); return; }
-  if (d.repdf) { const tx = S.trx.find(x => x._id === d.repdf); if (tx) bastPdf(tx); return; }
+  if (d.lappdf) { const r = bastReport().find(x => x.id === d.lappdf); if (r) cetakBast(reportToBast(r)); return; }
+  if (d.repdf) { const tx = S.trx.find(x => x._id === d.repdf); if (tx) cetakBast(tx); return; }
   if (d.k && t.closest("#d-kondseg")) { const seg = t.closest("#d-kondseg"); const on = t.getAttribute("aria-pressed") === "true"; for (const b of seg.querySelectorAll("button")) b.setAttribute("aria-pressed", "false"); if (!on) t.setAttribute("aria-pressed", "true"); return; }
   if (d.askfoto) { confirmFoto = d.askfoto; renderDrawer(); return; }
   if (d.cancelfoto) { confirmFoto = null; renderDrawer(); return; }
@@ -3144,11 +3220,11 @@ document.addEventListener("click", async e => {
       if (document.getElementById("d-hno")) patch.hapusNo = val("d-hno");
       if (document.getElementById("d-rehab")) patch.rehab = $("#d-rehab").checked;
       if (document.getElementById("d-sip")) {
-        patch.sip = val("d-sip") === "1"; patch.kode = val("d-kode"); patch.noreg = val("d-noreg");
+        patch.sip = val("d-sip") === "1"; patch.grp = val("d-sip") === "bospda" ? "bospda" : ""; patch.kode = val("d-kode"); patch.noreg = val("d-noreg");
         if (patch.sip && !x.sip && can("aset_ubah") && (!patch.kode || !patch.noreg)) { toast("Isi kode aset dan no. register SIPBMD untuk mengubah status menjadi tercatat."); break; }
       }
       // only the fields this account may change are sent
-      const allow = new Set([...(can("aset_ubah") ? ["pj", "nip", "jab", "untuk", "lokasi", "reg", "spj", "sumber", "sip", "kode", "noreg"] : []), ...(can("aset_kondisi") ? ["kond", "tcek", "cek", "cat"] : []), ...(can("hapus") ? ["hapusNo", "rehab"] : [])]);
+      const allow = new Set([...(can("aset_ubah") ? ["pj", "nip", "jab", "untuk", "lokasi", "reg", "spj", "sumber", "sip", "grp", "kode", "noreg"] : []), ...(can("aset_kondisi") ? ["kond", "tcek", "cek", "cat"] : []), ...(can("hapus") ? ["hapusNo", "rehab"] : [])]);
       for (const f of Object.keys(patch)) if (!allow.has(f)) delete patch[f];
       if (await saveUpd(x.key, patch)) { drawer.fresh = true; renderDrawer(); } else break;
       toast((kond === "Rusak Berat" || kond === "Hilang") && !patch.rehab ? "Tersimpan. Aset masuk usulan penghapusan." : "Tersimpan.");
@@ -3166,21 +3242,21 @@ document.addEventListener("click", async e => {
       if (!db) { toast("Data belum terhubung."); break; }
       const nama = val("n-nama"); if (!nama) { toast("Isi nama aset."); break; }
       const id = uid("n"), kat = val("n-kat");
-      const doc = { kat, nama, merek:val("n-merek"), spes:val("n-spes"), jml:Math.max(1, +val("n-jml") || 1), harga:+val("n-harga") || 0, tgl:val("n-tgl"), th:yearOf(val("n-tgl")), sumber:val("n-sumber"), spj:val("n-spj"), reg:val("n-reg"), sip:val("n-sip") === "1", kode:val("n-kode"), noreg:val("n-noreg"), lokasi:val("n-lok"), dibuat:new Date().toISOString(), oleh:S.me || "" };
-      try { await W.set("aset_baru/" + id, doc); toast("Aset ditambahkan."); if (isMaster()) drawer = { mode:"item", key:"N|" + id, fresh:true }; else closeDrawer(); if (kat !== sub && !(sub === "tak" && !doc.sip)) location.hash = "aset-" + kat; } catch (err) { writeErr(err); }
+      const doc = { kat, nama, merek:val("n-merek"), spes:val("n-spes"), jml:Math.max(1, +val("n-jml") || 1), harga:+val("n-harga") || 0, tgl:val("n-tgl"), th:yearOf(val("n-tgl")), sumber:val("n-sumber"), spj:val("n-spj"), reg:val("n-reg"), sip:val("n-sip") === "1", grp:val("n-sip") === "bospda" ? "bospda" : "", sumber:val("n-sip") === "bospda" && !val("n-sumber") ? "BOSP Daerah" : val("n-sumber"), kode:val("n-kode"), noreg:val("n-noreg"), lokasi:val("n-lok"), dibuat:new Date().toISOString(), oleh:S.me || "" };
+      try { await W.set("aset_baru/" + id, doc); toast("Aset ditambahkan."); if (isMaster()) drawer = { mode:"item", key:"N|" + id, fresh:true }; else closeDrawer(); { const dest = doc.grp === "bospda" ? "bospda" : !doc.sip ? "tak" : kat; if (dest !== sub) location.hash = "aset-" + dest; } } catch (err) { writeErr(err); }
       break;
     }
     case "a-prev": UI.aset.page--; render(); break;
     case "a-next": UI.aset.page++; render(); break;
-    case "a-xlsx": { const kk = sub === "tak" ? KAT_TAK : KATMAP[sub]; xlsxSave(`Aset ${kk.kib} ${kk.nama} ${today()}.xlsx`, [[kk.kib.slice(0, 31), filterAset().map(asetRow)]]); break; }
+    case "a-xlsx": { const kk = subMeta(sub); xlsxSave(`Aset ${kk.kib} ${kk.nama} ${today()}.xlsx`, [[kk.kib.slice(0, 31), filterAset().map(asetRow)]]); break; }
     case "a-kir": {
-      const g = {}; for (const x of (sub === "tak" ? takItems() : allItems().visible.filter(x => x.kat === sub))) { const k = x.lokasi || x.pj || "(belum ada posisi/pemegang)"; (g[k] = g[k] || []).push(x); }
-      xlsxSave(`KIR ${(sub === "tak" ? KAT_TAK : KATMAP[sub]).nama} ${today()}.xlsx`, [["Rekap", Object.entries(g).sort().map(([k, a]) => ({ "Posisi / Pemegang":k, "Jumlah":a.length, "Nilai":a.reduce((s, x) => s + itemNilai(x), 0), "Sudah dicek":a.filter(x => x.kond).length }))], ["KIR", Object.entries(g).sort().flatMap(([k, a]) => a.map(x => Object.assign({ "Posisi / Pemegang":k }, asetRow(x))))]]);
+      const g = {}; for (const x of subItems(sub)) { const k = x.lokasi || x.pj || "(belum ada posisi/pemegang)"; (g[k] = g[k] || []).push(x); }
+      xlsxSave(`KIR ${subMeta(sub).nama} ${today()}.xlsx`, [["Rekap", Object.entries(g).sort().map(([k, a]) => ({ "Posisi / Pemegang":k, "Jumlah":a.length, "Nilai":a.reduce((s, x) => s + itemNilai(x), 0), "Sudah dicek":a.filter(x => x.kond).length }))], ["KIR", Object.entries(g).sort().flatMap(([k, a]) => a.map(x => Object.assign({ "Posisi / Pemegang":k }, asetRow(x))))]]);
       break;
     }
     case "b-ofpeg": { UI.bast.q = UI.bast.p.split(",")[0]; render(); break; }
     case "b-save": saveBast(); break;
-    case "b-pdf": bastPdf(buildBast()); break;
+    case "b-pdf": cetakBast(buildBast()); break;
     case "b-reset": UI.bast = { jenis:UI.bast.jenis, items:[], p:"", q:"", tgl:today(), untuk:"", fotos:[] }; render(); break;
     case "h-xlsx": xlsxSave(`Lampiran Usulan Penghapusan BMD SMAN 1 Berau ${today()}.xlsx`, [["Usulan Hapus", hapusRows().filter(x => !UI.hapus.kat || x.kat === UI.hapus.kat).map((x, n) => ({ "No":n + 1, "No Usulan":x.hapusNo || "", "Golongan":KATMAP[x.kat].kib + " " + KATMAP[x.kat].nama, "Status":x.sip ? "SIPBMD" : "Tak tercatat", "Kode Aset":x.kode || "", "No Register":x.noreg || "", "No Registrasi Internal":x.reg || "", "Nama Aset":x.nama, "Merek/Tipe":[x.merek, x.tipe].filter(Boolean).join(" "), "Tahun Perolehan":x.th || "", "Nilai Perolehan":itemNilai(x), "Asal Usul":x.asal || "", "Kondisi":x.kond, "Posisi":x.lokasi || x.pj || "", "Foto diunggah":(x.fotos || []).length, "Foto Drive":x.foto || "", "Keterangan":x.cat || x.ket || "" }))]]); break;
     case "h-foto": hapusFotoPdf(); break;
@@ -3563,7 +3639,7 @@ const JD_IZIN = [["jadwal_ajukan", "Mengajukan peminjaman", "Mengisi pengajuan p
 const APP_DEFAULT_ON = ["sarpras", "jadwal"];
 function appAccess(id) { if (isMaster()) return true; if (S.role !== "operator") return false; const v = myIzin()["app_" + id]; return APP_DEFAULT_ON.includes(id) ? v !== false : !!v; }
 const TAB_IZIN = { bast:"bast", pemegang:"bast", laporan:"bast", hapus:"hapus", persediaan:"persediaan", surat:"surat", kertas:"kertas", rekon:"kertas" };
-function canView(v) { if (v === "home" || v === "akun") return true; if (v === "jadwal") return appAccess("jadwal"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
+function canView(v) { if (v === "home" || v === "akun") return true; if (v === "jadwal") return appAccess("jadwal"); if (v === "surat") return appAccess("waka") && can("surat"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
 function izinSummary(iz) {
   if (!iz) return PRESET.staf.nama;
   for (const p of Object.values(PRESET)) if (IZIN.every(([k]) => !!iz[k] === !!p.izin[k])) return p.nama;
@@ -3578,7 +3654,7 @@ function izinChecklist(prefix, iz) {
     <p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Hak akses di aplikasi Aset & Persediaan</b></p>
     <div class="chips" style="margin-bottom:8px">${Object.entries(PRESET).map(([k, p]) => `<button type="button" class="chip" data-preset="${k}" data-for="${prefix}">${p.nama}</button>`).join("")}</div>
     <div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px">${IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${iz && iz[k] ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
-    <p class="hint">Semua akun bisa melihat Rekap, Aset SIPBMD, Kondisi Ruangan, dan Catatan Temuan. Semua perubahan dari operator tetap menunggu validasi master.</p>`;
+    <p class="hint">Semua akun bisa melihat Rekap, Aset/Modal, Kondisi Ruangan, dan Catatan Temuan. Semua perubahan dari operator tetap menunggu validasi master.</p>`;
 }
 const readIzin = prefix => Object.fromEntries([...IZIN, ...APP_IZIN, ...JD_IZIN].map(([k]) => [k, !!(document.getElementById(prefix + "-" + k) || {}).checked]));
 document.addEventListener("click", async e => {
@@ -3764,7 +3840,7 @@ document.addEventListener("click", async e => {
 /* ---------- status terkini (siapa yang sedang membuka aplikasi) & chat tim ---------- */
 const LIVE = { on:{}, chat:[], open:false, started:false, t0:new Date().toISOString(), seen:"", lastBeat:0, sending:false };
 const ONLINE_MS = 4 * 60 * 1000, BEAT_MS = 90 * 1000;
-const VIEW_NAMA = { home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset SIPBMD", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Rekon · Kertas Kerja Modal", rekon:"Rekon · Rekon Aset", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
+const VIEW_NAMA = { home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset/Modal", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Rekon · Kertas Kerja Modal", rekon:"Rekon · Rekon Aset", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
 function akunNama(id) { const a = AK.list.find(x => x._id === id); return a ? (a.nama || shownLogin(a.email)) : (LIVE.on[id] && LIVE.on[id].nama) || "Akun"; }
 const isOnline = o => !!o && !o.off && Date.now() - new Date(o.at).getTime() < ONLINE_MS;
 function onlineList() { return Object.entries(LIVE.on).filter(([id, o]) => isOnline(o) && !(AK.list.find(a => a._id === id) || {}).dihapus && (AK.list.find(a => a._id === id) || {}).aktif !== false).map(([id, o]) => Object.assign({ id }, o)).sort((a, b) => akunNama(a.id).localeCompare(akunNama(b.id))); }

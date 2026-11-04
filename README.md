@@ -99,6 +99,7 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 | `foto` | Foto (JPEG dikompres, disimpan sebagai data URL, maks. ±420 KB per foto) |
 | `akun` | Akun aplikasi: nama, jabatan, email, peran, aktif, hak akses (`izin`) |
 | `catatan` | Catatan temuan (lihat di atas) |
+| `cetak`, `pengingat` | Riwayat cetak BAST; catatan pengingat per menu |
 | `pinjam` | Peminjaman Aula dan Ruang Multimedia (Jadwal Ruang) |
 | `online`, `chat` | Status terkini dan chat tim (lihat di atas) |
 | `usulan`, `keputusan`, `log` | Alur validasi dan riwayat perubahan |
@@ -127,6 +128,14 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 **Buku Induk:** tombol "Unduh Buku Induk" di setiap halaman golongan aset (termasuk Aset tidak tercatat; `biPanel`, `biItems`, `biPdf`, `biExcel`). Filter: tahun perolehan, sumber dana, status pencatatan, kondisi, lokasi, pemegang, hanya berfoto. PDF A4 lanskap dengan kop, judul "BUKU INDUK BARANG MILIK DAERAH", identitas (kuasa pengguna, pengguna barang, filter, jumlah & nilai, tanggal), tabel lengkap dengan foto pertama tiap aset, dan tanda tangan Pengurus Barang · Waka Sarpras · Kepala Sekolah. Excel berisi data lengkap tanpa foto.
 
 **Isi sekaligus:** di daftar aset, centang beberapa aset (atau "Pilih semua hasil filter"), lalu "Isi sekaligus untuk N aset" (`selBar`, `bulkPanel`, `bulkApply`). Kolom yang diisi diterapkan ke semua aset terpilih: kelengkapan data KIB (bila satu golongan), diserahkan ke, lokasi, peruntukan, sumber dana, no. SPJ, kondisi, tanggal cek, pemeriksa; kolom kosong tidak mengubah apa pun. Semua perubahan masuk satu usulan validasi (operator) atau langsung tersimpan (master); isian yang sama dengan SIPBMD tidak disimpan sebagai isian sekolah.
+
+**Aset/Modal:** menu aset (dulu "Aset SIPBMD"). Kartu golongan KIB A–ATB diberi tanda **SIPBMD** dan hanya berisi aset tercatat SIPBMD; aset lain ada di **Aset tidak tercatat** (`#aset-tak`) dan **Aset BOSP Daerah belum tercatat di SIPBMD** (`#aset-bospda`, field `grp:"bospda"`, belanja cabang dinas mulai 2025). Status pencatatan di detail aset punya tiga pilihan (Tidak tercatat / BOSP Daerah · menunggu SIPBMD / Sudah tercatat); mengubahnya memindahkan aset ke menu yang sesuai. Helper: `subItems`, `subMeta`, `isSpecialSub`.
+
+**BAST:** memilih pegawai menampilkan barang yang tercatat diserahkan kepadanya (dengan tanda sudah/belum ber-BAST) untuk dipilih. Foto pertama setiap barang dari data aset otomatis masuk lampiran ("Foto barang (dari data aset)"), ditambah foto tambahan dan foto proses. **Riwayat cetak** di koleksi `cetak` (`jenis`, `nomor`, `ke`, `ulang`, `by`, `at`); mencetak BAST yang sudah pernah dicetak meminta konfirmasi "Cetak ulang". Pratinjau berbentuk lembar A4 (rasio 210:297).
+
+**Catatan pengingat per menu:** akun master bisa menulis pengingat di setiap menu (koleksi `pengingat`, id = nama menu, untuk Aset/Persediaan per sub-menu), tampil untuk semua akun.
+
+**Surat Keluar** dipindah ke aplikasi Waka Sarpras (butuh akses `app_waka` dan hak `surat`). Tombol impor di semua menu kini bernama "Import".
 
 **Aset tidak tercatat:** kartu "Aset tidak tercatat" di deretan golongan (alamat `#aset-tak`) menampilkan semua aset yang `sip` = false dari semua golongan. Di detail aset ada pilihan **Status pencatatan** (Tidak tercatat / Sudah tercatat di SIPBMD); mengubah ke tercatat wajib mengisi kode aset dan no. register SIPBMD (tersimpan di `sip`, `kode`, `noreg`, lewat validasi master seperti perubahan lain), atau pasangkan ke data impor SIPBMD lewat "Padanan di SIPBMD".
 
