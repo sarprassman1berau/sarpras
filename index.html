@@ -1029,6 +1029,111 @@ const kibCell = (x, re, unit) => kibFmtVal(kibVal(x, re, kibLabelOf(x, re)).v, u
 
 function rekonTabs() { return `<nav class="chips" aria-label="Rekon" style="margin-bottom:14px"><a class="chip" href="#kertas" aria-pressed="${current === "kertas"}" style="text-decoration:none">Kertas Kerja Modal</a><a class="chip" href="#rekon" aria-pressed="${current === "rekon"}" style="text-decoration:none">Rekon Aset</a></nav>`; }
 
+/* ================= buku induk ================= */
+UI.bi = { open:false, dari:"", sampai:"", sumber:"", st:"", kond:"", lok:"", pj:"", foto:false, busy:false };
+function biItems() {
+  const B = UI.bi, base = sub === "tak" ? takItems() : allItems().visible.filter(x => x.kat === sub);
+  return base.filter(x => {
+    const t = tahunOf(x);
+    if ((B.dari || B.sampai) && (!t || (B.dari && t < +B.dari) || (B.sampai && t > +B.sampai))) return false;
+    if (B.sumber && norm(x.sumber || "") !== norm(B.sumber)) return false;
+    if (B.st === "sip" && !x.sip) return false; if (B.st === "tak" && x.sip) return false;
+    if (B.kond === "-" ? x.kond : (B.kond && x.kond !== B.kond)) return false;
+    if (B.lok && !norm(x.lokasi || "").includes(norm(B.lok))) return false;
+    if (B.pj && !norm(x.pj || "").includes(norm(B.pj))) return false;
+    if (B.foto && !(x.fotos || []).length) return false;
+    return true;
+  }).sort((a, b) => String(a.kode).localeCompare(String(b.kode), "id", { numeric:true }) || String(a.noreg).localeCompare(String(b.noreg), "id", { numeric:true }) || String(a.nama).localeCompare(String(b.nama)));
+}
+function biFilterText() {
+  const B = UI.bi, f = [];
+  if (B.dari || B.sampai) f.push("tahun perolehan " + (B.dari || "awal") + "–" + (B.sampai || "akhir"));
+  if (B.sumber) f.push("sumber dana " + B.sumber);
+  if (B.st) f.push(B.st === "sip" ? "tercatat di SIPBMD" : "tidak tercatat di SIPBMD");
+  if (B.kond) f.push("kondisi " + (B.kond === "-" ? "belum dicek" : B.kond));
+  if (B.lok) f.push("lokasi \"" + B.lok + "\""); if (B.pj) f.push("pemegang \"" + B.pj + "\""); if (B.foto) f.push("hanya yang berfoto");
+  return f.join(" · ") || "semua data";
+}
+function biPanel() {
+  const B = UI.bi, base = sub === "tak" ? takItems() : allItems().visible.filter(x => x.kat === sub), list = biItems();
+  const years = [...new Set(base.map(tahunOf).filter(Boolean))].sort((a, b) => a - b), sumber = [...new Set([...SUMBER_DANA, ...base.map(x => x.sumber).filter(Boolean)])];
+  const yo = (id, v, ph) => `<select id="${id}"><option value="">${ph}</option>${years.map(y => `<option ${String(y) === String(v) ? "selected" : ""}>${y}</option>`).join("")}</select>`;
+  const nf = list.filter(x => (x.fotos || []).length).length;
+  return `<section class="panel" style="margin-bottom:14px;border-color:var(--accent)"><div style="display:flex;gap:8px;align-items:baseline"><h3 style="margin:0;flex:1">Unduh Buku Induk · ${esc(sub === "tak" ? "Aset tidak tercatat" : KATMAP[sub].kib + " " + KATMAP[sub].nama)}</h3><button class="ghost" id="bi-close">Tutup</button></div>
+    <p class="hint" style="margin:4px 0 10px">Berisi seluruh data yang tercatat di aplikasi (data SIPBMD, isian sekolah, sumber dana, nilai, kondisi, pemegang, lokasi) beserta foto aset, dengan kop dan judul "Buku Induk Barang".</p>
+    <div class="fgrid">
+      <div class="fgrid" style="grid-template-columns:1fr 1fr;gap:10px"><label class="f">Tahun perolehan dari${yo("bi-dari", B.dari, "awal")}</label><label class="f">sampai${yo("bi-sampai", B.sampai, "akhir")}</label></div>
+      <label class="f">Sumber dana<select id="bi-sumber"><option value="">Semua sumber dana</option>${sumber.map(o => `<option ${o === B.sumber ? "selected" : ""}>${esc(o)}</option>`).join("")}</select></label>
+      <label class="f">Status pencatatan<select id="bi-st"><option value="">Semua</option><option value="sip" ${B.st === "sip" ? "selected" : ""}>Tercatat SIPBMD</option><option value="tak" ${B.st === "tak" ? "selected" : ""}>Tidak tercatat</option></select></label>
+      <label class="f">Kondisi<select id="bi-kond"><option value="">Semua</option><option value="-" ${B.kond === "-" ? "selected" : ""}>Belum dicek</option>${KOND.map(k => `<option ${B.kond === k ? "selected" : ""}>${k}</option>`).join("")}</select></label>
+      <label class="f">Lokasi mengandung<input id="bi-lok" value="${esc(B.lok)}" placeholder="mis. Lab Komputer"></label>
+      <label class="f">Pemegang mengandung<input id="bi-pj" value="${esc(B.pj)}" placeholder="mis. Ika"></label>
+      <label class="ck full"><input type="checkbox" id="bi-foto" ${B.foto ? "checked" : ""}> Hanya aset yang sudah berfoto</label>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px"><button class="primary" id="bi-pdf" ${list.length && !B.busy ? "" : "disabled"}>${B.busy ? "Menyusun…" : "Unduh Buku Induk (PDF, dengan foto)"}</button><button id="bi-xlsx" ${list.length ? "" : "disabled"}>Unduh Buku Induk (Excel)</button>
+      <span class="muted">${fmt(list.length)} aset · ${fmt(nf)} berfoto · ${rp(list.reduce((t, x) => t + itemNilai(x), 0))}</span></div>
+    <p class="hint">Excel berisi data lengkap tanpa foto; foto hanya ada di versi PDF.</p></section>`;
+}
+// SIPBMD / KIB details folded into one readable text for the book
+function biSpes(x) {
+  const skip = new Set(["Nilai perolehan", "Kondisi di SIPBMD", "Tahun perolehan", "Tanggal perolehan", "Asal usul"]);
+  return kibFields(x.kat).filter(f => !skip.has(f.l)).map(f => { const r = kibVal(x, f.src, f.l), v = kibFmtVal(r.v, f.u); return v ? f.l + ": " + v + (r.isi && x.sip ? (r.beda ? " (SIPBMD: " + kibFmtVal(r.sip, f.u) + ")" : " (diisi sekolah)") : "") : ""; }).filter(Boolean).join("; ");
+}
+async function biPdf() {
+  if (!window.jspdf) { toast("Modul PDF belum termuat. Coba lagi sebentar."); return; }
+  const list = biItems(); if (!list.length) return;
+  UI.bi.busy = true; render();
+  try {
+    const nf = list.filter(x => (x.fotos || []).length).length; if (nf) toast("Menyusun buku induk dan memuat " + nf + " foto…");
+    const foto = new Map();
+    for (const x of list) if ((x.fotos || []).length) { const [f] = await pdfFotos([{ id:x.fotos[0] }]); if (f) foto.set(x.key, f); }
+    const c = cfg(), { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4", orientation:"landscape" }), Wp = 297;
+    const gol = sub === "tak" ? "Aset Tidak Tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama + " (kode " + KATMAP[sub].kode + ")";
+    let y = pdfKop(doc);
+    y = pdfJudul(doc, y, ["BUKU INDUK BARANG MILIK DAERAH"], gol);
+    doc.setFontSize(9.5);
+    const total = list.reduce((t, x) => t + itemNilai(x), 0), fm = n => Math.round(n || 0).toLocaleString("id-ID");
+    [["Kuasa Pengguna Barang", "SMA Negeri 1 Berau"], ["Pengguna Barang", "Dinas Pendidikan dan Kebudayaan Provinsi Kalimantan Timur"], ["Data", biFilterText()], ["Jumlah", fmt(list.length) + " barang · nilai Rp" + fm(total)], ["Keadaan per", tglID(today())]].forEach(([k, v]) => { doc.text(k, 20, y); doc.text(": " + v, 62, y); y += 4.6; });
+    y += 2;
+    doc.autoTable({ startY:y, margin:{ left:10, right:10, top:14, bottom:14 }, theme:"grid", showHead:"everyPage",
+      styles:{ fontSize:7.4, cellPadding:1.2, lineColor:[60,60,60], lineWidth:0.12, textColor:[20,20,20], valign:"top", overflow:"linebreak" },
+      headStyles:{ fillColor:[225,225,225], textColor:[20,20,20], fontStyle:"bold", halign:"center", valign:"middle" },
+      head:[["No", "Kode Barang / No. Register", "Nama Barang", "Spesifikasi / Data KIB", "Tahun / Tgl Perolehan", "Sumber Dana / Asal Usul", "Nilai Perolehan (Rp)", "Kondisi", "Pemegang / Lokasi", "Foto"]],
+      body:[...list.map((x, n) => [n + 1, (x.kode || "-") + (x.noreg ? "\nNo. " + x.noreg : "") + (x.reg ? "\nReg. " + x.reg : "") + (x.sip ? "" : "\n(tidak tercatat SIPBMD)"), itemNama(x) + (sub === "tak" && KATMAP[x.kat] ? "\n" + KATMAP[x.kat].kib : ""), biSpes(x) || "-", (tahunOf(x) || "-") + (x.tgl && String(x.tgl).length > 4 ? "\n" + tglID(parseTgl(String(x.tgl))) : ""), [x.sumber, x.asal].filter(Boolean).join("\n") || "-", fm(itemNilai(x)) + (x.jml > 1 ? "\n(" + fmt(x.jml) + " unit)" : ""), (x.kond || "Belum dicek") + (x.ksip ? "\nSIPBMD: " + x.ksip : ""), [x.pj, x.lokasi].filter(Boolean).join("\n") || "-", foto.has(x.key) ? "" : "-"]),
+        [{ content:"JUMLAH", colSpan:6, styles:{ fontStyle:"bold", halign:"right" } }, { content:fm(total), styles:{ fontStyle:"bold", halign:"right" } }, { content:"", colSpan:3 }]],
+      columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 1:{ cellWidth:30 }, 2:{ cellWidth:38 }, 3:{ cellWidth:62 }, 4:{ cellWidth:20, halign:"center" }, 5:{ cellWidth:24 }, 6:{ cellWidth:24, halign:"right" }, 7:{ cellWidth:18 }, 8:{ cellWidth:29 }, 9:{ cellWidth:24, halign:"center" } },
+      didParseCell:d => { if (d.section === "body" && d.column.index === 9 && list[d.row.index] && foto.has(list[d.row.index].key)) d.cell.styles.minCellHeight = 20; },
+      didDrawCell:d => { if (d.section !== "body" || d.column.index !== 9) return; const x = list[d.row.index]; const f = x && foto.get(x.key); if (!f) return;
+        const bw = d.cell.width - 2, bh = Math.min(d.cell.height - 2, 18); let iw = bw, ih = iw / f.r; if (ih > bh) { ih = bh; iw = ih * f.r; }
+        try { doc.addImage(f.data, "JPEG", d.cell.x + (d.cell.width - iw) / 2, d.cell.y + 1, iw, ih, undefined, "FAST"); } catch (e) {} } });
+    y = doc.lastAutoTable.finalY + 8; if (y > 165) { doc.addPage(); y = 25; }
+    const sb = (x, lab, nama, nip) => { doc.setFontSize(10); doc.text(lab, x, y, { align:"center" }); doc.setFont("helvetica", "bold"); doc.text(nama || "", x, y + 24, { align:"center" }); const w = doc.getTextWidth(nama || ""); doc.setLineWidth(0.25); if (nama) doc.line(x - w / 2, y + 25, x + w / 2, y + 25); doc.setFont("helvetica", "normal"); doc.text("NIP. " + (nip || "-"), x, y + 29.5, { align:"center" }); };
+    doc.setFontSize(10); doc.text("Tanjung Redeb, " + tglID(today()), Wp - 60, y, { align:"center" }); y += 5;
+    sb(60, "Pengurus Barang,", c.pengurus, c.nipPengurus); sb(Wp / 2, "Waka Sarpras,", c.waka, c.nipWaka); sb(Wp - 60, "Kepala Sekolah\nselaku Kuasa Pengguna Barang,", c.kepsek, c.nipKepsek);
+    const nm = sub === "tak" ? "Aset Tidak Tercatat" : KATMAP[sub].kib + " " + KATMAP[sub].nama;
+    saveFile(`Buku Induk ${nm} ${today()}.pdf`, pdfFinish(doc).output("blob"));
+  } catch (e) { toast("Buku induk gagal disusun (" + (e.message || e) + ")."); }
+  UI.bi.busy = false; render();
+}
+function biExcel() {
+  const list = biItems(); if (!list.length) return;
+  const nm = sub === "tak" ? "Aset Tidak Tercatat" : KATMAP[sub].kib + " " + KATMAP[sub].nama;
+  const rows = list.map((x, i) => Object.assign(kibRow(x, KIB_KOLOM.map(k => k[0]), i + 1), { "Sumber Dana":x.sumber || "", "Nilai (Rp)":itemNilai(x), "Jumlah Foto":(x.fotos || []).length }));
+  const info = [{ "Buku Induk Barang Milik Daerah":"SMA Negeri 1 Berau" }, { "Buku Induk Barang Milik Daerah":nm }, { "Buku Induk Barang Milik Daerah":"Data: " + biFilterText() }, { "Buku Induk Barang Milik Daerah":"Keadaan per " + tglID(today()) + " · " + fmt(list.length) + " barang" }];
+  xlsxSave(`Buku Induk ${nm} ${today()}.xlsx`, [["Buku Induk", rows], ["Identitas", info]]);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id === "a-bi") { UI.bi.open = !UI.bi.open; render(); }
+  if (b.id === "bi-close") { UI.bi.open = false; render(); }
+  if (b.id === "bi-pdf") biPdf();
+  if (b.id === "bi-xlsx") biExcel();
+});
+document.addEventListener("change", e => {
+  const t = e.target, m = { "bi-dari":"dari", "bi-sampai":"sampai", "bi-sumber":"sumber", "bi-st":"st", "bi-kond":"kond", "bi-lok":"lok", "bi-pj":"pj" };
+  if (m[t.id]) { UI.bi[m[t.id]] = t.value; render(); } if (t.id === "bi-foto") { UI.bi.foto = t.checked; render(); }
+});
+
 /* ================= unduh KIB ================= */
 const KIB_KOLOM = [
   ["id", "Identitas (kode, no. register, nama, golongan, status)"],
@@ -1195,8 +1300,9 @@ function vAset() {
   </div>
   <div class="toolbar">
     <div class="chips">${Object.entries(FLAGS).map(([key, v]) => `<button class="chip" data-flag="${key}" aria-pressed="${f.flag===key}">${v[0]}</button>`).join("")}</div>
-    <span class="sp"></span><button id="a-xlsx">Unduh Excel (${fmt(rows.length)})</button><button id="a-kir">Unduh KIR per ruang/pemegang</button>
+    <span class="sp"></span><button class="primary" id="a-bi" aria-expanded="${!!UI.bi.open}">Unduh Buku Induk</button><button id="a-xlsx">Unduh Excel (${fmt(rows.length)})</button><button id="a-kir">Unduh KIR per ruang/pemegang</button>
   </div>
+  ${UI.bi.open ? biPanel() : ""}
   <div class="tablebox"><table>
     <thead><tr><th></th><th>Kode · No. registrasi</th><th>Aset</th><th>Status</th>${sub === "tanah" ? '<th class="num hide-sm">Luas</th><th class="hide-sm">Dokumen kepemilikan</th>' : sub === "gedung" ? '<th class="num hide-sm">Luas bangunan</th><th class="hide-sm">Konstruksi · status tanah</th>' : '<th class="hide-sm">Diserahkan ke</th><th class="hide-sm">Posisi</th>'}<th>Kondisi</th><th class="num">Nilai</th></tr></thead>
     <tbody>${slice.map(x => `<tr class="rowlink ${x.kond ? "" : "unchecked"}" tabindex="0" data-key="${esc(x.key)}" ${x.kond ? "" : 'title="Kondisi belum dikonfirmasi"'}>
@@ -1413,7 +1519,7 @@ function vBast() {
       <div class="picked">${f.items.map((i, n) => `<div class="it"><div><b>${esc(i.nama)}</b>${i.th ? ` <span class="pill">Tahun ${esc(i.th)}</span>` : ""}<div class="mono faint">${esc(i.reg || (i.kode ? i.kode + " / " + i.noreg : "tanpa nomor registrasi"))}</div></div><input id="b-jml-${n}" type="number" min="1" value="${i.jml}" aria-label="Jumlah"><button class="ghost" data-unpick="${n}">Hapus</button></div>`).join("") || '<p class="muted" style="margin:0">Belum ada barang dipilih.</p>'}</div>
       <label class="f" style="margin-top:10px">Tambah barang${tarik && f.p ? ` <button class="link" type="button" id="b-ofpeg">tampilkan barang yang dipegang ${esc(f.p.split(",")[0])}</button>` : ""}<input id="b-q" type="search" value="${esc(f.q)}" placeholder="cari nama, merek, no. registrasi, serial, pemegang…"></label>
       ${cands.length ? `<div class="suggest" style="margin-top:6px">${cands.map(x => `<button data-pick="${esc(x.key)}"><span><b>${esc(itemNama(x))}</b> <span class="pill">${tahunOf(x) ? "Tahun " + tahunOf(x) : "tahun ?"}</span><br><span class="mono faint">${esc(idLabel(x))}</span> ${x.pj ? '<span class="faint">· ' + esc(x.pj) + "</span>" : ""}${x.lokasi ? '<span class="faint"> · ' + esc(x.lokasi) + "</span>" : ""}</span><span class="num">${rp(bastItem(x).nilai)}</span></button>`).join("")}</div>` : ""}
-      <p class="sectionlabel" style="margin-top:16px">Dokumentasi (dicetak di lembar BAST yang sama)</p>
+      <p class="sectionlabel" style="margin-top:16px">Dokumentasi (dicetak sebagai lampiran BAST)</p>
       <div class="bfoto">${[["barang", "Foto barang"], ["proses", tarik ? "Foto proses penarikan" : "Foto proses penyerahan"]].map(([j, l]) => { const fs = (f.fotos || []).filter(x => x.j === j); return `<div><span class="f" style="display:block;margin-bottom:4px">${l} <span class="hint">(maks. 2)</span></span><div class="photos" style="grid-template-columns:repeat(3,minmax(0,1fr))">${fs.map(x => `<figure><img src="${fotoSrc(x.id)}" data-foto="${esc(x.id)}" alt="${l}"><button data-bfdel="${esc(x.id)}" aria-label="Hapus foto">Hapus</button></figure>`).join("")}${fs.length < 2 && assets ? `<label class="upload" for="bf-${j}" style="min-height:70px">${UI.bast.up === j ? "Mengunggah…" : "<b>+ Foto</b>"}<input id="bf-${j}" data-bfj="${j}" type="file" accept="image/*" capture="environment" multiple></label>` : ""}</div></div>`; }).join("")}</div>
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="primary" id="b-save" ${f.items.length && f.p ? "" : "disabled"}>Simpan & unduh PDF</button><button id="b-pdf" ${f.items.length ? "" : "disabled"}>Unduh PDF saja</button><button class="ghost" id="b-reset">Kosongkan</button></div>
     </section>
@@ -1446,15 +1552,19 @@ function letterPreview(b) {
     <table class="items"><colgroup><col class="n"><col><col><col class="j"><col class="r"><col class="t"><col class="v"></colgroup><thead><tr><th>No</th><th>Nama barang</th><th>Merek / spesifikasi</th><th>Jml</th><th>No. registrasi</th><th>Tahun</th><th class="num">Nilai</th></tr></thead><tbody>${b.items.map((i, n) => `<tr><td class="c">${n + 1}</td><td>${esc(i.nama)}</td><td>${esc([i.merek, i.spes].filter(Boolean).join(" · ") || "-")}</td><td class="c">${i.jml || 1}</td><td>${esc(i.reg || (i.kode ? i.kode + "/" + i.noreg : "-"))}</td><td class="c">${esc(i.th || "-")}</td><td class="num">${fm((i.nilai || 0) * (i.jml || 1))}</td></tr>`).join("") || '<tr><td colspan="7" class="c muted">Belum ada barang</td></tr>'}<tr><td colspan="6"><b>TOTAL</b></td><td class="num"><b>${fm(total)}</b></td></tr></tbody></table>
     <p>${tarik ? "Barang tersebut telah diterima kembali dalam keadaan sebagaimana tercantum di atas oleh PIHAK KEDUA." : "Barang tersebut telah diterima dengan baik dan jumlahnya sesuai dengan tabel di atas oleh PIHAK KEDUA. PIHAK KEDUA bertanggung jawab atas barang yang diserahkan tersebut."} Demikian Berita Acara ini dibuat dengan sebenar-benarnya untuk dipergunakan sebagaimana mestinya.</p>
     <div class="sign3"><div><p class="lb">PIHAK PERTAMA,</p><span><b>${esc(b.p1.nama || "")}</b><br>NIP. ${esc(b.p1.nip || "")}</span></div><div><p class="lb">Mengetahui,<br>Kepala Sekolah</p><span><b>${esc(b.kepsek.nama || "")}</b><br>NIP. ${esc(b.kepsek.nip || "")}</span></div><div><p class="lb">PIHAK KEDUA,</p><span><b>${esc(b.p2.nama || "")}</b><br>NIP. ${esc(b.p2.nip || "")}</span></div></div>
-    ${fotos.length ? `<div class="dok"><p>Dokumentasi</p><div class="dokg" style="grid-template-columns:repeat(${fotos.length},minmax(0,1fr))">${fotos.map(x => `<figure><img src="${fotoSrc(x.id)}" data-foto="${esc(x.id)}" alt=""><figcaption>${x.j === "barang" ? "Barang" : tarik ? "Proses penarikan" : "Proses penyerahan"}</figcaption></figure>`).join("")}</div></div>` : ""}
-  </div></div>`;
+  </div>
+  ${fotos.length ? `<div class="letter" style="margin-top:14px">${letterKop()}<p class="judul">LAMPIRAN DOKUMENTASI<br><u>BERITA ACARA ${tarik ? "PENARIKAN BARANG INVENTARIS" : "PENYERAHAN BARANG"}</u></p><p class="no">Nomor: ${esc(b.nomor || "…")}</p>
+    ${[["barang", "Foto barang"], ["proses", tarik ? "Foto proses penarikan" : "Foto proses penyerahan"]].map(([j, l]) => { const fs = fotos.filter(x => x.j === j); return fs.length ? `<div class="dok"><p>${l}</p><div class="dokg" style="grid-template-columns:repeat(${Math.max(fs.length, 1)},minmax(0,1fr))">${fs.map(x => `<figure><img src="${fotoSrc(x.id)}" data-foto="${esc(x.id)}" alt="${l}"></figure>`).join("")}</div></div>` : ""; }).join("")}
+    <div class="sign3" style="grid-template-columns:1fr 1fr"><div><p class="lb">PIHAK PERTAMA,</p><span><b>${esc(b.p1.nama || "")}</b><br>NIP. ${esc(b.p1.nip || "")}</span></div><div><p class="lb">PIHAK KEDUA,</p><span><b>${esc(b.p2.nama || "")}</b><br>NIP. ${esc(b.p2.nip || "")}</span></div></div></div>` : ""}
+  </div>`;
 }
 document.addEventListener("change", async e => {
   const t = e.target; if (!t.dataset || !t.dataset.bfj) return;
   const j = t.dataset.bfj, files = [...(t.files || [])]; t.value = ""; if (!files.length) return;
-  const f = UI.bast; f.fotos = f.fotos || []; f.up = j; render();
-  for (const file of files) { if (f.fotos.filter(x => x.j === j).length >= 2) break; try { const r = await assets.upload(file); f.fotos.push({ id:r.id, j }); } catch (err) { toast("Satu foto gagal diunggah."); } }
-  f.up = null; render();
+  UI.bast.fotos = UI.bast.fotos || []; UI.bast.up = j; render();
+  // UI.bast may be replaced while uploading (e.g. form re-render), so always write to the current object
+  for (const file of files) { if ((UI.bast.fotos || []).filter(x => x.j === j).length >= 2) break; try { const r = await assets.upload(file); UI.bast.fotos = [...(UI.bast.fotos || []), { id:r.id, j }]; render(); } catch (err) { toast("Satu foto gagal diunggah."); } }
+  UI.bast.up = null; render();
 });
 document.addEventListener("click", e => { const b = e.target.closest("button[data-bfdel]"); if (!b) return; UI.bast.fotos = (UI.bast.fotos || []).filter(x => x.id !== b.dataset.bfdel); render(); });
 function bastKalimat(b) {
@@ -1506,7 +1616,7 @@ async function pdfFotos(list) {
 }
 // draws photos in one row, each fitted (not stretched) inside its frame; returns new y
 function pdfFotoRow(doc, y, fotos, caption, maxH = 42) {
-  const L = 20, Wd = 170, gap = 5, n = fotos.length, w = (Wd - gap * (n - 1)) / n, h = Math.min(maxH, w * 0.75);
+  const gap = 5, n = fotos.length, Wd = n === 1 ? Math.min(170, maxH / 0.75) : 170, L = 20 + (170 - Wd) / 2, w = (Wd - gap * (n - 1)) / n, h = Math.min(maxH, w * 0.75);
   fotos.forEach((f, i) => {
     const x = L + i * (w + gap); doc.setDrawColor(150); doc.setLineWidth(0.2); doc.rect(x, y, w, h);
     let iw = w - 2, ih = iw / f.r; if (ih > h - 2) { ih = h - 2; iw = ih * f.r; }
@@ -1537,14 +1647,22 @@ async function bastPdf(b) {
   y = pdfPara(doc, y, (tarik ? "Barang tersebut telah diterima kembali dalam keadaan sebagaimana tercantum di atas oleh PIHAK KEDUA." : "Barang tersebut telah diterima dengan baik dan jumlahnya sesuai dengan tabel di atas oleh PIHAK KEDUA. PIHAK KEDUA bertanggung jawab atas barang yang diserahkan tersebut.") + " Demikian Berita Acara ini dibuat dengan sebenar-benarnya dan penuh tanggung jawab untuk dapat dipergunakan sebagaimana mestinya.");
   // signatures (3 columns) and documentation stay on one sheet when they fit
   if (y + 40 > 282) { doc.addPage(); y = 22; }
-  y = signBlock(doc, y + 1, b.p1, b.p2, b.kepsek, "PIHAK PERTAMA,", "PIHAK KEDUA,", { row3:true });
+  signBlock(doc, y + 1, b.p1, b.p2, b.kepsek, "PIHAK PERTAMA,", "PIHAK KEDUA,", { row3:true });
   if (fotos.length) {
-    // photos shrink to fit the remaining space on the same sheet; only when too little is left they move to a lampiran page
-    const wF = (170 - 5 * (fotos.length - 1)) / fotos.length; let hF = Math.min(42, wF * 0.75, 283 - y - 12);
-    if (hF < 24) { doc.addPage(); y = 22; doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text("Lampiran Berita Acara Nomor: " + b.nomor, 20, y); y += 6; hF = Math.min(60, wF * 0.75); }
-    doc.setLineWidth(0.2); doc.setDrawColor(150); doc.line(L, y - 2, R, y - 2); doc.setDrawColor(0);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.text("DOKUMENTASI", L, y + 2.5); doc.setFont("helvetica", "normal"); y += 5;
-    y = pdfFotoRow(doc, y, fotos, f => f.j === "barang" ? "Barang" : tarik ? "Proses penarikan" : "Proses penyerahan", hF);
+    // documentation goes on its own lampiran page, large 2-column photos with captions
+    doc.addPage(); y = pdfKop(doc);
+    y = pdfJudul(doc, y, ["LAMPIRAN DOKUMENTASI", "BERITA ACARA " + (tarik ? "PENARIKAN BARANG INVENTARIS" : "PENYERAHAN BARANG")], "Nomor: " + b.nomor);
+    doc.setFontSize(10); y = pdfPara(doc, y, `Tanggal ${tglID(b.tgl)} · ${tarik ? "Dikembalikan oleh" : "Diserahkan kepada"} ${(tarik ? b.p1 : b.p2).nama || "-"} · ${b.items.length} barang`);
+    for (const [j, judul] of [["barang", "Foto barang"], ["proses", tarik ? "Foto proses penarikan" : "Foto proses penyerahan"]]) {
+      const fs = fotos.filter(f => f.j === j); if (!fs.length) continue;
+      if (y + 75 > 282) { doc.addPage(); y = 22; }
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text(judul, L, y); doc.setFont("helvetica", "normal"); y += 3;
+      const two = fs.length > 1 ? fs : [fs[0]];
+      y = pdfFotoRow(doc, y, two, f => judul + (two.length > 1 ? " " + (two.indexOf(f) + 1) : ""), 64);
+      y += 2;
+    }
+    if (y + 40 > 284) { doc.addPage(); y = 22; }
+    signBlock(doc, y + 2, b.p1, b.p2, null, "PIHAK PERTAMA,", "PIHAK KEDUA,");
   }
   const who = (tarik ? b.p1.nama : b.p2.nama).split(",")[0].trim();
   saveFile(`BAST ${tarik ? "Penarikan" : "Penyerahan"} ${b.tgl} ${who}.pdf`, pdfFinish(doc).output("blob"));
