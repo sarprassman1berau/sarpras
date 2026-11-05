@@ -1276,7 +1276,7 @@ function biPanel() {
       <label class="f">Pemegang mengandung<input id="bi-pj" value="${esc(B.pj)}" placeholder="mis. Ika"></label>
       <label class="ck full"><input type="checkbox" id="bi-foto" ${B.foto ? "checked" : ""}> Hanya aset yang sudah berfoto</label>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px"><button class="primary" id="bi-pdf" ${list.length && !B.busy ? "" : "disabled"}>${B.busy ? "Menyusun…" : "Unduh Buku Induk (PDF, dengan foto)"}</button><button id="bi-xlsx" ${list.length ? "" : "disabled"}>Unduh Buku Induk (Excel)</button>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px"><span class="chips" role="group" aria-label="Foto di PDF"><button class="chip" data-bifoto="1" aria-pressed="${B.foto2 !== false}">Dengan foto</button><button class="chip" data-bifoto="0" aria-pressed="${B.foto2 === false}">Tanpa foto</button></span><button class="primary" id="bi-pdf" ${list.length && !B.busy ? "" : "disabled"}>${B.busy ? "Menyusun…" : `Unduh Buku Induk (PDF, ${B.foto2 === false ? "tanpa" : "dengan"} foto)`}</button><button id="bi-xlsx" ${list.length ? "" : "disabled"}>Unduh Buku Induk (Excel)</button>
       <span class="muted">${fmt(list.length)} aset · ${fmt(nf)} berfoto · ${rp(list.reduce((t, x) => t + itemNilai(x), 0))}</span></div>
     <p class="hint">Excel berisi data lengkap tanpa foto; foto hanya ada di versi PDF.</p></section>`;
 }
@@ -1288,43 +1288,65 @@ function biSpes(x) {
 async function biPdf() {
   if (!window.jspdf) { toast("Modul PDF belum termuat. Coba lagi sebentar."); return; }
   const list = biItems(); if (!list.length) return;
+  const withFoto = UI.bi.foto2 !== false;
   UI.bi.busy = true; render();
   try {
-    const nf = list.filter(x => (x.fotos || []).length).length; if (nf) toast("Menyusun buku induk dan memuat " + nf + " foto…");
     const foto = new Map();
-    for (const x of list) if ((x.fotos || []).length) { const [f] = await pdfFotos([{ id:x.fotos[0] }]); if (f) foto.set(x.key, f); }
-    const c = cfg(), { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4", orientation:"landscape" }), Wp = 297;
+    if (withFoto) {
+      const nf = list.filter(x => (x.fotos || []).length).length; if (nf) toast("Menyusun buku induk dan memuat " + nf + " foto…");
+      for (const x of list) if ((x.fotos || []).length) { const [f] = await pdfFotos([{ id:x.fotos[0] }]); if (f) foto.set(x.key, f); }
+    }
+    const c = cfg(), { jsPDF } = window.jspdf, Wp = 297, Hp = 210, SIGN_H = 42, BOTTOM = Hp - 14;
     const gol = UI.bi.all ? "Seluruh Aset: KIB A–ATB (data SIPBMD), Aset Tidak Tercatat, dan Aset BOSP Daerah" : sub === "tak" ? "Aset Tidak Tercatat di SIPBMD (semua golongan)" : sub === "bospda" ? "Aset BOSP Daerah Belum Tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama + " (kode " + KATMAP[sub].kode + ")";
-    let y = pdfKop(doc);
-    y = pdfJudul(doc, y, ["BUKU INDUK BARANG MILIK DAERAH"], gol);
-    doc.setFontSize(9.5);
     const total = list.reduce((t, x) => t + itemNilai(x), 0), fm = n => Math.round(n || 0).toLocaleString("id-ID");
-    [["Kuasa Pengguna Barang", "SMA Negeri 1 Berau"], ["Pengguna Barang", "Dinas Pendidikan dan Kebudayaan Provinsi Kalimantan Timur"], ["Data", biFilterText()], ["Jumlah", fmt(list.length) + " catatan barang · nilai Rp" + fm(total)], ["Keadaan per", tglID(today())]].forEach(([k, v]) => { doc.text(k, 20, y); doc.text(": " + v, 62, y); y += 4.6; });
-    y += 2;
-    const groups = biGroups(list), multi = UI.bi.all; let no = 0;
-    for (const g of groups) {
-      if (multi) { if (y > 180) { doc.addPage(); y = 18; } doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text(g.t + " · " + fmt(g.list.length) + " barang", 10, y + 3); doc.setFont("helvetica", "normal"); y += 6; }
-      const L2 = g.list, sub2 = L2.reduce((t, x) => t + itemNilai(x), 0);
+    const groups = biGroups(list), multi = UI.bi.all;
+    const head = ["No", "Kode Barang / No. Register", "Nama Barang", "Spesifikasi / Data KIB", "Tahun / Tgl Perolehan", "Sumber Dana / Asal Usul", "Nilai Perolehan (Rp)", "Kondisi", "Pemegang / Lokasi", ...(withFoto ? ["Foto"] : [])];
+    const colW = withFoto ? [8, 30, 38, 62, 20, 24, 24, 18, 29, 24] : [8, 32, 44, 78, 20, 26, 25, 18, 26];
+    const columnStyles = Object.fromEntries(colW.map((w, i) => [i, Object.assign({ cellWidth:w }, i === 0 ? { halign:"center" } : i === 4 ? { halign:"center" } : i === 6 ? { halign:"right" } : i === 9 ? { halign:"center" } : {})]));
+    const rowOf = (x, n) => [n, (x.kode || "-") + (x.noreg ? "\nNo. " + x.noreg : "") + (x.reg ? "\nReg. " + x.reg : "") + (isBospda(x) ? "\n(BOSP Daerah, menunggu SIPBMD)" : x.sip ? "" : "\n(tidak tercatat SIPBMD)"), itemNama(x) + ((multi || isSpecialSub(sub)) && KATMAP[x.kat] && !(multi && x.sip && !isBospda(x)) ? "\n" + KATMAP[x.kat].kib : ""), biSpes(x) || "-", (tahunOf(x) || "-") + (x.tgl && String(x.tgl).length > 4 ? "\n" + tglID(parseTgl(String(x.tgl))) : ""), [x.sumber, x.asal].filter(Boolean).join("\n") || "-", fm(itemNilai(x)) + (x.jml > 1 ? "\n(" + fmt(x.jml) + " unit)" : ""), (x.kond || "Belum dicek") + (x.ksip ? "\nSIPBMD: " + x.ksip : ""), [x.pj, x.lokasi].filter(Boolean).join("\n") || "-", ...(withFoto ? [foto.has(x.key) ? "" : "-"] : [])];
+    const table = (doc, y, rows, startNo, sumLabel, sumVal) => {
       doc.autoTable({ startY:y, margin:{ left:10, right:10, top:14, bottom:14 }, theme:"grid", showHead:"everyPage",
         styles:{ fontSize:7.4, cellPadding:1.2, lineColor:[60,60,60], lineWidth:0.12, textColor:[20,20,20], valign:"top", overflow:"linebreak" },
         headStyles:{ fillColor:[225,225,225], textColor:[20,20,20], fontStyle:"bold", halign:"center", valign:"middle" },
-        head:[["No", "Kode Barang / No. Register", "Nama Barang", "Spesifikasi / Data KIB", "Tahun / Tgl Perolehan", "Sumber Dana / Asal Usul", "Nilai Perolehan (Rp)", "Kondisi", "Pemegang / Lokasi", "Foto"]],
-        body:[...L2.map(x => [++no, (x.kode || "-") + (x.noreg ? "\nNo. " + x.noreg : "") + (x.reg ? "\nReg. " + x.reg : "") + (isBospda(x) ? "\n(BOSP Daerah, menunggu SIPBMD)" : x.sip ? "" : "\n(tidak tercatat SIPBMD)"), itemNama(x) + ((multi || isSpecialSub(sub)) && KATMAP[x.kat] && !(multi && x.sip && !isBospda(x)) ? "\n" + KATMAP[x.kat].kib : ""), biSpes(x) || "-", (tahunOf(x) || "-") + (x.tgl && String(x.tgl).length > 4 ? "\n" + tglID(parseTgl(String(x.tgl))) : ""), [x.sumber, x.asal].filter(Boolean).join("\n") || "-", fm(itemNilai(x)) + (x.jml > 1 ? "\n(" + fmt(x.jml) + " unit)" : ""), (x.kond || "Belum dicek") + (x.ksip ? "\nSIPBMD: " + x.ksip : ""), [x.pj, x.lokasi].filter(Boolean).join("\n") || "-", foto.has(x.key) ? "" : "-"]),
-          [{ content:multi ? "SUBJUMLAH" : "JUMLAH", colSpan:6, styles:{ fontStyle:"bold", halign:"right" } }, { content:fm(sub2), styles:{ fontStyle:"bold", halign:"right" } }, { content:"", colSpan:3 }]],
-        columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 1:{ cellWidth:30 }, 2:{ cellWidth:38 }, 3:{ cellWidth:62 }, 4:{ cellWidth:20, halign:"center" }, 5:{ cellWidth:24 }, 6:{ cellWidth:24, halign:"right" }, 7:{ cellWidth:18 }, 8:{ cellWidth:29 }, 9:{ cellWidth:24, halign:"center" } },
-        didParseCell:d => { if (d.section === "body" && d.column.index === 9 && L2[d.row.index] && foto.has(L2[d.row.index].key)) d.cell.styles.minCellHeight = 20; },
-        didDrawCell:d => { if (d.section !== "body" || d.column.index !== 9) return; const x = L2[d.row.index]; const f = x && foto.get(x.key); if (!f) return;
+        head:[head], body:[...rows.map((x, i) => rowOf(x, startNo + i)), ...(sumLabel ? [[{ content:sumLabel, colSpan:6, styles:{ fontStyle:"bold", halign:"right" } }, { content:fm(sumVal), styles:{ fontStyle:"bold", halign:"right" } }, { content:"", colSpan:head.length - 7 }]] : [])],
+        columnStyles,
+        didParseCell:d => { if (withFoto && d.section === "body" && d.column.index === 9 && rows[d.row.index] && foto.has(rows[d.row.index].key)) d.cell.styles.minCellHeight = 20; },
+        didDrawCell:d => { if (!withFoto || d.section !== "body" || d.column.index !== 9) return; const x = rows[d.row.index]; const f = x && foto.get(x.key); if (!f) return;
           const bw = d.cell.width - 2, bh = Math.min(d.cell.height - 2, 18); let iw = bw, ih = iw / f.r; if (ih > bh) { ih = bh; iw = ih * f.r; }
           try { doc.addImage(f.data, "JPEG", d.cell.x + (d.cell.width - iw) / 2, d.cell.y + 1, iw, ih, undefined, "FAST"); } catch (e) {} } });
-      y = doc.lastAutoTable.finalY + 6;
-    }
-    if (multi) { if (y > 185) { doc.addPage(); y = 20; } doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text("JUMLAH SELURUH ASET: " + fmt(list.length) + " catatan barang · Rp" + fm(total), Wp - 10, y, { align:"right" }); doc.setFont("helvetica", "normal"); y += 4; }
-    y += 2; if (y > 165) { doc.addPage(); y = 25; }
+      return doc.lastAutoTable.finalY;
+    };
+    // draws everything except the signatures; keepLast > 0 moves the last rows to a new page so they stay with the signatures
+    const draw = keepLast => {
+      const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"landscape" });
+      let y = pdfKop(doc); y = pdfJudul(doc, y, ["BUKU INDUK BARANG MILIK DAERAH"], gol);
+      doc.setFontSize(9.5);
+      [["Kuasa Pengguna Barang", "SMA Negeri 1 Berau"], ["Pengguna Barang", "Dinas Pendidikan dan Kebudayaan Provinsi Kalimantan Timur"], ["Data", biFilterText()], ["Jumlah", fmt(list.length) + " catatan barang · nilai Rp" + fm(total)], ["Keadaan per", tglID(today())], ["Foto", withFoto ? "dicantumkan" : "tidak dicantumkan"]].forEach(([k, v]) => { doc.text(k, 20, y); doc.text(": " + v, 62, y); y += 4.6; });
+      y += 2; let no = 1;
+      groups.forEach((g, gi) => {
+        const last = gi === groups.length - 1, L2 = g.list, sub2 = L2.reduce((t, x) => t + itemNilai(x), 0), sumLabel = multi ? "SUBJUMLAH" : "JUMLAH";
+        const heading = yy => { if (!multi) return yy; doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text(g.t + " · " + fmt(g.list.length) + " barang", 10, yy + 3); doc.setFont("helvetica", "normal"); return yy + 6; };
+        if (multi && y > 180) { doc.addPage(); y = 18; }
+        if (last && keepLast) {
+          const k = Math.min(keepLast, L2.length), first = L2.slice(0, L2.length - k), tail = L2.slice(L2.length - k);
+          if (first.length) { y = heading(y); y = table(doc, y, first, no, "", 0) + 6; no += first.length; doc.addPage(); y = 18; if (multi) { doc.setFont("helvetica", "italic"); doc.setFontSize(9); doc.text("(lanjutan) " + g.t, 10, y + 3); doc.setFont("helvetica", "normal"); y += 6; } }
+          else { doc.addPage(); y = 18; y = heading(y); }
+          y = table(doc, y, tail, no, sumLabel, sub2) + 6; no += tail.length;
+        } else { y = heading(y); y = table(doc, y, L2, no, sumLabel, sub2) + 6; no += L2.length; }
+      });
+      if (multi) { doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text("JUMLAH SELURUH ASET: " + fmt(list.length) + " catatan barang · Rp" + fm(total), Wp - 10, y, { align:"right" }); doc.setFont("helvetica", "normal"); y += 6; }
+      return { doc, y: y + 2 };
+    };
+    let r = draw(0);
+    if (r.y + SIGN_H > BOTTOM) r = draw(3);
+    if (r.y + SIGN_H > BOTTOM) r = draw(1);
+    const doc = r.doc; let y = r.y;
+    if (y + SIGN_H > BOTTOM) { doc.addPage(); y = 25; }
     const sb = (x, lab, nama, nip) => { doc.setFontSize(10); doc.text(lab, x, y, { align:"center" }); doc.setFont("helvetica", "bold"); doc.text(nama || "", x, y + 24, { align:"center" }); const w = doc.getTextWidth(nama || ""); doc.setLineWidth(0.25); if (nama) doc.line(x - w / 2, y + 25, x + w / 2, y + 25); doc.setFont("helvetica", "normal"); doc.text("NIP. " + (nip || "-"), x, y + 29.5, { align:"center" }); };
     doc.setFontSize(10); doc.text("Tanjung Redeb, " + tglID(today()), Wp - 60, y, { align:"center" }); y += 5;
     // pimpinan di kiri: Kepala Sekolah · Waka Sarpras · Pengurus Barang (label rata bawah supaya nama sejajar)
     sb(60, "Kepala Sekolah\nselaku Kuasa Pengguna Barang,", c.kepsek, c.nipKepsek); sb(Wp / 2, "\nWaka Sarpras,", c.waka, c.nipWaka); sb(Wp - 60, "\nPengurus Barang,", c.pengurus, c.nipPengurus);
-    saveFile(`Buku Induk ${biNama()} ${today()}.pdf`, pdfFinish(doc).output("blob"));
+    saveFile(`Buku Induk ${biNama()}${withFoto ? "" : " (tanpa foto)"} ${today()}.pdf`, pdfFinish(doc).output("blob"));
   } catch (e) { toast("Buku induk gagal disusun (" + (e.message || e) + ")."); }
   UI.bi.busy = false; render();
 }
@@ -1339,6 +1361,7 @@ document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.id === "a-bi") { UI.bi.open = !UI.bi.open; render(); }
   if (b.dataset.biall != null) { UI.bi.all = b.dataset.biall === "1"; render(); }
+  if (b.dataset.bifoto != null) { UI.bi.foto2 = b.dataset.bifoto === "1"; render(); }
   if (b.id === "bi-close") { UI.bi.open = false; render(); }
   if (b.id === "bi-pdf") biPdf();
   if (b.id === "bi-xlsx") biExcel();
