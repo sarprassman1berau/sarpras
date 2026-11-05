@@ -285,7 +285,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
     <a href="#pelihara" data-v="pelihara">Pemeliharaan & Perbaikan</a>
     <a href="#hapus" data-v="hapus">Usulan Penghapusan</a></div>
   <div class="navsec"><p class="navgroup">Penyerahan barang</p>
-    <a href="#bast" data-v="bast">BAST</a>
+    <a href="#bast" data-v="bast">BAST <span id="bbadge"></span></a>
     <a href="#bantuan" data-v="bantuan">BAST Penerimaan Bantuan</a>
     <a href="#pemegang" data-v="pemegang">Per Pemegang</a>
     <a href="#laporan" data-v="laporan">Laporan BAST</a></div>
@@ -517,7 +517,7 @@ async function saveUpd(key, patch) {
     return true;
   } catch (e) { writeErr(e); return false; }
 }
-const FIELD_LABEL = { grp:"kelompok BOSP Daerah", kib:"kelengkapan data KIB", pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
+const FIELD_LABEL = { batas:"batas penggunaan", grp:"kelompok BOSP Daerah", kib:"kelengkapan data KIB", pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
 
 /* ================= change layer: master writes directly, operators propose ================= */
 const isMaster = () => S.role === "master";
@@ -694,6 +694,7 @@ function render(soft) {
     const nb = $("#vbadge"), np = pendingList().length; if (nb) nb.innerHTML = np ? `<span class="pill ${isMaster() ? "bad" : "warn"}">${np}</span>` : "";
     const nd = $("#nav-dot"); if (nd) nd.hidden = !(np && isMaster());
     const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : "";
+    const bb = $("#bbadge"), bn = masaPakai().lewat.length; if (bb) bb.innerHTML = bn ? `<span class="pill bad" title="masa penggunaan lewat">${bn}</span>` : "";
     if (drawer) renderDrawer();
   });
 }
@@ -713,6 +714,7 @@ function vRingkasan() {
   return `
   <h2>Rekap Aset dan Persediaan</h2>
   <p class="lead">Tulis catatan temuan, lihat rekap aset dan kondisi ruangan, serta siapa saja yang terakhir mengubah data. Angka di halaman ini langsung berubah setiap ada isian baru yang disimpan.</p>
+  ${masaPanel(true)}
   ${ctQuickPanel()}
   ${asetRekapPanel()}
   ${ruangRekapPanel(true)}
@@ -767,7 +769,7 @@ function vHome() {
   const ready = S.ready || S.seed.aset.length;
   const status = a => {
     if (!a.siap) return "Sedang disiapkan";
-    if (a.id === "sarpras") { const t = S.catatan.filter(c => c.val !== false && c.st !== "Selesai").length, v = pendingList().length; return [ready ? fmt(allItems().visible.length) + " aset" : "memuat…", t ? fmt(t) + " temuan terbuka" : "", v ? fmt(v) + " menunggu validasi" : ""].filter(Boolean).join(" · "); }
+    if (a.id === "sarpras") { const t = S.catatan.filter(c => c.val !== false && c.st !== "Selesai").length, v = pendingList().length; return [ready ? fmt(allItems().visible.length) + " aset" : "memuat…", ready && masaPakai().lewat.length ? fmt(masaPakai().lewat.length) + " masa pakai lewat" : "", t ? fmt(t) + " temuan terbuka" : "", v ? fmt(v) + " menunggu validasi" : ""].filter(Boolean).join(" · "); }
     if (a.id === "minta") { const w = S.minta.filter(m => m.st === "Diajukan"), mine = w.filter(m => m.by === S.me).length; return (can("minta_proses") ? (w.length ? fmt(w.length) + " menunggu diproses" : "Tidak ada antrean") : (mine ? fmt(mine) + " permintaan Anda menunggu" : "Ajukan permintaan barang")) + " · " + fmt(S.psdBarang.filter(b => psdLedger(b._id).qty > 0).length) + " jenis tersedia"; }
     if (a.id === "jadwal") { const h = jdToday().length, w = S.pinjam.filter(b => b.st === "Diajukan").length; return (h ? fmt(h) + " pemakaian hari ini" : "Hari ini kosong") + (w ? " · " + fmt(w) + " menunggu" : ""); }
     if (a.id === "waka") { const n = AK.list.filter(x => x.aktif !== false).length; return fmt(n) + " akun aktif · " + fmt(typeof onlineList === "function" ? onlineList().length : 0) + " online"; }
@@ -1430,7 +1432,7 @@ function kibRow(x, cols, n) {
   if (on("id") && x.orig && x.orig.nama != null && x.orig.nama !== x.nama) r["Nama di SIPBMD"] = x.orig.nama;
   if (on("kib")) for (const f of kibFields(x.kat)) { if (f.l === "Nama barang") continue; const v = kibVal(x, f.src, f.l).v; r[f.l] = f.u === "rp" ? numVal(v) : f.u === "tgl" ? (parseTgl(String(v || "")) || v || "") : (kibEmpty(v) ? "" : v); }
   if (on("beda")) r["Isian sekolah berbeda dari SIPBMD"] = kibFields(x.kat).map(f => { const k = kibVal(x, f.src, f.l); return k.isi ? `${f.l}: ${kibEmpty(k.sip) ? "(kosong)" : k.sip} → ${k.v}` : ""; }).filter(Boolean).join("; ");
-  if (on("serah")) Object.assign(r, { "Diserahkan ke":x.pj || "", "Jabatan":x.jab || "", "NIP":x.nip || "", "Peruntukan":x.untuk || "", "Posisi Barang (Lokasi Sekolah)":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "" });
+  if (on("serah")) Object.assign(r, { "Diserahkan ke":x.pj || "", "Jabatan":x.jab || "", "NIP":x.nip || "", "Peruntukan":x.untuk || "", "Posisi Barang (Lokasi Sekolah)":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "", "Batas Penggunaan":x.pj ? x.batas || "" : "" });
   if (on("kond")) Object.assign(r, { "Kondisi Cek Fisik":x.kond || "Belum dicek", "Tgl Cek":x.tcek || "", "Pemeriksa":x.cek || "", "Catatan Kondisi":x.cat || "", "Pemeliharaan":x.kond === "Rusak Sedang" ? ((x.pl && x.pl.st !== "Selesai" && x.pl.st) || "Belum ditangani") : "", "Usulan Penghapusan":usulHapus(x) ? (x.hapusNo || "Ya") : "" });
   if (on("catatan")) { const cs = S.catatan.filter(c => ctOk(c) && c.st !== "Selesai" && c.target && c.target.t === "aset" && c.target.id === x.key); r["Catatan Temuan Terbuka"] = cs.map(c => `${tglID((c.at || "").slice(0, 10))} ${c.kat}: ${c.teks}`).join(" | "); }
   return r;
@@ -1685,7 +1687,7 @@ function drawerItem(x) {
   return `
     <div class="dh"><div><p class="sectionlabel" style="margin:0 0 2px">${esc(kat ? kat.kib + " · " + kat.nama : "")} ${statusPill(x)}</p><h3>${esc(itemNama(x))}</h3>
       <div class="mono muted">${esc(idLabel(x) || "tanpa nomor")}</div>
-      ${x.kat === "pm" || x.kat === "atl" || !x.sip ? `<div class="dsum"><span>Diserahkan ke: <b>${x.pj ? esc(x.pj) : '<span style="color:var(--warn)">belum diserahkan</span>'}</b>${x.jab ? ` <span class="muted">(${esc(x.jab)})</span>` : ""}</span><span>Lokasi: <b>${x.lokasi ? esc(x.lokasi) : '<span style="color:var(--warn)">belum diisi</span>'}</b></span></div>` : ""}</div><button class="x" id="d-close">Tutup</button></div>
+      ${x.kat === "pm" || x.kat === "atl" || !x.sip ? `<div class="dsum"><span>Diserahkan ke: <b>${x.pj ? esc(x.pj) : '<span style="color:var(--warn)">belum diserahkan</span>'}</b>${x.jab ? ` <span class="muted">(${esc(x.jab)})</span>` : ""}${x.pj && isoDate(x.batas) ? ` · batas penggunaan s.d. <b>${esc(tglID(x.batas))}</b> ${masaLabel(x)}` : ""}</span><span>Lokasi: <b>${x.lokasi ? esc(x.lokasi) : '<span style="color:var(--warn)">belum diisi</span>'}</b></span></div>` : ""}</div><button class="x" id="d-close">Tutup</button></div>
     <div class="db">
       ${x.kond ? "" : '<div class="note bad"><b>Kondisi belum dikonfirmasi.</b> Lakukan cek fisik lalu pilih kondisinya di bagian Kondisi.</div>'}
       ${catatanSection({ t:"aset", id:x.key, label:itemNama(x) })}
@@ -1781,8 +1783,40 @@ function nextNomor(jenis, tgl) {
   const klas = jenis === "tarik" ? c.klasTarik : c.klasSerah, bag = jenis === "tarik" ? c.bagTarik : c.bagSerah;
   return `${klas}/${max + 1}/SMAN1-Berau-${bag}/${ROMAWI[m - 1]}/${y}`;
 }
+// ---- masa penggunaan barang yang diserahkan
+const addYears = (iso, n) => { const d = isoDate(iso) || today(); return (+d.slice(0, 4) + n) + d.slice(4); };
+const akhirTA = iso => { const d = isoDate(iso) || today(), y = +d.slice(0, 4); return (d.slice(5) <= "06-30" ? y : y + 1) + "-06-30"; };
+const dayDiff = (a, b) => Math.round((new Date(a + "T00:00:00") - new Date(b + "T00:00:00")) / 864e5);
+// lewat: batas sudah terlewat dan barang masih dipegang; segera: berakhir dalam 30 hari
+function masaPakai() {
+  const t = today(), lewat = [], segera = [];
+  for (const x of allItems().visible) { if (!x.pj || !isoDate(x.batas)) continue; const d = dayDiff(x.batas, t); if (d < 0) lewat.push(x); else if (d <= 30) segera.push(x); }
+  const by = list => { const m = new Map(); for (const x of list) { if (!m.has(x.pj)) m.set(x.pj, []); m.get(x.pj).push(x); } return [...m.entries()].sort((a, b) => String(a[1][0].batas).localeCompare(String(b[1][0].batas))); };
+  return { lewat, segera, lewatBy:by(lewat), segeraBy:by(segera) };
+}
+function masaLabel(x) { if (!x.pj || !isoDate(x.batas)) return ""; const d = dayDiff(x.batas, today()); return d < 0 ? `<span class="pill bad">masa penggunaan lewat ${fmt(-d)} hari</span>` : d <= 30 ? `<span class="pill warn">berakhir ${d ? "dalam " + d + " hari" : "hari ini"}</span>` : ""; }
+function masaPanel(compact) {
+  const M = masaPakai(); if (!M.lewat.length && !M.segera.length) return "";
+  const grp = (list, cls) => list.map(([nama, xs]) => `<div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:220px"><b>${esc(nama)}</b> <span class="pill ${cls}">${fmt(xs.length)} barang</span><div class="sm muted">${xs.slice(0, 4).map(x => esc(itemNama(x)) + " (s.d. " + esc(tglID(x.batas)) + ")").join("; ")}${xs.length > 4 ? "; …" : ""}</div></div>${can("bast") ? `<button data-masaperp="${esc(nama)}">Perbarui masa penggunaan</button><button class="ghost" data-masatarik="${esc(nama)}">Tarik barang</button>` : ""}</div>`).join("");
+  if (compact) return `<div class="note ${M.lewat.length ? "bad" : "warn"}" style="margin-bottom:14px"><b>Pengingat masa penggunaan barang:</b> ${M.lewat.length ? `${fmt(M.lewat.length)} barang di ${fmt(M.lewatBy.length)} pegawai sudah melewati batas waktu penggunaan dan belum diperbarui` : ""}${M.lewat.length && M.segera.length ? "; " : ""}${M.segera.length ? `${fmt(M.segera.length)} barang berakhir dalam 30 hari` : ""}. <a href="#bast">Buka BAST untuk memperbarui atau menarik</a>.</div>`;
+  return `<section class="panel" style="margin-bottom:14px;border-color:var(--${M.lewat.length ? "bad" : "warn"})"><h3 style="margin:0 0 4px">Pengingat masa penggunaan barang</h3><p class="hint" style="margin:0 0 6px">Perbarui dengan BAST penyerahan baru (batas waktu baru) kepada pegawai yang sama, atau tarik barangnya.</p>
+    ${M.lewatBy.length ? `<p class="sectionlabel" style="margin:8px 0 0;color:var(--bad)">Sudah lewat batas, belum diperbarui</p>${grp(M.lewatBy, "bad")}` : ""}
+    ${M.segeraBy.length ? `<p class="sectionlabel" style="margin:10px 0 0">Berakhir dalam 30 hari</p>${grp(M.segeraBy, "warn")}` : ""}</section>`;
+}
+function bastPrefill(jenis, nama, xs) {
+  const p = findPeg(nama), x0 = xs[0] || {};
+  UI.bast = { jenis, items:xs.map(bastItem), p:nama, nip:p ? p.nip : x0.nip || "", jab:p ? p.jab : x0.jab || "", q:"", tgl:today(), untuk:jenis === "tarik" ? "Masa penggunaan barang telah berakhir" : x0.untuk || "", lok:jenis === "tarik" ? "" : x0.lokasi || "", batas:addYears(today(), 1), fotos:[] };
+  if (location.hash !== "#bast") location.hash = "#bast"; else render();
+  window.scrollTo(0, 0);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("button[data-masaperp], button[data-masatarik]"); if (!b) return;
+  const nama = b.dataset.masaperp || b.dataset.masatarik, M = masaPakai(), xs = [...M.lewat, ...M.segera].filter(x => x.pj === nama);
+  bastPrefill(b.dataset.masaperp ? "serah" : "tarik", nama, xs);
+  toast(b.dataset.masaperp ? "Formulir BAST penyerahan (perpanjangan) sudah terisi. Periksa batas waktu baru lalu simpan." : "Formulir BAST penarikan sudah terisi. Isi kondisi terkini tiap barang lalu simpan.");
+});
 function bastItem(x) { return { key:x.key, th:tahunOf(x) ? String(tahunOf(x)) : "", nama:x.nama, // x.nama already carries validated name updates
- merek:x.src === "P" ? "" : x.merek || "", spes:x.src === "S" ? x.tipe || "" : x.spes || "", jml:1, reg:x.reg || "", kode:x.kode || "", noreg:x.noreg || "", nilai:x.src === "S" ? x.nilai || 0 : x.harga || x.nilai || 0 }; }
+ merek:x.src === "P" ? "" : x.merek || "", spes:x.src === "S" ? x.tipe || "" : x.spes || "", jml:1, reg:x.reg || "", kode:x.kode || "", noreg:x.noreg || "", nilai:x.src === "S" ? x.nilai || 0 : x.harga || x.nilai || 0, kond:x.kond || "", alasan:"" }; }
 function vBast() {
   const f = UI.bast;
   const picked = new Set(f.items.map(i => i.key));
@@ -1791,6 +1825,7 @@ function vBast() {
   const tarik = f.jenis === "tarik";
   return `
   <h2>Berita acara serah terima</h2>
+  ${masaPanel(false)}
   <p class="lead">Pilih jenis, pegawai, dan barang, lalu simpan. Pemegang barang langsung diperbarui, nomor surat masuk ke buku surat keluar, dan BAST diunduh sebagai PDF siap cetak.</p>
   <div class="grid two">
     <section class="panel">
@@ -1802,7 +1837,8 @@ function vBast() {
         <label class="f">Tanggal<input id="b-tgl" type="date" value="${esc(f.tgl)}"></label>
         <label class="f">Nomor surat<input id="b-nomor" class="mono" value="${esc(f.nomor)}"></label>
         ${tarik ? "" : `<label class="f full">Posisi barang setelah diserahkan<input id="b-lok" list="dl-ruang2" value="${esc(f.lok || "")}" placeholder="opsional, mis. G.II.L1.R3 · Lab Fisika"></label>`}
-        <label class="f full">${tarik ? "Alasan penarikan" : "Peruntukan"}<input id="b-untuk" ${tarik ? "" : 'list="dl-untuk"'} value="${esc(f.untuk)}" placeholder="${tarik ? "mis. pegawai pindah tugas, barang rusak, purna tugas" : "pilih atau ketik, mis. Pembelajaran di kelas"}"></label>
+        ${tarik ? "" : `<label class="f">Batas waktu penggunaan<input id="b-batas" type="date" value="${esc(f.batas || "")}"></label><div class="f" style="align-self:end"><div class="chips">${[["1 tahun", addYears(f.tgl, 1)], ["Akhir tahun ajaran", akhirTA(f.tgl)], ["2 tahun", addYears(f.tgl, 2)]].map(([l, v]) => `<button type="button" class="chip" data-bbatas="${v}" aria-pressed="${f.batas === v}">${l}</button>`).join("")}<button type="button" class="chip" data-bbatas="" aria-pressed="${!f.batas}">Tanpa batas</button></div></div>`}
+        <label class="f full">${tarik ? "Alasan penarikan (umum)" : "Peruntukan"}<input id="b-untuk" ${tarik ? "" : 'list="dl-untuk"'} value="${esc(f.untuk)}" placeholder="${tarik ? "mis. pegawai pindah tugas, barang rusak, purna tugas" : "pilih atau ketik, mis. Pembelajaran di kelas"}"></label>
       </div>
       ${untukList()}
       <datalist id="dl-ruang2">${ruangList().map(r => `<option value="${esc(r)}">`).join("")}</datalist>
@@ -1812,7 +1848,7 @@ function vBast() {
         <div class="heldlist">${held.map(x => `<label class="ck"><input type="checkbox" data-bh="${esc(x.key)}" ${hs.has(x.key) ? "checked" : ""}><span><b style="font-weight:500">${esc(itemNama(x))}</b> ${tahunOf(x) ? `<span class="pill">Tahun ${tahunOf(x)}</span>` : ""}<br><span class="sm muted">${esc(idLabel(x) || "tanpa nomor")}${x.lokasi ? " · " + esc(x.lokasi) : ""} · ${x.bast ? "BAST " + esc(x.bast) : '<b style="color:var(--warn)">belum ada BAST</b>'}</span></span></label>`).join("")}</div>
         <button class="primary" id="bh-add" style="margin-top:8px" ${hs.size ? "" : "disabled"}>Tambahkan ${hs.size} barang ke BAST ini</button></div>`; })() : ""}
       <p class="sectionlabel" style="margin-top:16px">Barang (${f.items.length})</p>
-      <div class="picked">${f.items.map((i, n) => `<div class="it"><div><b>${esc(i.nama)}</b>${i.th ? ` <span class="pill">Tahun ${esc(i.th)}</span>` : ""}<div class="mono faint">${esc(i.reg || (i.kode ? i.kode + " / " + i.noreg : "tanpa nomor registrasi"))}</div></div><input id="b-jml-${n}" type="number" min="1" value="${i.jml}" aria-label="Jumlah"><button class="ghost" data-unpick="${n}">Hapus</button></div>`).join("") || '<p class="muted" style="margin:0">Belum ada barang dipilih.</p>'}</div>
+      <div class="picked">${f.items.map((i, n) => `<div class="it"><div><b>${esc(i.nama)}</b>${i.th ? ` <span class="pill">Tahun ${esc(i.th)}</span>` : ""}<div class="mono faint">${esc(i.reg || (i.kode ? i.kode + " / " + i.noreg : "tanpa nomor registrasi"))}</div></div><input id="b-jml-${n}" type="number" min="1" value="${i.jml}" aria-label="Jumlah"><button class="ghost" data-unpick="${n}">Hapus</button>${tarik ? `<div style="grid-column:1/-1;display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px"><label class="f">Kondisi terkini<select id="b-kond-${n}"><option value="">— pilih —</option>${KOND.map(k => `<option ${i.kond === k ? "selected" : ""}>${k}</option>`).join("")}</select></label><label class="f">Alasan penarikan barang ini<input id="b-als-${n}" value="${esc(i.alasan || "")}" placeholder="${esc(f.untuk || "kosong = alasan umum")}"></label></div>` : ""}</div>`).join("") || '<p class="muted" style="margin:0">Belum ada barang dipilih.</p>'}</div>
       <label class="f" style="margin-top:10px">Tambah barang${f.p ? ` <span class="hint">atau cari barang lain</span>` : ""}<input id="b-q" type="search" value="${esc(f.q)}" placeholder="cari nama, merek, no. registrasi, serial, pemegang…"></label>
       ${cands.length ? `<div class="suggest" style="margin-top:6px">${cands.map(x => `<button data-pick="${esc(x.key)}"><span><b>${esc(itemNama(x))}</b> <span class="pill">${tahunOf(x) ? "Tahun " + tahunOf(x) : "tahun ?"}</span><br><span class="mono faint">${esc(idLabel(x))}</span> ${x.pj ? '<span class="faint">· ' + esc(x.pj) + "</span>" : ""}${x.lokasi ? '<span class="faint"> · ' + esc(x.lokasi) + "</span>" : ""}</span><span class="num">${rp(bastItem(x).nilai)}</span></button>`).join("")}</div>` : ""}
       <p class="sectionlabel" style="margin-top:16px">Dokumentasi (dicetak sebagai lampiran BAST)</p>
@@ -1830,7 +1866,8 @@ function buildBast() {
   const c = cfg(), f = UI.bast;
   const sar = { nama:c.waka, nip:c.nipWaka, jab:c.jabWaka };
   const peg = { nama:f.p || "", nip:f.nip || "", jab:f.jab || "" };
-  return { jenis:f.jenis, nomor:f.nomor, tgl:f.tgl, untuk:f.untuk, lok:f.lok || "", fotos:(f.fotos || []).map(x => ({ id:x.id, j:x.j })), p1:f.jenis === "tarik" ? peg : sar, p2:f.jenis === "tarik" ? sar : peg, items:f.items.map(i => Object.assign({}, i)), kepsek:{ nama:c.kepsek, nip:c.nipKepsek } };
+  if (f.batas === undefined) f.batas = addYears(f.tgl, 1);
+  return { jenis:f.jenis, nomor:f.nomor, tgl:f.tgl, untuk:f.untuk, lok:f.lok || "", batas:f.jenis === "tarik" ? "" : f.batas || "", fotos:(f.fotos || []).map(x => ({ id:x.id, j:x.j })), p1:f.jenis === "tarik" ? peg : sar, p2:f.jenis === "tarik" ? sar : peg, items:f.items.map(i => Object.assign({}, i, f.jenis === "tarik" ? { alasan:(i.alasan || "").trim() || f.untuk || "" } : {})), kepsek:{ nama:c.kepsek, nip:c.nipKepsek } };
 }
 function letterKop() {
   const c = cfg();
@@ -1846,8 +1883,8 @@ function letterPreview(b) {
     ${pihak("I.", b.p1, tarik ? "Mewakili dan atas nama jabatannya, selanjutnya disebut <b>PIHAK PERTAMA</b>." : "Mewakili dan atas nama SMAN 1 Berau, selanjutnya disebut <b>PIHAK PERTAMA</b>.")}
     ${pihak("II.", b.p2, tarik ? "Mewakili dan atas nama SMAN 1 Berau, selanjutnya disebut <b>PIHAK KEDUA</b>." : "Mewakili dan atas nama jabatannya, selanjutnya disebut <b>PIHAK KEDUA</b>.")}
     <p>${esc(bastKalimat(b))}</p>
-    <table class="items"><colgroup><col class="n"><col><col><col class="j"><col class="r"><col class="t"><col class="v"></colgroup><thead><tr><th>No</th><th>Nama barang</th><th>Merek / spesifikasi</th><th>Jml</th><th>No. registrasi</th><th>Tahun</th><th class="num">Nilai</th></tr></thead><tbody>${b.items.map((i, n) => `<tr><td class="c">${n + 1}</td><td>${esc(i.nama)}</td><td>${esc([i.merek, i.spes].filter(Boolean).join(" · ") || "-")}</td><td class="c">${i.jml || 1}</td><td>${esc(i.reg || (i.kode ? i.kode + "/" + i.noreg : "-"))}</td><td class="c">${esc(i.th || "-")}</td><td class="num">${fm((i.nilai || 0) * (i.jml || 1))}</td></tr>`).join("") || '<tr><td colspan="7" class="c muted">Belum ada barang</td></tr>'}<tr><td colspan="6"><b>TOTAL</b></td><td class="num"><b>${fm(total)}</b></td></tr></tbody></table>
-    <p>${tarik ? "Barang tersebut telah diterima kembali dalam keadaan sebagaimana tercantum di atas oleh PIHAK KEDUA." : "Barang tersebut telah diterima dengan baik dan jumlahnya sesuai dengan tabel di atas oleh PIHAK KEDUA. PIHAK KEDUA bertanggung jawab atas barang yang diserahkan tersebut."} Demikian Berita Acara ini dibuat dengan sebenar-benarnya untuk dipergunakan sebagaimana mestinya.</p>
+    <table class="items"><colgroup><col class="n"><col><col><col class="j"><col class="r"><col class="t"><col class="v"></colgroup><thead><tr><th>No</th><th>Nama barang</th><th>Merek / spesifikasi</th><th>Jml</th><th>No. registrasi</th><th>${tarik ? "Kondisi terkini" : "Tahun"}</th><th class="${tarik ? "" : "num"}">${tarik ? "Alasan penarikan" : "Nilai"}</th></tr></thead><tbody>${b.items.map((i, n) => `<tr><td class="c">${n + 1}</td><td>${esc(i.nama)}</td><td>${esc([i.merek, i.spes].filter(Boolean).join(" · ") || "-")}</td><td class="c">${i.jml || 1}</td><td>${esc(i.reg || (i.kode ? i.kode + "/" + i.noreg : "-"))}</td>${tarik ? `<td class="c"><b>${esc(i.kond || "—")}</b></td><td>${esc(i.alasan || b.untuk || "-")}</td>` : `<td class="c">${esc(i.th || "-")}</td><td class="num">${fm((i.nilai || 0) * (i.jml || 1))}</td>`}</tr>`).join("") || '<tr><td colspan="7" class="c muted">Belum ada barang</td></tr>'}<tr><td colspan="6"><b>TOTAL</b></td><td class="num"><b>${fm(total)}</b></td></tr></tbody></table>
+    <p>${tarik ? "Barang tersebut telah diterima kembali dalam keadaan sebagaimana tercantum di atas oleh PIHAK KEDUA." : "Barang tersebut telah diterima dengan baik dan jumlahnya sesuai dengan tabel di atas oleh PIHAK KEDUA. PIHAK KEDUA bertanggung jawab atas barang yang diserahkan tersebut. " + bastBatasKalimat(b)} Demikian Berita Acara ini dibuat dengan sebenar-benarnya untuk dipergunakan sebagaimana mestinya.</p>
     <div class="sign3"><div><p class="lb">PIHAK PERTAMA,</p><span><b>${esc(b.p1.nama || "")}</b><br>NIP. ${esc(b.p1.nip || "")}</span></div><div><p class="lb">Mengetahui,<br>Kepala Sekolah</p><span><b>${esc(b.kepsek.nama || "")}</b><br>NIP. ${esc(b.kepsek.nip || "")}</span></div><div><p class="lb">PIHAK KEDUA,</p><span><b>${esc(b.p2.nama || "")}</b><br>NIP. ${esc(b.p2.nip || "")}</span></div></div>
   </div>
   ${fotos.length ? `<div class="letter" style="margin-top:14px">${letterKop()}<p class="judul">LAMPIRAN DOKUMENTASI<br><u>BERITA ACARA ${tarik ? "PENARIKAN BARANG INVENTARIS" : "PENYERAHAN BARANG"}</u></p><p class="no">Nomor: ${esc(b.nomor || "…")}</p>
@@ -1863,6 +1900,7 @@ document.addEventListener("change", async e => {
   for (const file of files) { if ((UI.bast.fotos || []).filter(x => x.j === j).length >= 2) break; try { const r = await assets.upload(file); UI.bast.fotos = [...(UI.bast.fotos || []), { id:r.id, j }]; render(); } catch (err) { toast("Satu foto gagal diunggah."); } }
   UI.bast.up = null; render();
 });
+document.addEventListener("click", e => { const b = e.target.closest("button[data-bbatas]"); if (!b) return; UI.bast.batas = b.dataset.bbatas; render(); });
 document.addEventListener("click", e => { const b = e.target.closest("button[data-bfdel]"); if (!b) return; UI.bast.fotos = (UI.bast.fotos || []).filter(x => x.id !== b.dataset.bfdel); render(); });
 const cetakOf = nomor => (S.cetak || []).filter(c => c.jenis === "BAST" && c.nomor === nomor);
 async function cetakBast(b, first) {
@@ -1888,8 +1926,11 @@ document.addEventListener("click", e => {
 function bastAsetFotos(b) { return (b.items || []).map(i => { const x = i.key && allItems().byKey.get(i.key); return x && (x.fotos || []).length ? { id:x.fotos[0], j:"aset", cap:i.nama } : null; }).filter(Boolean); }
 function bastKalimat(b) {
   return b.jenis === "tarik"
-    ? `PIHAK PERTAMA menyerahkan kembali barang inventaris sekolah kepada PIHAK KEDUA${b.untuk ? " dengan alasan " + b.untuk : ""}, sebagaimana tercantum pada tabel di bawah ini.`
-    : `PIHAK PERTAMA telah menyerahkan barang-barang kepada PIHAK KEDUA untuk digunakan dalam menunjang pelaksanaan kegiatan dan kepentingan sekolah${b.untuk ? ", dengan peruntukan " + b.untuk.toLowerCase() : ""}${b.lok ? ", ditempatkan di " + b.lok : ""}, sebagaimana tercantum pada tabel di bawah ini.`;
+    ? (() => { const al = [...new Set((b.items || []).map(i => i.alasan || b.untuk || "").filter(Boolean))], lc = t => t.charAt(0).toLowerCase() + t.slice(1); return `PIHAK PERTAMA menyerahkan kembali barang inventaris sekolah kepada PIHAK KEDUA${al.length === 1 ? " dengan alasan " + lc(al[0]) : al.length > 1 ? " dengan alasan dan kondisi terkini masing-masing barang" : ""}, sebagaimana tercantum pada tabel di bawah ini.`; })()
+    : `PIHAK PERTAMA telah menyerahkan barang-barang kepada PIHAK KEDUA untuk digunakan dalam menunjang pelaksanaan kegiatan dan kepentingan sekolah${b.untuk ? ", dengan peruntukan " + b.untuk.toLowerCase() : ""}${b.lok ? ", ditempatkan di " + b.lok : ""}${b.batas ? ", dengan batas waktu penggunaan sampai dengan tanggal " + tglID(b.batas) : ""}, sebagaimana tercantum pada tabel di bawah ini.`;
+}
+function bastBatasKalimat(b) {
+  return b.jenis !== "tarik" && b.batas ? `Setelah batas waktu penggunaan tanggal ${tglID(b.batas)} berakhir, PIHAK KEDUA wajib memperbarui berita acara penyerahan (perpanjangan masa penggunaan) atau mengembalikan barang kepada PIHAK PERTAMA.` : "";
 }
 function pdfKop(doc) {
   const c = cfg(), W = doc.internal.pageSize.getWidth(), L = 20, R = W - 20, LH = 25, top = 10;
@@ -1985,12 +2026,16 @@ async function bastPdf(b) {
   pihak("II.", b.p2, tarik ? "Mewakili dan atas nama SMAN 1 Berau, selanjutnya disebut PIHAK KEDUA." : "Mewakili dan atas nama jabatannya, selanjutnya disebut PIHAK KEDUA.");
   y = pdfPara(doc, y, bastKalimat(b));
   const total = b.items.reduce((t, i) => t + (i.nilai || 0) * (i.jml || 1), 0), fm = n => Math.round(n || 0).toLocaleString("id-ID");
-  doc.autoTable({ startY:y, margin:{ left:L, right:W - R }, theme:"grid", styles:{ fontSize:8.5, cellPadding:1.3, lineColor:[60,60,60], lineWidth:0.15, textColor:[20,20,20], valign:"middle" }, headStyles:{ fillColor:[230,230,230], textColor:[20,20,20], fontStyle:"bold", halign:"center" },
+  if (tarik) doc.autoTable({ startY:y, margin:{ left:L, right:W - R }, theme:"grid", styles:{ fontSize:8.5, cellPadding:1.3, lineColor:[60,60,60], lineWidth:0.15, textColor:[20,20,20], valign:"middle" }, headStyles:{ fillColor:[230,230,230], textColor:[20,20,20], fontStyle:"bold", halign:"center" },
+    head:[["No", "Nama Barang", "Merek / Spesifikasi", "Jml", "No. Registrasi / Tahun", "Kondisi Terkini", "Alasan Penarikan"]],
+    body:b.items.map((i, n) => [n + 1, i.nama, [i.merek, i.spes].filter(Boolean).join(" · ") || "-", i.jml || 1, (i.reg || (i.kode ? i.kode + "/" + i.noreg : "-")) + (i.th ? "\n" + i.th : ""), i.kond || "-", i.alasan || b.untuk || "-"]),
+    columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 1:{ cellWidth:34 }, 3:{ cellWidth:9, halign:"center" }, 4:{ cellWidth:30 }, 5:{ cellWidth:20, halign:"center", fontStyle:"bold" }, 6:{ cellWidth:38 } } });
+  else doc.autoTable({ startY:y, margin:{ left:L, right:W - R }, theme:"grid", styles:{ fontSize:8.5, cellPadding:1.3, lineColor:[60,60,60], lineWidth:0.15, textColor:[20,20,20], valign:"middle" }, headStyles:{ fillColor:[230,230,230], textColor:[20,20,20], fontStyle:"bold", halign:"center" },
     head:[["No", "Nama Barang", "Merek / Spesifikasi", "Jml", "No. Registrasi", "Tahun", "Nilai Satuan", "Jumlah"]],
     body:[...b.items.map((i, n) => [n + 1, i.nama, [i.merek, i.spes].filter(Boolean).join(" · ") || "-", i.jml || 1, i.reg || (i.kode ? i.kode + "/" + i.noreg : "-"), i.th || "-", fm(i.nilai), fm((i.nilai || 0) * (i.jml || 1))]), [{ content:"TOTAL", colSpan:7, styles:{ fontStyle:"bold", halign:"right" } }, { content:fm(total), styles:{ fontStyle:"bold" } }]],
     columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 3:{ cellWidth:9, halign:"center" }, 5:{ cellWidth:12, halign:"center" }, 6:{ halign:"right", cellWidth:20 }, 7:{ halign:"right", cellWidth:22 } } });
   y = doc.lastAutoTable.finalY + 6;
-  y = pdfPara(doc, y, (tarik ? "Barang tersebut telah diterima kembali dalam keadaan sebagaimana tercantum di atas oleh PIHAK KEDUA." : "Barang tersebut telah diterima dengan baik dan jumlahnya sesuai dengan tabel di atas oleh PIHAK KEDUA. PIHAK KEDUA bertanggung jawab atas barang yang diserahkan tersebut.") + " Demikian Berita Acara ini dibuat dengan sebenar-benarnya dan penuh tanggung jawab untuk dapat dipergunakan sebagaimana mestinya.");
+  y = pdfPara(doc, y, (tarik ? "Barang tersebut telah diterima kembali oleh PIHAK KEDUA dalam kondisi sebagaimana tercantum pada kolom Kondisi Terkini di atas, dan kondisi tersebut menjadi data kondisi barang yang berlaku." : "Barang tersebut telah diterima dengan baik dan jumlahnya sesuai dengan tabel di atas oleh PIHAK KEDUA. PIHAK KEDUA bertanggung jawab atas barang yang diserahkan tersebut." + (bastBatasKalimat(b) ? " " + bastBatasKalimat(b) : "")) + " Demikian Berita Acara ini dibuat dengan sebenar-benarnya dan penuh tanggung jawab untuk dapat dipergunakan sebagaimana mestinya.");
   // signatures (3 columns) and documentation stay on one sheet when they fit
   if (y + 40 > 282) { doc.addPage(); y = 22; }
   signBlock(doc, y + 1, b.p1, b.p2, b.kepsek, "PIHAK PERTAMA,", "PIHAK KEDUA,", { row3:true });
@@ -2042,15 +2087,17 @@ async function saveBast() { const b0 = buildBast(); return W.group(`BAST ${b0.je
 async function saveBast0() {
   const b = buildBast();
   if (!b.items.length || !b.p1.nama || !b.p2.nama) { toast("Lengkapi pegawai dan barang dulu."); return; }
+  if (b.jenis === "tarik") { const no = b.items.findIndex(i => !i.kond); if (no >= 0) { toast(`Pilih kondisi terkini untuk ${b.items[no].nama}.`); return; } if (b.items.some(i => !i.alasan)) { toast("Isi alasan penarikan (umum atau per barang)."); return; } }
   if (!db) { toast("Data belum terhubung. Periksa koneksi lalu muat ulang."); return; }
   const btn = $("#b-save"); if (btn) btn.disabled = true;
   try {
     const id = uid("t"), now = new Date().toISOString();
     await W.set("trx/" + id, Object.assign({}, b, { dibuat:now, oleh:S.me || "" }));
     await W.set("surat/" + id, { tgl:b.tgl, nomor:b.nomor, hal:b.jenis === "tarik" ? "BERITA ACARA PENARIKAN BARANG" : "BERITA ACARA PENYERAHAN BARANG", ke:b.jenis === "tarik" ? b.p1.nama : b.p2.nama, reg:b.items.map(i => i.reg || i.kode + "/" + i.noreg).join(", "), ket:b.items.map(i => i.nama).join("; "), dibuat:now });
-    for (const i of b.items) await saveUpd(i.key, b.jenis === "tarik" ? { pj:"", nip:"", jab:"", untuk:"", stpj:"Ditarik dari " + b.p1.nama, lokasi:"Gudang Sarpras", bast:b.nomor, tbast:b.tgl } : Object.assign({ pj:b.p2.nama, nip:b.p2.nip, jab:b.p2.jab, stpj:"", untuk:b.untuk || "", bast:b.nomor, tbast:b.tgl }, b.lok ? { lokasi:b.lok } : {}));
+    // penarikan: kondisi terkini langsung menjadi kondisi barang (ikut ke rekap, pemeliharaan, usulan penghapusan, KIB, buku induk)
+    for (const i of b.items) await saveUpd(i.key, b.jenis === "tarik" ? { pj:"", nip:"", jab:"", untuk:"", batas:"", stpj:"Ditarik dari " + b.p1.nama, lokasi:"Gudang Sarpras", bast:b.nomor, tbast:b.tgl, kond:i.kond, tcek:b.tgl, cek:b.p2.nama, cat:"Ditarik (BAST " + b.nomor + "): " + i.alasan } : Object.assign({ pj:b.p2.nama, nip:b.p2.nip, jab:b.p2.jab, stpj:"", untuk:b.untuk || "", bast:b.nomor, tbast:b.tgl, batas:b.batas || "" }, b.lok ? { lokasi:b.lok } : {}));
     cetakBast(b, true);
-    toast("BAST tersimpan dan pemegang barang diperbarui.");
+    toast(b.jenis === "tarik" ? "BAST tersimpan; pemegang dan kondisi barang diperbarui." : "BAST tersimpan; pemegang dan batas waktu penggunaan diperbarui.");
     UI.bast = { jenis:b.jenis, items:[], p:"", q:"", tgl:today(), untuk:"", fotos:[] };
     render();
   } catch (e) { writeErr(e); if (btn) btn.disabled = false; }
@@ -3646,6 +3693,7 @@ document.addEventListener("input", e => {
   else if (id === "b-untuk") UI.bast.untuk = t.value, render();
   else if (id === "b-lok") UI.bast.lok = t.value, render();
   else if (id === "b-nomor") UI.bast.nomor = t.value, render();
+  else if (id.startsWith("b-als-")) { const n = +id.slice(6); if (UI.bast.items[n]) UI.bast.items[n].alasan = t.value; }
   else if (id.startsWith("b-jml-")) { const n = +id.slice(6); if (UI.bast.items[n]) UI.bast.items[n].jml = Math.max(1, +t.value || 1); render(); }
   else if (t.dataset && t.dataset.sumber) {
     const inp = document.getElementById(t.dataset.sumber); if (!inp) return;
@@ -3664,7 +3712,9 @@ document.addEventListener("change", e => {
   else if (id === "a-th") { A.th = t.value; A.page = 0; render(); }
   else if (id === "a-kat") { A.kat = t.value; A.page = 0; render(); }
   else if (id === "a-gedung") { A.gedung = t.value; A.page = 0; render(); }
-  else if (id === "b-tgl") { UI.bast.tgl = t.value; render(); }
+  else if (id === "b-tgl") { const o = UI.bast.tgl; UI.bast.tgl = t.value; if (UI.bast.batas && [addYears(o, 1), addYears(o, 2), akhirTA(o)].includes(UI.bast.batas)) UI.bast.batas = UI.bast.batas === akhirTA(o) ? akhirTA(t.value) : addYears(t.value, UI.bast.batas === addYears(o, 2) ? 2 : 1); render(); }
+  else if (id === "b-batas") { UI.bast.batas = t.value; render(); }
+  else if (id.startsWith("b-kond-")) { const n = +id.slice(7); if (UI.bast.items[n]) UI.bast.items[n].kond = t.value; render(); }
   else if (id === "r-dari") { UI.rekon.dari = t.value; render(); }
   else if (id === "r-sampai") { UI.rekon.sampai = t.value; render(); }
   else if (id === "rg-file") { const f = t.files && t.files[0]; t.value = ""; if (f) ruangReadFile(f); }

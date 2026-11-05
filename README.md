@@ -76,6 +76,12 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 
 ---
 
+### Masa penggunaan barang (BAST penyerahan) dan kondisi saat penarikan
+- **BAST Penyerahan** memuat **batas waktu penggunaan** (pilihan cepat: 1 tahun, akhir tahun ajaran 30 Juni, 2 tahun, atau tanpa batas). Kalimat BAST menyebut batas tersebut dan kewajiban memperbarui atau mengembalikan barang. Batas disimpan di setiap barang (`batas`).
+- **Pengingat**: barang yang masih dipegang dan batasnya sudah lewat (merah) atau berakhir ≤30 hari (kuning) tampil di atas halaman BAST (per pegawai, tombol **Perbarui masa penggunaan** = BAST penyerahan baru yang sudah terisi, dan **Tarik barang**), di Rekap, di detail aset, angka merah di menu BAST, dan status kartu Aset & Persediaan di Beranda.
+- **BAST Penarikan** wajib mengisi **kondisi terkini** dan **alasan penarikan** setiap barang (alasan umum dipakai bila alasan per barang kosong); keduanya tercetak di tabel BAST.
+- Saat BAST penarikan disimpan, kondisi terkini langsung menjadi kondisi barang (tanggal cek = tanggal BAST, pemeriksa = Pihak Kedua, catatan = alasan), sehingga ikut ke Rekap, Pemeliharaan & Perbaikan (Rusak Sedang), Usulan Penghapusan (Rusak Berat/Hilang), Unduh KIB, Buku Induk, dan Per Pemegang. Dari akun operator perubahan ini menunggu validasi master seperti biasa.
+
 ### Permintaan Barang Persediaan (aplikasi baru)
 Guru dan staf membuka aplikasi **Permintaan Barang Persediaan** di Beranda (aktif untuk semua akun, bisa dimatikan per akun), memilih barang dari stok persediaan, mengisi jumlah, unit/bagian, dan keperluan, lalu mengirim permintaan. Akun yang dicentang **"Memproses permintaan persediaan"** (dan master) melihat antrean di tab Daftar permintaan, menyesuaikan jumlah yang diserahkan dengan stok, lalu klik **Serahkan & catat keluar**: setiap barang langsung tercatat sebagai Persediaan Keluar (nilai FIFO, nomor bukti `BKP/…`, ditandai "dari aplikasi permintaan"), dan Bukti Permintaan dan Pengeluaran Barang Persediaan (PDF) terunduh dengan tanda tangan Pengurus Barang · Mengetahui Waka Sarpras · Yang meminta/menerima. Permintaan bisa ditolak dengan alasan atau dibatalkan pemohon. Tab Stok tersedia dan Rekap pengeluaran (per unit, per barang, Excel).
 
