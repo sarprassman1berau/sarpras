@@ -285,7 +285,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
     <a href="#pelihara" data-v="pelihara">Pemeliharaan & Perbaikan</a>
     <a href="#hapus" data-v="hapus">Usulan Penghapusan</a></div>
   <div class="navsec"><p class="navgroup">Penyerahan barang</p>
-    <a href="#bast" data-v="bast">BAST <span id="bbadge"></span></a>
+    <a href="#bast" data-v="bast">BAST</a>
+    <a href="#masa" data-v="masa">Masa Penggunaan Barang <span id="bbadge"></span></a>
     <a href="#bantuan" data-v="bantuan">BAST Penerimaan Bantuan</a>
     <a href="#pemegang" data-v="pemegang">Per Pemegang</a>
     <a href="#laporan" data-v="laporan">Laporan BAST</a></div>
@@ -613,7 +614,7 @@ function xlsxSave(filename, sheets) {
 }
 
 /* ================= router ================= */
-const VIEWS = ["home","jadwal","minta","bantuan","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
+const VIEWS = ["home","jadwal","minta","bantuan","masa","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
 let current = "ringkasan", sub = "";
 const UI = {
   aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"", th:"" },
@@ -689,7 +690,7 @@ function render(soft) {
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
     if (current === "home" || current === "jadwal" || current === "akun" || current === "minta") { v.innerHTML = pinBar() + (current === "home" ? vHome() : current === "akun" ? vAkunPage() : current === "minta" ? vMinta() : vJadwal()); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
-    v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, bantuan:vBantuan, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
+    v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, bantuan:vBantuan, masa:vMasa, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) {} } }
     const nb = $("#vbadge"), np = pendingList().length; if (nb) nb.innerHTML = np ? `<span class="pill ${isMaster() ? "bad" : "warn"}">${np}</span>` : "";
     const nd = $("#nav-dot"); if (nd) nd.hidden = !(np && isMaster());
@@ -1702,6 +1703,7 @@ function drawerItem(x) {
         <div class="fgrid">
           <fieldset class="full fgrid fs" ${drawerItem.canU ? "" : "disabled"}>
           <label class="f full">Diserahkan ke<select id="d-pj">${penerimaOptions(x.pj || "", "— belum diserahkan ke siapa pun —")}</select><span class="hint" id="d-pjinfo">${x.pj ? esc(pjInfo(findPeg(x.pj))) : "Pilih pegawai penanggung jawab. Untuk bukti tertulis, buat BAST penyerahan."}</span></label>
+          <label class="f full">Batas waktu penggunaan<input id="d-batas" type="date" value="${esc(x.batas || "")}"><span class="hint">${x.pj ? masaLabel(x) || "dari BAST penyerahan; kosongkan bila tanpa batas" : "diisi bila barang diserahkan ke pegawai"}</span></label>
           <label class="f full">Peruntukan<input id="d-untuk" list="dl-untuk" value="${esc(x.untuk || "")}" placeholder="pilih atau ketik, mis. Pembelajaran di kelas"></label>
           <label class="f full">Posisi / letak<input id="d-lok" list="dl-ruang" value="${esc(x.lokasi || "")}" placeholder="pilih ruang, mis. G.I.L1.R1 · Ruang BK"></label>
           </fieldset><fieldset class="full fgrid fs" ${drawerItem.canK ? "" : "disabled"}>
@@ -1798,11 +1800,65 @@ function masaLabel(x) { if (!x.pj || !isoDate(x.batas)) return ""; const d = day
 function masaPanel(compact) {
   const M = masaPakai(); if (!M.lewat.length && !M.segera.length) return "";
   const grp = (list, cls) => list.map(([nama, xs]) => `<div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:220px"><b>${esc(nama)}</b> <span class="pill ${cls}">${fmt(xs.length)} barang</span><div class="sm muted">${xs.slice(0, 4).map(x => esc(itemNama(x)) + " (s.d. " + esc(tglID(x.batas)) + ")").join("; ")}${xs.length > 4 ? "; …" : ""}</div></div>${can("bast") ? `<button data-masaperp="${esc(nama)}">Perbarui masa penggunaan</button><button class="ghost" data-masatarik="${esc(nama)}">Tarik barang</button>` : ""}</div>`).join("");
-  if (compact) return `<div class="note ${M.lewat.length ? "bad" : "warn"}" style="margin-bottom:14px"><b>Pengingat masa penggunaan barang:</b> ${M.lewat.length ? `${fmt(M.lewat.length)} barang di ${fmt(M.lewatBy.length)} pegawai sudah melewati batas waktu penggunaan dan belum diperbarui` : ""}${M.lewat.length && M.segera.length ? "; " : ""}${M.segera.length ? `${fmt(M.segera.length)} barang berakhir dalam 30 hari` : ""}. <a href="#bast">Buka BAST untuk memperbarui atau menarik</a>.</div>`;
+  if (compact) return `<div class="note ${M.lewat.length ? "bad" : "warn"}" style="margin-bottom:14px"><b>Pengingat masa penggunaan barang:</b> ${M.lewat.length ? `${fmt(M.lewat.length)} barang di ${fmt(M.lewatBy.length)} pegawai sudah melewati batas waktu penggunaan dan belum diperbarui` : ""}${M.lewat.length && M.segera.length ? "; " : ""}${M.segera.length ? `${fmt(M.segera.length)} barang berakhir dalam 30 hari` : ""}. <a href="#masa">Buka menu Masa Penggunaan Barang</a>.</div>`;
   return `<section class="panel" style="margin-bottom:14px;border-color:var(--${M.lewat.length ? "bad" : "warn"})"><h3 style="margin:0 0 4px">Pengingat masa penggunaan barang</h3><p class="hint" style="margin:0 0 6px">Perbarui dengan BAST penyerahan baru (batas waktu baru) kepada pegawai yang sama, atau tarik barangnya.</p>
     ${M.lewatBy.length ? `<p class="sectionlabel" style="margin:8px 0 0;color:var(--bad)">Sudah lewat batas, belum diperbarui</p>${grp(M.lewatBy, "bad")}` : ""}
     ${M.segeraBy.length ? `<p class="sectionlabel" style="margin:10px 0 0">Berakhir dalam 30 hari</p>${grp(M.segeraBy, "warn")}` : ""}</section>`;
 }
+/* ================= menu masa penggunaan barang ================= */
+UI.ms = { f:"lewat", q:"", sel:new Set(), tgl:"", busy:false };
+function masaRows() {
+  const t = today(), all = allItems().visible.filter(x => x.pj && x.src !== "G");
+  const st = x => !isoDate(x.batas) ? "tanpa" : dayDiff(x.batas, t) < 0 ? "lewat" : dayDiff(x.batas, t) <= 30 ? "segera" : "aktif";
+  return all.map(x => ({ x, st:st(x) }));
+}
+function vMasa() {
+  const M = UI.ms, ed = can("bast"), all = masaRows(), n = k => all.filter(r => r.st === k).length;
+  const rows = all.filter(r => (M.f === "semua" ? r.st !== "tanpa" : r.st === M.f) && matches(M.q, [r.x.nama, r.x.merek, r.x.pj, r.x.jab, r.x.bast, r.x.lokasi, r.x.reg, r.x.kode, r.x.noreg]))
+    .sort((a, b) => String(a.x.batas || "9").localeCompare(String(b.x.batas || "9")) || String(a.x.pj).localeCompare(String(b.x.pj)));
+  for (const k of [...M.sel]) if (!rows.some(r => r.x.key === k)) M.sel.delete(k);
+  const selX = rows.filter(r => M.sel.has(r.x.key)).map(r => r.x), peg = [...new Set(selX.map(x => x.pj))];
+  const STL = { lewat:["bad", "Lewat batas"], segera:["warn", "Berakhir ≤30 hari"], aktif:["ok", "Masih berlaku"], tanpa:["", "Belum ada batas"] };
+  const kpi = (k, l, s2) => `<button class="kpi" data-msf="${k}" style="text-align:left;cursor:pointer;${M.f === k ? "outline:2px solid var(--accent);" : ""}"><span class="l">${l}</span><span class="v" ${k === "lewat" && n(k) ? 'style="color:var(--bad)"' : ""}>${fmt(k === "semua" ? all.filter(r => r.st !== "tanpa").length : n(k))}</span><span class="s">${s2}</span></button>`;
+  return `<h2>Masa penggunaan barang</h2>
+  <p class="lead">Barang yang sedang dipegang pegawai beserta batas waktu penggunaannya dari BAST penyerahan. Batas bisa diubah langsung di sini atau lewat BAST perpanjangan, penarikan, dan detail aset; semua perubahan langsung terbaca di menu lain.</p>
+  <div class="grid kpis">${kpi("lewat", "Sudah lewat batas", "belum diperbarui")}${kpi("segera", "Berakhir ≤30 hari", "segera perpanjang/tarik")}${kpi("semua", "Semua yang berbatas", fmt(n("aktif")) + " masih berlaku")}${kpi("tanpa", "Dipegang tanpa batas", "BAST lama / belum diisi")}</div>
+  <div class="toolbar" style="margin-top:14px"><label class="f grow">Cari<input id="ms-q" type="search" value="${esc(M.q)}" placeholder="barang, pegawai, nomor BAST, lokasi…"></label><span class="sp"></span><button id="ms-xlsx" ${rows.length ? "" : "disabled"}>Unduh Excel</button></div>
+  ${ed ? `<div class="selbar" style="flex-wrap:wrap;gap:8px"><b>${fmt(M.sel.size)} dipilih</b><button class="link" id="ms-all">Pilih semua (${fmt(rows.length)})</button><button class="link" id="ms-none">Batal pilih</button><span class="sp"></span>
+    <label class="f" style="flex-direction:row;align-items:center;gap:6px">Batas baru<input id="ms-tgl" type="date" value="${esc(M.tgl)}"></label><span class="chips"><button class="chip" data-mstgl="${addYears(today(), 1)}">1 tahun</button><button class="chip" data-mstgl="${akhirTA(today())}">Akhir TA</button></span>
+    <button class="primary" id="ms-apply" ${M.sel.size && isoDate(M.tgl) && !M.busy ? "" : "disabled"}>${M.busy ? "Menyimpan…" : "Ubah batas"}</button>
+    <button id="ms-perp" ${peg.length === 1 ? "" : "disabled"} title="Barang terpilih harus milik satu pegawai">BAST perpanjangan</button><button id="ms-tarik" ${peg.length === 1 ? "" : "disabled"} title="Barang terpilih harus milik satu pegawai">BAST penarikan</button></div>` : ""}
+  <div class="tablebox"><table><thead><tr>${ed ? `<th class="selc"><input type="checkbox" id="ms-page" aria-label="Pilih semua" ${rows.length && rows.every(r => M.sel.has(r.x.key)) ? "checked" : ""}></th>` : ""}<th>Barang</th><th>Pemegang</th><th class="hide-sm">BAST terakhir</th><th>Batas penggunaan</th><th>Status</th></tr></thead><tbody>
+  ${rows.map(({ x, st }) => { const d = isoDate(x.batas) ? dayDiff(x.batas, today()) : null; return `<tr>${ed ? `<td class="selc"><input type="checkbox" data-mssel="${esc(x.key)}" ${M.sel.has(x.key) ? "checked" : ""}></td>` : ""}<td><a href="#masa" data-open="${esc(x.key)}" class="nm">${esc(itemNama(x))}</a><div class="sm mono faint">${esc(idLabel(x) || "")}</div></td><td>${esc(x.pj)}<div class="sm">${esc(x.lokasi || "")}</div></td><td class="hide-sm sm">${esc(x.bast || "-")}${x.tbast ? "<br>" + esc(tglID(x.tbast)) : ""}</td>
+    <td>${ed ? `<input type="date" data-msbatas="${esc(x.key)}" value="${esc(x.batas || "")}" style="max-width:160px">` : esc(tglID(x.batas) || "-")}</td><td><span class="pill ${STL[st][0]}">${STL[st][1]}</span>${d != null ? `<div class="sm muted">${d < 0 ? "lewat " + fmt(-d) + " hari" : d === 0 ? "hari ini" : "sisa " + fmt(d) + " hari"}</div>` : ""}</td></tr>`; }).join("") || `<tr><td colspan="6"><div class="empty"><b>${M.f === "lewat" ? "Tidak ada barang yang melewati batas waktu penggunaan" : "Tidak ada data"}</b>${M.f === "lewat" ? "Semua barang yang dipegang masih dalam masa penggunaan." : ""}</div></td></tr>`}
+  </tbody></table></div>
+  <p class="hint">Mengubah tanggal di tabel langsung menyimpan batas baru (dari akun operator menunggu validasi master). Untuk dokumen resmi, gunakan tombol BAST perpanjangan agar pegawai menandatangani batas baru.</p>`;
+}
+document.addEventListener("click", async e => {
+  if (current !== "masa") return; const M = UI.ms;
+  const op = e.target.closest("[data-open]"); if (op && op.closest("#view")) { e.preventDefault(); openItem(op.dataset.open); return; }
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.msf) { M.f = b.dataset.msf; M.sel = new Set(); render(); }
+  if (b.dataset.mstgl) { M.tgl = b.dataset.mstgl; render(); }
+  if (b.id === "ms-all") { for (const tr of document.querySelectorAll("[data-mssel]")) M.sel.add(tr.dataset.mssel); render(); }
+  if (b.id === "ms-none") { M.sel = new Set(); render(); }
+  if (b.id === "ms-perp" || b.id === "ms-tarik") { const xs = [...M.sel].map(k => allItems().byKey.get(k)).filter(Boolean); if (xs.length) { M.sel = new Set(); bastPrefill(b.id === "ms-perp" ? "serah" : "tarik", xs[0].pj, xs); } }
+  if (b.id === "ms-apply") {
+    const keys = [...M.sel]; M.busy = true; render();
+    try { await W.group(`Ubah batas penggunaan ${keys.length} barang s.d. ${tglID(M.tgl)}`, async () => { for (const k of keys) await saveUpd(k, { batas:M.tgl }); }); toast(isMaster() ? `Batas penggunaan ${keys.length} barang diperbarui.` : "Usulan perubahan dikirim ke akun master."); M.sel = new Set(); }
+    catch (err) { writeErr(err); }
+    M.busy = false; render();
+  }
+  if (b.id === "ms-xlsx") { const t = today(); xlsxSave(`Masa Penggunaan Barang ${t}.xlsx`, [["Masa Penggunaan", masaRows().map(({ x, st }) => ({ "Nama Barang":itemNama(x), "Kode / No. Registrasi":idLabel(x) || "", "Pemegang":x.pj, "Jabatan":x.jab || "", "Lokasi":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "", "Batas Penggunaan":x.batas || "", "Status":({ lewat:"Lewat batas", segera:"Berakhir ≤30 hari", aktif:"Masih berlaku", tanpa:"Belum ada batas" })[st], "Hari":isoDate(x.batas) ? dayDiff(x.batas, t) : "" }))]]); }
+});
+document.addEventListener("change", async e => {
+  if (current !== "masa") return; const t = e.target, M = UI.ms;
+  if (t.dataset.mssel) { if (t.checked) M.sel.add(t.dataset.mssel); else M.sel.delete(t.dataset.mssel); render(); }
+  if (t.id === "ms-page") { for (const c of document.querySelectorAll("[data-mssel]")) { if (t.checked) M.sel.add(c.dataset.mssel); else M.sel.delete(c.dataset.mssel); } render(); }
+  if (t.id === "ms-tgl") { M.tgl = t.value; render(); }
+  if (t.dataset.msbatas) { const k = t.dataset.msbatas; if (await saveUpd(k, { batas:t.value })) toast(isMaster() ? "Batas penggunaan diperbarui." : "Usulan perubahan dikirim ke akun master."); render(); }
+});
+document.addEventListener("input", e => { if (current === "masa" && e.target.id === "ms-q") { UI.ms.q = e.target.value; render(); } });
 function bastPrefill(jenis, nama, xs) {
   const p = findPeg(nama), x0 = xs[0] || {};
   UI.bast = { jenis, items:xs.map(bastItem), p:nama, nip:p ? p.nip : x0.nip || "", jab:p ? p.jab : x0.jab || "", q:"", tgl:today(), untuk:jenis === "tarik" ? "Masa penggunaan barang telah berakhir" : x0.untuk || "", lok:jenis === "tarik" ? "" : x0.lokasi || "", batas:addYears(today(), 1), fotos:[] };
@@ -1825,7 +1881,7 @@ function vBast() {
   const tarik = f.jenis === "tarik";
   return `
   <h2>Berita acara serah terima</h2>
-  ${masaPanel(false)}
+  ${masaPanel(true)}
   <p class="lead">Pilih jenis, pegawai, dan barang, lalu simpan. Pemegang barang langsung diperbarui, nomor surat masuk ke buku surat keluar, dan BAST diunduh sebagai PDF siap cetak.</p>
   <div class="grid two">
     <section class="panel">
@@ -3801,6 +3857,7 @@ document.addEventListener("click", async e => {
       const kond = pressed ? pressed.dataset.k : (x.kond && !KOND.includes(x.kond) ? x.kond : "");
       const pj = val("d-pj"), peg = findPeg(pj);
       const patch = { pj, untuk:val("d-untuk"), lokasi:val("d-lok"), kond, tcek:val("d-tcek"), cek:val("d-cek"), cat:val("d-cat"), reg:val("d-reg"), spj:val("d-spj"), sumber:val("d-sumber") };
+      if (document.getElementById("d-batas")) patch.batas = pj ? val("d-batas") : "";
       if (peg) { patch.nip = peg.nip || ""; patch.jab = peg.jab || ""; } else if (!pj) { patch.nip = ""; patch.jab = ""; }
       if (kond && kond !== x.kond && !patch.tcek) patch.tcek = today();
       if (document.getElementById("d-hno")) patch.hapusNo = val("d-hno");
