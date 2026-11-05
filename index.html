@@ -1239,7 +1239,7 @@ document.addEventListener("change", e => {
 });
 
 /* ================= buku induk ================= */
-UI.bi = { open:false, all:false, cover:true, dari:"", sampai:"", sumber:"", st:"", kond:"", lok:"", pj:"", foto:false, busy:false };
+UI.bi = { open:false, all:false, cover:true, gab:true, dari:"", sampai:"", sumber:"", st:"", kond:"", lok:"", pj:"", foto:false, busy:false };
 const biBase = () => UI.bi.all ? allItems().visible.filter(x => x.src !== "G") : subItems(sub);
 // groups for a combined book: every SIPBMD golongan, then the two special lists
 function biGroups(list) {
@@ -1261,6 +1261,24 @@ function biItems() {
     return true;
   }).sort((a, b) => String(a.kode).localeCompare(String(b.kode), "id", { numeric:true }) || String(a.noreg).localeCompare(String(b.noreg), "id", { numeric:true }) || String(a.nama).localeCompare(String(b.nama)));
 }
+// ATL (buku dsb.): catatan dengan identitas sama digabung jadi satu baris berisi jumlah, rentang No. Register, dan total nilai
+const noRange = regs => { const num = regs.filter(r => /^\d+$/.test(String(r))).map(Number).sort((a, b) => a - b), oth = regs.filter(r => !/^\d+$/.test(String(r))), out = [];
+  for (let i = 0; i < num.length; i++) { let j = i; while (j + 1 < num.length && num[j + 1] === num[j] + 1) j++; out.push(j > i ? num[i] + "–" + num[j] : String(num[i])); i = j; }
+  return [...out, ...oth].join(", "); };
+function biMerge(list) {
+  if (!UI.bi.gab) return list;
+  const out = [], by = new Map();
+  for (const x of list) {
+    if (x.kat !== "atl") { out.push(x); continue; }
+    const u = (x.jml || 1), k = JSON.stringify([x.kode || "", norm(x.nama || ""), biSpes(x), String(x.tgl || tahunOf(x) || ""), x.sumber || "", x.asal || "", Math.round(itemNilai(x) / u), x.kond || "", norm(x.pj || ""), norm(x.lokasi || ""), !!x.sip, isBospda(x)]);
+    let g = by.get(k);
+    if (!g) { g = Object.assign({}, x, { _gab:[], nilai:0, jml:0, fotos:[] }); by.set(k, g); out.push(g); }
+    g._gab.push(x); g.nilai += itemNilai(x); g.jml += u; if (!g.fotos.length && (x.fotos || []).length) { g.fotos = x.fotos; g.key = x.key; }
+  }
+  for (const g of out) if (g._gab) { if (g._gab.length === 1) { const i = out.indexOf(g); out[i] = g._gab[0]; continue; } g.noreg = noRange(g._gab.map(y => y.noreg).filter(v => v != null && v !== "")); g.reg = ""; }
+  return out;
+}
+const biUnits = list => list.reduce((t, x) => t + (x._gab ? x.jml : 1), 0);
 function biFilterText() {
   const B = UI.bi, f = [];
   if (B.dari || B.sampai) f.push("tahun perolehan " + (B.dari || "awal") + "–" + (B.sampai || "akhir"));
@@ -1287,7 +1305,7 @@ function biPanel() {
       <label class="f">Pemegang mengandung<input id="bi-pj" value="${esc(B.pj)}" placeholder="mis. Ika"></label>
       <label class="ck full"><input type="checkbox" id="bi-foto" ${B.foto ? "checked" : ""}> Hanya aset yang sudah berfoto</label>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px"><label class="ck"><input type="checkbox" id="bi-cover" ${B.cover ? "checked" : ""}> Sertakan cover</label><span class="chips" role="group" aria-label="Foto di PDF"><button class="chip" data-bifoto="1" aria-pressed="${B.foto2 !== false}">Dengan foto</button><button class="chip" data-bifoto="0" aria-pressed="${B.foto2 === false}">Tanpa foto</button></span><button class="primary" id="bi-pdf" ${list.length && !B.busy ? "" : "disabled"}>${B.busy ? "Menyusun…" : `Unduh Buku Induk (PDF, ${B.foto2 === false ? "tanpa" : "dengan"} foto)`}</button><button id="bi-xlsx" ${list.length ? "" : "disabled"}>Unduh Buku Induk (Excel)</button>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px"><label class="ck"><input type="checkbox" id="bi-cover" ${B.cover ? "checked" : ""}> Sertakan cover</label>${list.some(x => x.kat === "atl") ? `<label class="ck" title="Buku/ATL dengan nama, judul, pengarang, tahun, sumber dana, harga satuan, kondisi, dan lokasi yang sama dicetak satu baris"><input type="checkbox" id="bi-gab" ${B.gab ? "checked" : ""}> Gabungkan buku/ATL yang identik (${fmt(list.filter(x => x.kat === "atl").length)} → ${fmt(biMerge(list.filter(x => x.kat === "atl")).length)} baris)</label>` : ""}<span class="chips" role="group" aria-label="Foto di PDF"><button class="chip" data-bifoto="1" aria-pressed="${B.foto2 !== false}">Dengan foto</button><button class="chip" data-bifoto="0" aria-pressed="${B.foto2 === false}">Tanpa foto</button></span><button class="primary" id="bi-pdf" ${list.length && !B.busy ? "" : "disabled"}>${B.busy ? "Menyusun…" : `Unduh Buku Induk (PDF, ${B.foto2 === false ? "tanpa" : "dengan"} foto)`}</button><button id="bi-xlsx" ${list.length ? "" : "disabled"}>Unduh Buku Induk (Excel)</button>
       <span class="muted">${fmt(list.length)} aset · ${fmt(nf)} berfoto · ${rp(list.reduce((t, x) => t + itemNilai(x), 0))}</span></div>
     <p class="hint">Excel berisi data lengkap tanpa foto; foto hanya ada di versi PDF.</p></section>`;
 }
@@ -1305,16 +1323,16 @@ async function biPdf() {
     const foto = new Map();
     if (withFoto) {
       const nf = list.filter(x => (x.fotos || []).length).length; if (nf) toast("Menyusun buku induk dan memuat " + nf + " foto…");
-      for (const x of list) if ((x.fotos || []).length) { const [f] = await pdfFotos([{ id:x.fotos[0] }]); if (f) foto.set(x.key, f); }
+      for (const x of biMerge(list)) if ((x.fotos || []).length) { const [f] = await pdfFotos([{ id:x.fotos[0] }]); if (f) foto.set(x.key, f); }
     }
     const c = cfg(), { jsPDF } = window.jspdf, Wp = 297, Hp = 210, SIGN_H = 42, BOTTOM = Hp - 14;
     const gol = UI.bi.all ? "Seluruh Aset: KIB A–ATB (data SIPBMD), Aset Tidak Tercatat, dan Aset BOSP Daerah" : sub === "tak" ? "Aset Tidak Tercatat di SIPBMD (semua golongan)" : sub === "bospda" ? "Aset BOSP Daerah Belum Tercatat di SIPBMD (semua golongan)" : KATMAP[sub].kib + " · " + KATMAP[sub].nama + " (kode " + KATMAP[sub].kode + ")";
     const total = list.reduce((t, x) => t + itemNilai(x), 0), fm = n => Math.round(n || 0).toLocaleString("id-ID");
-    const groups = biGroups(list), multi = UI.bi.all;
+    const groups = biGroups(biMerge(list)), multi = UI.bi.all;
     const head = ["No", "Kode Barang / No. Register", "Nama Barang", "Spesifikasi / Data KIB", "Tahun / Tgl Perolehan", "Sumber Dana / Asal Usul", "Nilai Perolehan (Rp)", "Kondisi", "Pemegang / Lokasi", ...(withFoto ? ["Foto"] : [])];
     const colW = withFoto ? [8, 30, 38, 62, 20, 24, 24, 18, 29, 24] : [8, 32, 44, 78, 20, 26, 25, 18, 26];
     const columnStyles = Object.fromEntries(colW.map((w, i) => [i, Object.assign({ cellWidth:w }, i === 0 ? { halign:"center" } : i === 4 ? { halign:"center" } : i === 6 ? { halign:"right" } : i === 9 ? { halign:"center" } : {})]));
-    const rowOf = (x, n) => [n, (x.kode || "-") + (x.noreg ? "\nNo. " + x.noreg : "") + (x.reg ? "\nReg. " + x.reg : "") + (isBospda(x) ? "\n(BOSP Daerah, menunggu SIPBMD)" : x.sip ? "" : "\n(tidak tercatat SIPBMD)"), itemNama(x) + ((multi || isSpecialSub(sub)) && KATMAP[x.kat] && !(multi && x.sip && !isBospda(x)) ? "\n" + KATMAP[x.kat].kib : ""), biSpes(x) || "-", (tahunOf(x) || "-") + (x.tgl && String(x.tgl).length > 4 ? "\n" + tglID(parseTgl(String(x.tgl))) : ""), [x.sumber, x.asal].filter(Boolean).join("\n") || "-", fm(itemNilai(x)) + (x.jml > 1 ? "\n(" + fmt(x.jml) + " unit)" : ""), (x.kond || "Belum dicek") + (x.ksip ? "\nSIPBMD: " + x.ksip : ""), [x.pj, x.lokasi].filter(Boolean).join("\n") || "-", ...(withFoto ? [foto.has(x.key) ? "" : "-"] : [])];
+    const rowOf = (x, n) => [n, (x.kode || "-") + (x.noreg ? "\nNo. " + x.noreg : "") + (x._gab ? "\n(" + fmt(x._gab.length) + " register digabung)" : "") + (x.reg ? "\nReg. " + x.reg : "") + (isBospda(x) ? "\n(BOSP Daerah, menunggu SIPBMD)" : x.sip ? "" : "\n(tidak tercatat SIPBMD)"), itemNama(x) + ((multi || isSpecialSub(sub)) && KATMAP[x.kat] && !(multi && x.sip && !isBospda(x)) ? "\n" + KATMAP[x.kat].kib : ""), biSpes(x) || "-", (tahunOf(x) || "-") + (x.tgl && String(x.tgl).length > 4 ? "\n" + tglID(parseTgl(String(x.tgl))) : ""), [x.sumber, x.asal].filter(Boolean).join("\n") || "-", fm(itemNilai(x)) + (x._gab ? "\n(" + fmt(x.jml) + " eks @ " + fm(itemNilai(x) / x.jml) + ")" : x.jml > 1 ? "\n(" + fmt(x.jml) + " unit)" : ""), (x.kond || "Belum dicek") + (x.ksip ? "\nSIPBMD: " + x.ksip : ""), [x.pj, x.lokasi].filter(Boolean).join("\n") || "-", ...(withFoto ? [foto.has(x.key) ? "" : "-"] : [])];
     const table = (doc, y, rows, startNo, sumLabel, sumVal) => {
       doc.autoTable({ startY:y, margin:{ left:10, right:10, top:14, bottom:14 }, theme:"grid", showHead:"everyPage",
         styles:{ fontSize:7.4, cellPadding:1.2, lineColor:[60,60,60], lineWidth:0.12, textColor:[20,20,20], valign:"top", overflow:"linebreak" },
@@ -1333,11 +1351,11 @@ async function biPdf() {
       if (UI.bi.cover) { pdfCover(doc, { judul:["BUKU INDUK", "BARANG MILIK DAERAH"], sub:[gol, "Keadaan per " + tglID(today()), biFilterText() !== "semua data" ? "Data: " + biFilterText() : "", fmt(list.length) + " catatan barang · nilai Rp" + fm(total)], rows:COVER_ID(), tahun:(UI.bi.dari && UI.bi.dari === UI.bi.sampai ? "Tahun Perolehan " + UI.bi.dari : new Date().getFullYear()) }); doc.addPage(); }
       let y = pdfKop(doc); y = pdfJudul(doc, y, ["BUKU INDUK BARANG MILIK DAERAH"], gol);
       doc.setFontSize(9.5);
-      [["Kuasa Pengguna Barang", "SMA Negeri 1 Berau"], ["Pengguna Barang", "Dinas Pendidikan dan Kebudayaan Provinsi Kalimantan Timur"], ["Data", biFilterText()], ["Jumlah", fmt(list.length) + " catatan barang · nilai Rp" + fm(total)], ["Keadaan per", tglID(today())], ["Foto", withFoto ? "dicantumkan" : "tidak dicantumkan"]].forEach(([k, v]) => { doc.text(k, 20, y); doc.text(": " + v, 62, y); y += 4.6; });
+      [["Kuasa Pengguna Barang", "SMA Negeri 1 Berau"], ["Pengguna Barang", "Dinas Pendidikan dan Kebudayaan Provinsi Kalimantan Timur"], ["Data", biFilterText()], ["Jumlah", fmt(list.length) + " catatan barang · nilai Rp" + fm(total)], ["Keadaan per", tglID(today())], ["Foto", withFoto ? "dicantumkan" : "tidak dicantumkan"], ...(UI.bi.gab && list.some(x => x.kat === "atl") ? [["Catatan", "buku/ATL dengan identitas sama digabung satu baris (jumlah eksemplar dan rentang No. Register)"]] : [])].forEach(([k, v]) => { doc.text(k, 20, y); doc.text(": " + v, 62, y); y += 4.6; });
       y += 2; let no = 1;
       groups.forEach((g, gi) => {
         const last = gi === groups.length - 1, L2 = g.list, sub2 = L2.reduce((t, x) => t + itemNilai(x), 0), sumLabel = multi ? "SUBJUMLAH" : "JUMLAH";
-        const heading = yy => { if (!multi) return yy; doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text(g.t + " · " + fmt(g.list.length) + " barang", 10, yy + 3); doc.setFont("helvetica", "normal"); return yy + 6; };
+        const heading = yy => { if (!multi) return yy; doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text(g.t + " · " + fmt(biUnits(g.list)) + " barang", 10, yy + 3); doc.setFont("helvetica", "normal"); return yy + 6; };
         if (multi && y > 180) { doc.addPage(); y = 18; }
         if (last && keepLast) {
           const k = Math.min(keepLast, L2.length), first = L2.slice(0, L2.length - k), tail = L2.slice(L2.length - k);
@@ -1364,9 +1382,9 @@ async function biPdf() {
 }
 function biExcel() {
   const list = biItems(); if (!list.length) return;
-  const nm = biNama(), row = (x, i) => Object.assign(kibRow(x, KIB_KOLOM.map(k => k[0]), i + 1), { "Sumber Dana":x.sumber || "", "Nilai (Rp)":itemNilai(x), "Jumlah Foto":(x.fotos || []).length });
+  const nm = biNama(), row = (x, i) => Object.assign(kibRow(x, KIB_KOLOM.map(k => k[0]), i + 1), { "Sumber Dana":x.sumber || "", "Jumlah (eks/unit)":x._gab ? x.jml : (x.jml || 1), "Harga Satuan (Rp)":Math.round(itemNilai(x) / (x._gab ? x.jml : (x.jml || 1))), "Nilai (Rp)":itemNilai(x), "Jumlah Foto":(x.fotos || []).length });
   const info = [{ "Buku Induk Barang Milik Daerah":"SMA Negeri 1 Berau" }, { "Buku Induk Barang Milik Daerah":nm }, { "Buku Induk Barang Milik Daerah":"Data: " + biFilterText() }, { "Buku Induk Barang Milik Daerah":"Keadaan per " + tglID(today()) + " · " + fmt(list.length) + " catatan barang" }];
-  const sheets = UI.bi.all ? biGroups(list).map(g => [g.t.replace(" (data SIPBMD)", "").replace("Aset BOSP Daerah belum tercatat di SIPBMD", "BOSP Daerah belum SIPBMD").slice(0, 31), g.list.map(row)]) : [["Buku Induk", list.map(row)]];
+  const sheets = UI.bi.all ? biGroups(biMerge(list)).map(g => [g.t.replace(" (data SIPBMD)", "").replace("Aset BOSP Daerah belum tercatat di SIPBMD", "BOSP Daerah belum SIPBMD").slice(0, 31), g.list.map(row)]) : [["Buku Induk", biMerge(list).map(row)]];
   xlsxSave(`Buku Induk ${nm} ${today()}.xlsx`, [...sheets, ["Identitas", info]]);
 }
 document.addEventListener("click", e => {
@@ -1380,7 +1398,7 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("change", e => {
   const t = e.target, m = { "bi-dari":"dari", "bi-sampai":"sampai", "bi-sumber":"sumber", "bi-st":"st", "bi-kond":"kond", "bi-lok":"lok", "bi-pj":"pj" };
-  if (m[t.id]) { UI.bi[m[t.id]] = t.value; render(); } if (t.id === "bi-foto") { UI.bi.foto = t.checked; render(); } if (t.id === "bi-cover") { UI.bi.cover = t.checked; render(); }
+  if (m[t.id]) { UI.bi[m[t.id]] = t.value; render(); } if (t.id === "bi-foto") { UI.bi.foto = t.checked; render(); } if (t.id === "bi-cover") { UI.bi.cover = t.checked; render(); } if (t.id === "bi-gab") { UI.bi.gab = t.checked; render(); }
 });
 
 /* ================= unduh KIB ================= */
