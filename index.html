@@ -270,6 +270,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
   <a href="#home" data-v="home" class="navhome"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 9.5 10 3.5l7 6V17H12.5v-4.5h-5V17H3z"/></svg>Beranda · pilih aplikasi</a>
   <div id="nav-app-jadwal"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Jadwal Penggunaan Aula dan Multimedia</p>
   <div class="navsec"><a href="#jadwal" data-v="jadwal">Jadwal Penggunaan Aula dan Multimedia <span id="jbadge"></span></a></div></div>
+  <div id="nav-app-minta"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Permintaan Barang Persediaan</p>
+  <div class="navsec"><a href="#minta" data-v="minta">Permintaan Barang Persediaan <span id="mbadge"></span></a></div></div>
   <div id="nav-app-waka"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Waka Sarpras</p>
   <div class="navsec"><a href="#surat" data-v="surat">Surat Keluar</a><a href="#akun" data-v="akun">Akun & hak akses</a></div></div>
   <div id="nav-app-sarpras"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Aset & Persediaan</p>
@@ -284,6 +286,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
     <a href="#hapus" data-v="hapus">Usulan Penghapusan</a></div>
   <div class="navsec"><p class="navgroup">Penyerahan barang</p>
     <a href="#bast" data-v="bast">BAST</a>
+    <a href="#bantuan" data-v="bantuan">BAST Penerimaan Bantuan</a>
     <a href="#pemegang" data-v="pemegang">Per Pemegang</a>
     <a href="#laporan" data-v="laporan">Laporan BAST</a></div>
   <div class="navsec"><p class="navgroup">Persediaan</p>
@@ -352,7 +355,7 @@ const usulHapus = x => (x.kond === "Rusak Berat" || x.kond === "Hilang") && !x.r
 const BUKU_RE = /\b(buku|novel|bahan ajar|monograf|kamus|ensiklopedi|atlas|majalah|modul|komik|antologi)\b/i;
 
 /* ================= state ================= */
-const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], cetak:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
+const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], cetak:[], bantuan:[], minta:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
 const CFG_DEFAULT = {
   kepsek:"Dr. H. Saleh, S.T., M.Pd.", nipKepsek:"19780708 200604 1 004",
   waka:"Ika Novita Mulia, S.Pd.", nipWaka:"199211102022212025", jabWaka:"Wakil Kepala Sekolah Sarana dan Prasarana",
@@ -471,6 +474,8 @@ async function boot() {
   sub("kk", rows => { S.kk = rows; });
   sub("gdg", rows => { S.gdg = rows; });
   sub("pinjam", rows => { S.pinjam = rows; });
+  sub("bantuan", rows => { S.bantuan = rows.sort((a, b) => String(b.tgl).localeCompare(String(a.tgl))); });
+  sub("minta", rows => { S.minta = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
   sub("cetak", rows => { S.cetak = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
   sub("pengingat", rows => { S.pengingat = rows; });
   sub("catatan", rows => { S.catatan = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
@@ -539,7 +544,7 @@ const W = {
   merge(path, data) { return W.op({ op:"merge", path, data }); },
   del(path) { return W.op({ op:"del", path }); },
 };
-const COL_LABEL = { upd:"aset", aset_baru:"aset", trx:"BAST", surat:"surat", psd_trx:"persediaan", psd_barang:"barang persediaan", kk:"kertas kerja", gdg:"gedung", ruang:"ruang", penerima:"penerima" };
+const COL_LABEL = { bantuan:"BAST bantuan", upd:"aset", aset_baru:"aset", trx:"BAST", surat:"surat", psd_trx:"persediaan", psd_barang:"barang persediaan", kk:"kertas kerja", gdg:"gedung", ruang:"ruang", penerima:"penerima" };
 const ringOf = o => (o.op === "del" ? "Hapus " : "Simpan ") + (COL_LABEL[o.path.split("/")[0]] || o.path.split("/")[0]);
 async function applyOp(o, by, ok) {
   const ref = db.doc(o.path), stamp = { _by:by || "", _ok:ok || "", _at:new Date().toISOString() };
@@ -608,7 +613,7 @@ function xlsxSave(filename, sheets) {
 }
 
 /* ================= router ================= */
-const VIEWS = ["home","jadwal","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
+const VIEWS = ["home","jadwal","minta","bantuan","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
 let current = "ringkasan", sub = "";
 const UI = {
   aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"", th:"" },
@@ -627,11 +632,11 @@ function route() {
   const navV = current === "kertas" ? "rekon" : current;
   for (const a of document.querySelectorAll("#tabs a")) { if (a.dataset.v === navV) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
   const link = document.querySelector(`#tabs a[data-v="${navV}"]`), nama = current === "home" ? "Beranda" : link ? link.firstChild.textContent.trim() : "";
-  const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "akun" || current === "surat" ? "waka" : "sarpras";
+  const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "minta" ? "minta" : current === "akun" || current === "surat" ? "waka" : "sarpras";
   if (app !== "home") window.__lastApp = app;
-  const APPN = { home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Penggunaan Aula dan Multimedia", "Jadwal Penggunaan Aula dan Multimedia · SMAN 1 Berau", "SMAN 1 Berau · pengajuan dan persetujuan pemakaian Aula dan Ruang Multimedia"], waka:["Waka Sarpras", "Waka Sarpras · SMAN 1 Berau", "SMAN 1 Berau · akun, hak akses, dan administrasi Waka Sarpras"] }[app];
+  const APPN = { minta:["Permintaan Barang Persediaan", "Permintaan Barang Persediaan · SMAN 1 Berau", "SMAN 1 Berau · permintaan ATK & bahan habis pakai, stok keluar tercatat otomatis"], home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Penggunaan Aula dan Multimedia", "Jadwal Penggunaan Aula dan Multimedia · SMAN 1 Berau", "SMAN 1 Berau · pengajuan dan persetujuan pemakaian Aula dan Ruang Multimedia"], waka:["Waka Sarpras", "Waka Sarpras · SMAN 1 Berau", "SMAN 1 Berau · akun, hak akses, dan administrasi Waka Sarpras"] }[app];
   $(".pageid .app").textContent = APPN[1]; $("#nav-appname").textContent = APPN[0]; $("#nav-appdesc").textContent = APPN[2];
-  for (const a2 of ["sarpras", "jadwal", "waka"]) $("#nav-app-" + a2).hidden = app !== "home" && app !== a2;
+  for (const a2 of ["sarpras", "jadwal", "waka", "minta"]) $("#nav-app-" + a2).hidden = app !== "home" && app !== a2;
   $("#nav-me").hidden = app === "waka";
   const sb = current === "aset" ? (sub === "tak" ? "Aset tidak tercatat di SIPBMD (semua golongan)" : sub === "bospda" ? "Aset BOSP Daerah belum tercatat di SIPBMD" : KATMAP[sub].kib + " · " + KATMAP[sub].nama + " · data SIPBMD") : current === "persediaan" ? ({ masuk:"Persediaan masuk", keluar:"Persediaan keluar", mutasi:"Mutasi persediaan" })[sub] : current === "kertas" ? "Kertas Kerja Modal" : current === "rekon" ? "Rekon Aset" : "";
   $("#pagetitle").textContent = nama; $("#pagesub").textContent = sb;
@@ -677,13 +682,14 @@ function render(soft) {
     if (S.role === "none") { v.innerHTML = lockScreen(); return; }
     for (const a of document.querySelectorAll("#tabs a")) a.hidden = !canView(a.dataset.v);
     for (const sec of document.querySelectorAll("#tabs .navsec")) sec.hidden = ![...sec.querySelectorAll("a")].some(a => !a.hidden);
-    for (const a2 of ["sarpras", "jadwal", "waka"]) if (!appAccess(a2)) $("#nav-app-" + a2).hidden = true;
+    for (const a2 of ["sarpras", "jadwal", "waka", "minta"]) if (!appAccess(a2)) $("#nav-app-" + a2).hidden = true;
+    { const mb = $("#mbadge"), mn = mtPendingForMe(); if (mb) mb.innerHTML = mn ? `<span class="pill warn">${mn}</span>` : ""; }
     if (current === "akun" && appAccess("waka")) $("#nav-me").hidden = true;
     if (!canView(current)) { v.innerHTML = `<div class="empty"><b>Menu ini tidak termasuk akses akun Anda</b>Minta akun master menambahkan akses jika Anda perlu membukanya.</div>`; return; }
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
-    if (current === "home" || current === "jadwal" || current === "akun") { v.innerHTML = pinBar() + (current === "home" ? vHome() : current === "akun" ? vAkunPage() : vJadwal()); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); return; }
+    if (current === "home" || current === "jadwal" || current === "akun" || current === "minta") { v.innerHTML = pinBar() + (current === "home" ? vHome() : current === "akun" ? vAkunPage() : current === "minta" ? vMinta() : vJadwal()); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
-    v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
+    v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, bantuan:vBantuan, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
     if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); try { if (sel != null) el.setSelectionRange(sel, sel); } catch (e) {} } }
     const nb = $("#vbadge"), np = pendingList().length; if (nb) nb.innerHTML = np ? `<span class="pill ${isMaster() ? "bad" : "warn"}">${np}</span>` : "";
     const nd = $("#nav-dot"); if (nd) nd.hidden = !(np && isMaster());
@@ -744,6 +750,8 @@ const APPS = [
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="31" width="25" height="22" rx="2" fill="#d99a4e"/><path d="M9 37h25" stroke="#b97a32" stroke-width="2"/><rect x="18" y="31" width="7" height="8" fill="#f3d6a3"/><rect x="14" y="12" width="21" height="19" rx="2" fill="#e8b46b"/><path d="M14 17h21" stroke="#c98d43" stroke-width="2"/><rect x="21" y="12" width="7" height="7" fill="#f6e0b6"/><rect x="38" y="15" width="19" height="38" rx="3" fill="#fff" stroke="#1e5a4c" stroke-width="2.2"/><rect x="43" y="11" width="9" height="7" rx="2" fill="#1e5a4c"/><path d="m41.5 26 2 2 3.5-4M41.5 35l2 2 3.5-4M41.5 44l2 2 3.5-4" stroke="#2f9a5a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M49 26h5M49 35h5M49 44h5" stroke="#8aa69c" stroke-width="2" stroke-linecap="round"/></svg>' },
   { id:"jadwal", nama:"Jadwal Penggunaan Aula dan Multimedia", desc:"Jadwal pemakaian Aula dan Ruang Multimedia berdampingan, pengajuan peminjaman, dan persetujuan.", href:"#jadwal", ac:"#7e5bb5", acs:"color-mix(in srgb, #7e5bb5 16%, transparent)", siap:true,
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="11" width="42" height="41" rx="5" fill="#fff" stroke="#6b4fa0" stroke-width="2.2"/><path d="M6 16a5 5 0 0 1 5-5h32a5 5 0 0 1 5 5v6H6z" fill="#7e5bb5"/><path d="M16 7v8M38 7v8" stroke="#4b3578" stroke-width="3" stroke-linecap="round"/><rect x="11" y="27" width="15" height="7" rx="2" fill="#4caf7a"/><rect x="29" y="27" width="14" height="11" rx="2" fill="#b49be0"/><rect x="11" y="37" width="15" height="9" rx="2" fill="#b49be0"/><rect x="29" y="41" width="14" height="6" rx="2" fill="#4caf7a"/><circle cx="48" cy="46" r="12" fill="#fff" stroke="#6b4fa0" stroke-width="2.2"/><path d="M48 39v7l5 3" stroke="#6b4fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>' },
+  { id:"minta", nama:"Permintaan Barang Persediaan", desc:"Guru dan staf mengajukan permintaan ATK / bahan habis pakai; pengurus barang menyerahkan dan stok keluar tercatat otomatis di Persediaan.", href:"#minta", ac:"#2f8a5b", acs:"color-mix(in srgb, #2f8a5b 16%, transparent)", siap:true,
+    icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 26 32 14l24 12-24 12z" fill="#f3d6a3" stroke="#a8742c" stroke-width="2" stroke-linejoin="round"/><path d="M8 26v20l24 12V38z" fill="#d99a4e" stroke="#a8742c" stroke-width="2" stroke-linejoin="round"/><path d="M56 26v20L32 58V38z" fill="#e8b46b" stroke="#a8742c" stroke-width="2" stroke-linejoin="round"/><rect x="38" y="4" width="20" height="26" rx="2.5" fill="#fff" stroke="#2f8a5b" stroke-width="2"/><path d="M42 11h12M42 16h12M42 21h8" stroke="#2f8a5b" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="12" r="7" fill="#2f8a5b"/><path d="M13 12h6M16 9v6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>' },
   { id:"keuangan", nama:"Keuangan", desc:"Perencanaan dan RKAS, usulan kebutuhan dari unit, realisasi belanja, dan laporan.", ac:"var(--info)", acs:"var(--info-soft)", siap:false,
     rencana:["RKAS & perencanaan anggaran", "Usulan kebutuhan (form dari unit/guru)", "Realisasi belanja & SPJ", "Laporan & rekap per sumber dana"],
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="8" width="32" height="44" rx="3" fill="#fff" stroke="#2d5d8a" stroke-width="2.2"/><path d="M14 18h20M14 25h20M14 32h13" stroke="#9db6cf" stroke-width="2.4" stroke-linecap="round"/><text x="14" y="46" font-family="Arial,sans-serif" font-weight="700" font-size="11" fill="#2d5d8a">Rp</text><ellipse cx="46" cy="52" rx="11" ry="4" fill="#d9a520"/><rect x="35" y="44" width="22" height="8" fill="#e9b938"/><ellipse cx="46" cy="44" rx="11" ry="4" fill="#f5cf55" stroke="#c99619" stroke-width="1.2"/><rect x="35" y="36" width="22" height="8" fill="#e9b938"/><ellipse cx="46" cy="36" rx="11" ry="4" fill="#f8d96a" stroke="#c99619" stroke-width="1.2"/></svg>' },
@@ -760,6 +768,7 @@ function vHome() {
   const status = a => {
     if (!a.siap) return "Sedang disiapkan";
     if (a.id === "sarpras") { const t = S.catatan.filter(c => c.val !== false && c.st !== "Selesai").length, v = pendingList().length; return [ready ? fmt(allItems().visible.length) + " aset" : "memuat…", t ? fmt(t) + " temuan terbuka" : "", v ? fmt(v) + " menunggu validasi" : ""].filter(Boolean).join(" · "); }
+    if (a.id === "minta") { const w = S.minta.filter(m => m.st === "Diajukan"), mine = w.filter(m => m.by === S.me).length; return (can("minta_proses") ? (w.length ? fmt(w.length) + " menunggu diproses" : "Tidak ada antrean") : (mine ? fmt(mine) + " permintaan Anda menunggu" : "Ajukan permintaan barang")) + " · " + fmt(S.psdBarang.filter(b => psdLedger(b._id).qty > 0).length) + " jenis tersedia"; }
     if (a.id === "jadwal") { const h = jdToday().length, w = S.pinjam.filter(b => b.st === "Diajukan").length; return (h ? fmt(h) + " pemakaian hari ini" : "Hari ini kosong") + (w ? " · " + fmt(w) + " menunggu" : ""); }
     if (a.id === "waka") { const n = AK.list.filter(x => x.aktif !== false).length; return fmt(n) + " akun aktif · " + fmt(typeof onlineList === "function" ? onlineList().length : 0) + " online"; }
     return "";
@@ -1768,7 +1777,7 @@ async function uploadFotos(files) {
 function nextNomor(jenis, tgl) {
   const c = cfg(), d = tgl || today(), y = d.slice(0, 4), m = +d.slice(5, 7);
   let max = 0;
-  for (const s of [...allSurat(), ...S.trx]) { const mm = /^[\d.\s]+\/(\d+)\/.*?(\d{4})\s*$/.exec(s.nomor || ""); if (mm && mm[2] === y) max = Math.max(max, +mm[1]); }
+  for (const s of [...allSurat(), ...S.trx, ...(S.bantuan || [])]) { const mm = /^[\d.\s]+\/(\d+)\/.*?(\d{4})\s*$/.exec(s.nomor || ""); if (mm && mm[2] === y) max = Math.max(max, +mm[1]); }
   const klas = jenis === "tarik" ? c.klasTarik : c.klasSerah, bag = jenis === "tarik" ? c.bagTarik : c.bagSerah;
   return `${klas}/${max + 1}/SMAN1-Berau-${bag}/${ROMAWI[m - 1]}/${y}`;
 }
@@ -2016,17 +2025,17 @@ function signBlock(doc, y, p1, p2, ks, l1 = "PIHAK PERTAMA,", l2 = "PIHAK KEDUA,
     const yN = y + ((nLab || lab.length) - 1) * 4.8 + gapTtd; doc.setFont("helvetica", "bold");
     const nm = doc.splitTextToSize(p.nama || "", w); doc.text(nm, x, yN, { align:"center" });
     const w2 = doc.getTextWidth(nm[0] || ""); doc.setLineWidth(0.25); if (nm[0]) doc.line(x - w2 / 2, yN + 0.9, x + w2 / 2, yN + 0.9);
-    doc.setFont("helvetica", "normal"); doc.text("NIP. " + (p.nip || "-"), x, yN + (nm.length - 1) * 4.6 + 5, { align:"center" });
+    doc.setFont("helvetica", "normal"); if (p.nip !== null) doc.text((p.idLabel || "NIP. ") + (p.nip || "-"), x, yN + (nm.length - 1) * 4.6 + 5, { align:"center" });
     return yN + (nm.length - 1) * 4.6 + 5;
   };
   if (ks && opt.row3) {
     doc.setFontSize(10);
-    const e = Math.max(col(40, l1, p1, 52, 2), col(105, "Mengetahui,\nKepala Sekolah", ks, 56, 2), col(170, l2, p2, 52, 2));
+    const e = Math.max(col(40, l1, p1, 52, 2), col(105, opt.ksLabel || "Mengetahui,\nKepala Sekolah", ks, 56, 2), col(170, l2, p2, 52, 2));
     return e + 6;
   }
   const nl = Math.max(doc.splitTextToSize(l1, 70).length, doc.splitTextToSize(l2, 70).length);
   let e = Math.max(col(55, l1, p1, 70, nl), col(155, l2, p2, 70, nl));
-  if (ks) { y = e + 9; e = col(105, "Mengetahui,\nKepala Sekolah", ks, 80); }
+  if (ks) { y = e + 9; e = col(105, opt.ksLabel || "Mengetahui,\nKepala Sekolah", ks, 80); }
   return e + 6;
 }
 async function saveBast() { const b0 = buildBast(); return W.group(`BAST ${b0.jenis === "tarik" ? "penarikan dari " + b0.p1.nama : "penyerahan ke " + b0.p2.nama} (${b0.items.length} barang)`, saveBast0); }
@@ -2156,7 +2165,7 @@ function vPersediaan() {
     </div>
     <div class="toolbar" style="margin-top:14px"><label class="f grow">Cari<input id="p-q" type="search" value="${esc(f.q)}" placeholder="barang, bukti, ${masuk ? "sumber dana, penyedia" : "penerima, unit, keperluan"}…"></label><span class="sp"></span><button id="p-xlsx">Unduh Excel</button></div>
     <div class="tablebox"><table><thead><tr><th>Tanggal</th><th>Barang</th><th class="num">Jumlah</th>${masuk ? '<th class="num">Harga</th><th class="num">Total</th><th class="hide-sm">Sumber · bukti</th>' : '<th class="num">Nilai (FIFO)</th><th class="hide-sm">Penerima · unit</th><th class="hide-sm">Keperluan</th>'}<th></th></tr></thead><tbody>
-      ${rows.map(t => { const b = barangOf(t.barang) || { nama:"(barang dihapus)", satuan:"" }; return `<tr><td>${esc(tglID(t.tgl))}</td><td><div class="nm">${esc(b.nama)}</div><div class="sm">${esc(t.bukti || "")}</div></td><td class="num">${fmt(t.jml)} ${esc(b.satuan)}</td>${masuk ? `<td class="num">${rp(t.harga)}</td><td class="num">${rp((+t.jml) * (+t.harga || 0))}</td><td class="hide-sm">${esc(t.sumber || "")}<div class="sm">${esc(t.penyedia || "")}</div></td>` : `<td class="num">${rp(t.nilai)}</td><td class="hide-sm">${esc(t.penerima || "")}<div class="sm">${esc(t.unit || "")}</div></td><td class="hide-sm">${esc(t.keperluan || "")}</td>`}<td style="white-space:nowrap">${masuk ? "" : `<button class="ghost" data-psdpdf="${esc(t._id)}">PDF</button>`}${confirmPsd === t._id ? `<span class="confirm"><button class="danger" data-psddel="${esc(t._id)}">Ya, hapus</button><button data-psdcancel="1">Batal</button></span>` : `<button class="ghost" data-psdask="${esc(t._id)}">Hapus</button>`}</td></tr>`; }).join("") || `<tr><td colspan="7"><div class="empty"><b>Belum ada persediaan ${sub} di periode ini</b>Catat lewat formulir di atas.</div></td></tr>`}
+      ${rows.map(t => { const b = barangOf(t.barang) || { nama:"(barang dihapus)", satuan:"" }; return `<tr><td>${esc(tglID(t.tgl))}</td><td><div class="nm">${esc(b.nama)}</div><div class="sm">${esc(t.bukti || "")}</div></td><td class="num">${fmt(t.jml)} ${esc(b.satuan)}</td>${masuk ? `<td class="num">${rp(t.harga)}</td><td class="num">${rp((+t.jml) * (+t.harga || 0))}</td><td class="hide-sm">${esc(t.sumber || "")}<div class="sm">${esc(t.penyedia || "")}</div>${t.bantuan ? '<span class="pill info">bantuan pihak luar</span>' : ""}</td>` : `<td class="num">${rp(t.nilai)}</td><td class="hide-sm">${esc(t.penerima || "")}<div class="sm">${esc(t.unit || "")}</div>${t.minta ? '<span class="pill info">dari aplikasi permintaan</span>' : ""}</td><td class="hide-sm">${esc(t.keperluan || "")}</td>`}<td style="white-space:nowrap">${masuk ? "" : `<button class="ghost" data-psdpdf="${esc(t._id)}">PDF</button>`}${confirmPsd === t._id ? `<span class="confirm"><button class="danger" data-psddel="${esc(t._id)}">Ya, hapus</button><button data-psdcancel="1">Batal</button></span>` : `<button class="ghost" data-psdask="${esc(t._id)}">Hapus</button>`}</td></tr>`; }).join("") || `<tr><td colspan="7"><div class="empty"><b>Belum ada persediaan ${sub} di periode ini</b>Catat lewat formulir di atas.</div></td></tr>`}
     </tbody></table></div>`;
   }
   // mutasi
@@ -2221,6 +2230,314 @@ function psdKeluarPdf(t) {
   signBlock(doc, y, { nama:c.pengurus || c.waka, nip:c.pengurus ? c.nipPengurus : c.nipWaka }, { nama:t.penerima || "", nip:findPeg(t.penerima)?.nip || "" }, null, "Yang menyerahkan,\nPengurus Barang", "Yang menerima,", { tgl:t.tgl });
   saveFile(`Bukti Keluar Persediaan ${t.tgl} ${b.nama}.pdf`, pdfFinish(doc).output("blob"));
 }
+
+
+/* ================= BAST penerimaan bantuan dari pihak luar ================= */
+UI.bt = { f:null, q:"", up:null, confirm:null };
+const btLine = () => ({ nama:"", spes:"", jml:1, satuan:"unit", harga:"", kond:"Baik", jenis:"aset", kat:"pm" });
+function btBlank() { const tgl = today(); return { id:"", tgl, nomor:nextNomor("serah", tgl), _auto:tgl, nomorP1:"", sumber:"Hibah", dasar:"", p1:{ instansi:"", nama:"", nip:"", jab:"", alamat:"" }, items:[btLine()], fotos:[], ket:"", catat:true }; }
+const btTotal = b => (b.items || []).reduce((t, i) => t + (+i.jml || 0) * (+i.harga || 0), 0);
+function vBantuan() {
+  const B = UI.bt; if (!B.f) B.f = btBlank(); const f = B.f, c = cfg(), edit = !!f.id, saved = edit && S.bantuan.find(x => x._id === f.id);
+  if (!edit && f._auto === f.tgl) f.nomor = nextNomor("serah", f.tgl);
+  const list = S.bantuan.filter(b => matches(B.q, [b.nomor, b.nomorP1, b.p1 && b.p1.instansi, b.p1 && b.p1.nama, b.dasar, ...(b.items || []).map(i => i.nama)]));
+  const I = (id, v, ph = "", type = "text") => `<input id="${id}" type="${type}" value="${esc(v ?? "")}" placeholder="${esc(ph)}">`;
+  return `<h2>BAST penerimaan bantuan</h2>
+  <p class="lead">Berita acara serah terima barang bantuan atau hibah dari pihak luar (pemerintah pusat/daerah, perusahaan/CSR, komite, alumni, lembaga lain) kepada SMA Negeri 1 Berau. Barangnya bisa langsung dicatat sebagai aset (Aset tidak tercatat di SIPBMD) atau persediaan masuk.</p>
+  <div class="grid two">
+    <section class="panel"><h3>${edit ? "Ubah BAST bantuan" : "BAST bantuan baru"}</h3>
+      <p class="sectionlabel">Pihak Pertama · pemberi bantuan</p>
+      <div class="fgrid">
+        <label class="f full">Instansi / lembaga pemberi${I("bt-instansi", f.p1.instansi, "mis. Dinas Pendidikan dan Kebudayaan Prov. Kaltim, PT …, Komite Sekolah")}</label>
+        <label class="f">Nama yang menyerahkan${I("bt-nama", f.p1.nama)}</label>
+        <label class="f">Jabatan${I("bt-jab", f.p1.jab)}</label>
+        <label class="f">NIP / NIK / no. identitas${I("bt-nip", f.p1.nip, "kosongkan bila tidak ada")}</label>
+        <label class="f">Alamat instansi${I("bt-alamat", f.p1.alamat)}</label>
+      </div>
+      <p class="sectionlabel" style="margin-top:14px">Pihak Kedua · penerima</p>
+      <p class="sm" style="margin:0 0 8px">${esc(c.kepsek || "Kepala Sekolah")} · NIP ${esc(c.nipKepsek || "-")} · Kepala SMA Negeri 1 Berau <span class="hint">(diatur di Pengaturan surat & penerima)</span></p>
+      <div class="fgrid">
+        <label class="f">Tanggal serah terima${I("bt-tgl", f.tgl, "", "date")}</label>
+        <label class="f">Nomor BAST sekolah<input id="bt-nomor" class="mono" value="${esc(f.nomor)}"></label>
+        <label class="f">Nomor BAST dari pemberi${I("bt-nomorP1", f.nomorP1, "opsional")}</label>
+        ${sumberField("bt-sumber", f.sumber)}
+        <label class="f full">Dasar / program bantuan${I("bt-dasar", f.dasar, "opsional, mis. Program Revitalisasi Satuan Pendidikan 2026, surat …")}</label>
+      </div>
+      <p class="sectionlabel" style="margin-top:14px">Rincian barang</p>
+      ${f.items.map((l, i) => `<div class="btline" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><b style="flex:1">Barang ${i + 1}</b><span class="muted sm">${rp((+l.jml || 0) * (+l.harga || 0))}</span><button class="ghost" data-btdel="${i}" ${f.items.length > 1 ? "" : "disabled"}>Hapus</button></div>
+        <div class="fgrid"><label class="f">Nama barang<input data-btl="${i}:nama" value="${esc(l.nama)}"></label><label class="f">Spesifikasi / merek / tipe<input data-btl="${i}:spes" value="${esc(l.spes)}"></label>
+        <div class="fgrid" style="grid-template-columns:1fr 1fr 1.6fr;gap:10px"><label class="f">Jumlah<input data-btl="${i}:jml" type="number" min="0" step="any" value="${esc(l.jml)}"></label><label class="f">Satuan<input data-btl="${i}:satuan" value="${esc(l.satuan)}"></label><label class="f">Harga satuan (Rp)<input data-btl="${i}:harga" type="number" min="0" step="any" value="${esc(l.harga)}" placeholder="nilai / taksiran"></label></div>
+        <div class="fgrid" style="grid-template-columns:1fr 1fr 1fr;gap:10px"><label class="f">Kondisi<select data-btl="${i}:kond">${KOND.map(k => `<option ${l.kond === k ? "selected" : ""}>${k}</option>`).join("")}</select></label><label class="f">Dicatat sebagai<select data-btl="${i}:jenis"><option value="aset" ${l.jenis === "aset" ? "selected" : ""}>Aset</option><option value="persediaan" ${l.jenis === "persediaan" ? "selected" : ""}>Persediaan</option></select></label>${l.jenis === "aset" ? `<label class="f">Golongan<select data-btl="${i}:kat">${KAT.map(k => `<option value="${k.id}" ${l.kat === k.id ? "selected" : ""}>${k.kib} · ${k.nama}</option>`).join("")}</select></label>` : "<span></span>"}</div></div></div>`).join("")}
+      <p style="margin:4px 0"><b>Total nilai: <span id="bt-total">${rp(btTotal(f))}</span></b></p>
+      <button class="ghost" id="bt-add" style="margin-top:6px">+ Tambah baris barang</button>
+      <p class="hint">Harga satuan diisi nilai menurut dokumen pemberi; bila tidak ada, isi nilai taksiran/wajar. Barang dengan harga satuan di bawah batas kapitalisasi sebaiknya dicatat sebagai persediaan.</p>
+      <label class="f full" style="margin-top:8px">Keterangan${I("bt-ket", f.ket)}</label>
+      <p class="sectionlabel" style="margin-top:14px">Dokumentasi (lampiran BAST, maks. 4 foto)</p>
+      <div class="photos" style="grid-template-columns:repeat(4,minmax(0,1fr))">${(f.fotos || []).map(x => `<figure><img src="${fotoSrc(x.id)}" data-foto="${esc(x.id)}" alt="Dokumentasi"><button data-btfdel="${esc(x.id)}" aria-label="Hapus foto">Hapus</button></figure>`).join("")}${(f.fotos || []).length < 4 && assets ? `<label class="upload" for="bt-foto" style="min-height:70px">${B.up ? "Mengunggah…" : "<b>+ Foto</b>barang / proses serah terima"}<input id="bt-foto" type="file" accept="image/*" multiple hidden></label>` : ""}</div>
+      ${saved && saved.dicatat ? `<p class="note info" style="margin-top:12px">Barang BAST ini sudah dicatat ke Aset/Persediaan. Mengubah BAST di sini tidak mengubah catatan aset/persediaan tersebut; ubah langsung di menunya.</p>` : `<label class="ck" style="margin-top:12px"><input type="checkbox" id="bt-catat" ${f.catat ? "checked" : ""}><span>Catat barang ke Aset & Persediaan saat disimpan<br><span class="hint">Aset masuk ke "Aset tidak tercatat di SIPBMD" (satu catatan per unit) dengan sumber dana dan asal usul hibah; persediaan masuk ke Persediaan Masuk.</span></span></label>`}
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="primary" id="bt-save">${edit ? "Simpan perubahan & unduh PDF" : "Simpan & unduh PDF"}</button><button id="bt-pdf">Unduh PDF saja</button><button class="ghost" id="bt-reset">${edit ? "Batal ubah" : "Kosongkan"}</button></div>
+    </section>
+    <section class="panel"><h3>BAST bantuan tersimpan</h3>
+      <div class="toolbar"><label class="f grow">Cari<input id="bt-q" type="search" value="${esc(B.q)}" placeholder="nomor, pemberi, barang…"></label><button id="bt-xlsx" ${S.bantuan.length ? "" : "disabled"}>Unduh Excel</button></div>
+      ${list.length ? `<div class="tablebox"><table><thead><tr><th>Tanggal · nomor</th><th>Pemberi</th><th class="num">Barang · nilai</th><th></th></tr></thead><tbody>${list.map(b => `<tr><td>${esc(tglID(b.tgl))}<div class="mono sm">${esc(b.nomor)}</div></td><td>${esc(b.p1.instansi || "-")}<div class="sm">${esc(b.dasar || "")}</div></td><td class="num">${fmt((b.items || []).reduce((t, i) => t + (+i.jml || 0), 0))} barang<div class="sm">${rp(btTotal(b))}</div>${b.dicatat ? '<span class="pill ok">tercatat</span>' : '<span class="pill warn">belum dicatat</span>'}</td>
+        <td><div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px"><button class="ghost" data-btpdf="${esc(b._id)}">PDF</button><button class="ghost" data-btedit="${esc(b._id)}">Ubah</button>${B.confirm === b._id ? `<span class="confirm"><button class="danger" data-btdelok="${esc(b._id)}">Ya, hapus</button><button data-btdelno="1">Batal</button></span>` : `<button class="ghost" data-btask="${esc(b._id)}">Hapus</button>`}</div></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty"><b>Belum ada BAST bantuan</b>Isi formulir di samping untuk membuat yang pertama.</div>`}
+      <p class="hint">Menghapus BAST tidak menghapus aset/persediaan yang sudah dicatat dari BAST tersebut.</p>
+    </section>
+  </div>`;
+}
+function btDoc() {
+  const f = UI.bt.f, c = cfg();
+  return { tgl:f.tgl, nomor:(f.nomor || "").trim(), nomorP1:f.nomorP1 || "", sumber:f.sumber || "Hibah", dasar:f.dasar || "", ket:f.ket || "",
+    p1:{ instansi:(f.p1.instansi || "").trim(), nama:(f.p1.nama || "").trim(), nip:(f.p1.nip || "").trim(), jab:(f.p1.jab || "").trim(), alamat:(f.p1.alamat || "").trim() },
+    p2:{ nama:c.kepsek || "", nip:c.nipKepsek || "", jab:"Kepala SMA Negeri 1 Berau" },
+    items:f.items.filter(l => (l.nama || "").trim() && +l.jml > 0).map(l => ({ nama:l.nama.trim(), spes:(l.spes || "").trim(), jml:+l.jml, satuan:(l.satuan || "unit").trim(), harga:+l.harga || 0, kond:l.kond || "Baik", jenis:l.jenis, kat:l.jenis === "aset" ? l.kat || "pm" : "" })),
+    fotos:(f.fotos || []).map(x => ({ id:x.id })) };
+}
+async function btSave() {
+  const f = UI.bt.f, d = btDoc();
+  if (!d.p1.instansi || !d.p1.nama) { toast("Isi instansi pemberi dan nama yang menyerahkan."); return; }
+  if (!d.items.length) { toast("Isi minimal satu barang dengan jumlahnya."); return; }
+  if (!d.nomor) { toast("Isi nomor BAST."); return; }
+  const id = f.id || uid("bt"), old = f.id && S.bantuan.find(x => x._id === f.id), catat = !(old && old.dicatat) && f.catat;
+  try {
+    await W.group(`BAST bantuan ${d.nomor} dari ${d.p1.instansi}`, async () => {
+      if (catat) {
+        const asal = "Hibah dari " + d.p1.instansi, now = new Date().toISOString();
+        for (const l of d.items) {
+          if (l.jenis === "aset") {
+            const n = l.jml <= 100 && Number.isInteger(l.jml) ? l.jml : 1;
+            for (let i = 0; i < n; i++) await W.set("aset_baru/" + uid("n"), clean({ kat:l.kat || "pm", nama:l.nama, spes:l.spes, sumber:d.sumber, asal, th:yearOf(d.tgl), tgl:d.tgl, jml:n === 1 ? l.jml : 1, harga:Math.round(l.harga), sip:false, kond:l.kond, ket:["BAST bantuan " + d.nomor, n > 1 ? `unit ${i + 1} dari ${n}` : ""].filter(Boolean).join(" · "), bantuan:id, dibuat:now, oleh:S.me || "" }));
+          } else {
+            let b = S.psdBarang.find(x => norm(x.nama) === norm(l.nama));
+            if (!b) { const bid = uid("b"); await W.set("psd_barang/" + bid, { nama:l.nama, satuan:l.satuan || "unit", kategori:"Bantuan / hibah", dibuat:now }); b = { _id:bid }; }
+            await W.set("psd_trx/" + uid("p"), { jenis:"masuk", tgl:d.tgl, barang:b._id, jml:l.jml, harga:l.harga, sumber:d.sumber, bukti:d.nomor, penyedia:d.p1.instansi, ket:"Bantuan pihak luar" + (l.spes ? " · " + l.spes : ""), bantuan:id, dibuat:now, oleh:S.me || "" });
+          }
+        }
+      }
+      await W.set("bantuan/" + id, Object.assign(d, { dicatat:!!(catat || (old && old.dicatat)), dibuat:old ? old.dibuat || "" : new Date().toISOString(), oleh:old ? old.oleh || "" : S.me || "" }));
+    });
+    toast(isMaster() ? "BAST bantuan tersimpan" + (catat ? " dan barang sudah dicatat." : ".") : "Usulan BAST bantuan dikirim ke akun master untuk divalidasi.");
+    await btPdf(Object.assign({ _id:id }, d));
+    UI.bt.f = btBlank(); render();
+  } catch (e) { writeErr(e); }
+}
+async function btPdf(b) {
+  if (!window.jspdf) { toast("Modul PDF belum termuat. Coba lagi sebentar."); return; }
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4" }), L = 20, R = 190, fm = n => Math.round(n || 0).toLocaleString("id-ID"), c = cfg();
+  const fotos = await pdfFotos(b.fotos || []);
+  let y = pdfKop(doc);
+  y = pdfJudul(doc, y, ["BERITA ACARA SERAH TERIMA", "PENERIMAAN BANTUAN / HIBAH BARANG"], "Nomor: " + (b.nomor || "…"));
+  if (b.nomorP1) { doc.setFontSize(10); doc.text("Nomor Pihak Pertama: " + b.nomorP1, 105, y - 3.5, { align:"center" }); y += 3; }
+  doc.setFontSize(10.5);
+  y = pdfPara(doc, y, `Pada hari ini ${hariID(b.tgl)}, tanggal ${tglID(b.tgl)}, bertempat di SMA Negeri 1 Berau, Jl. Mangga I Nomor 14 Tanjung Redeb, kami yang bertanda tangan di bawah ini:`);
+  const pihak = (no, rows, ket) => { doc.text(no, L, y); rows.filter(r => r[1]).forEach(([k, v], i) => { doc.setFont("helvetica", i === 0 ? "bold" : "normal"); const ln = doc.splitTextToSize(": " + v, R - L - 40); doc.text(k, L + 8, y); doc.text(ln, L + 38, y); y += 4.9 * ln.length; }); doc.setFont("helvetica", "normal"); y = pdfPara(doc, y, ket, L + 8, R - L - 8); };
+  pihak("I.", [["Nama", b.p1.nama], [b.p1.nip ? "NIP / NIK" : "", b.p1.nip], ["Jabatan", b.p1.jab || "-"], ["Instansi", b.p1.instansi], ["Alamat", b.p1.alamat]], `Mewakili dan atas nama ${b.p1.instansi}, selanjutnya disebut PIHAK PERTAMA.`);
+  pihak("II.", [["Nama", b.p2.nama || c.kepsek], ["NIP", b.p2.nip || c.nipKepsek || "-"], ["Jabatan", b.p2.jab || "Kepala SMA Negeri 1 Berau"]], "Mewakili dan atas nama SMA Negeri 1 Berau, selanjutnya disebut PIHAK KEDUA.");
+  y = pdfPara(doc, y, `PIHAK PERTAMA menyerahkan kepada PIHAK KEDUA, dan PIHAK KEDUA menyatakan telah menerima dari PIHAK PERTAMA, barang bantuan${b.dasar ? " dalam rangka " + b.dasar : ""} dengan rincian sebagai berikut:`);
+  const total = btTotal(b);
+  doc.autoTable({ startY:y, margin:{ left:L, right:210 - R }, theme:"grid", styles:{ fontSize:8.5, cellPadding:1.3, lineColor:[60,60,60], lineWidth:0.15, textColor:[20,20,20], valign:"middle" }, headStyles:{ fillColor:[230,230,230], textColor:[20,20,20], fontStyle:"bold", halign:"center" },
+    head:[["No", "Nama Barang", "Spesifikasi", "Jumlah", "Satuan", "Kondisi", "Harga Satuan (Rp)", "Jumlah Nilai (Rp)"]],
+    body:[...b.items.map((i, n) => [n + 1, i.nama, i.spes || "-", fmt(i.jml), i.satuan || "unit", i.kond || "Baik", fm(i.harga), fm((+i.jml || 0) * (+i.harga || 0))]), [{ content:"TOTAL", colSpan:3, styles:{ fontStyle:"bold", halign:"right" } }, { content:fmt(b.items.reduce((t, i) => t + (+i.jml || 0), 0)), styles:{ fontStyle:"bold", halign:"center" } }, { content:"", colSpan:3 }, { content:fm(total), styles:{ fontStyle:"bold", halign:"right" } }]],
+    columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 3:{ cellWidth:14, halign:"center" }, 4:{ cellWidth:15, halign:"center" }, 5:{ cellWidth:16, halign:"center" }, 6:{ halign:"right", cellWidth:23 }, 7:{ halign:"right", cellWidth:25 } } });
+  y = doc.lastAutoTable.finalY + 6;
+  y = pdfPara(doc, y, "Barang tersebut telah diterima oleh PIHAK KEDUA dalam keadaan sebagaimana tercantum di atas dengan jumlah yang sesuai. Sejak penandatanganan Berita Acara ini, barang tersebut menjadi tanggung jawab PIHAK KEDUA untuk dicatat dan dikelola sebagai barang milik daerah pada SMA Negeri 1 Berau sesuai ketentuan yang berlaku." + (b.ket ? " " + b.ket : "") + " Demikian Berita Acara ini dibuat dalam rangkap secukupnya untuk dipergunakan sebagaimana mestinya.");
+  if (y + 46 > 282) { doc.addPage(); y = 22; }
+  const p1 = { nama:b.p1.nama, nip:b.p1.nip ? b.p1.nip : null, idLabel:"NIP/NIK. " }, p2 = { nama:b.p2.nama || c.kepsek, nip:b.p2.nip || c.nipKepsek };
+  signBlock(doc, y + 1, p1, p2, null, "PIHAK PERTAMA,\n" + b.p1.instansi, "PIHAK KEDUA,\nKepala SMA Negeri 1 Berau", { tgl:b.tgl });
+  if (fotos.length) {
+    doc.addPage(); y = pdfKop(doc);
+    y = pdfJudul(doc, y, ["LAMPIRAN DOKUMENTASI", "BERITA ACARA PENERIMAAN BANTUAN"], "Nomor: " + b.nomor);
+    doc.setFontSize(10); y = pdfPara(doc, y, `Tanggal ${tglID(b.tgl)} · dari ${b.p1.instansi} · ${b.items.length} jenis barang`);
+    for (let i = 0; i < fotos.length; i += 2) { if (y + 70 > 284) { doc.addPage(); y = 22; } y = pdfFotoRow(doc, y, fotos.slice(i, i + 2), f => "Dokumentasi " + (fotos.indexOf(f) + 1), 62); }
+  }
+  saveFile(`BAST Bantuan ${b.tgl} ${b.p1.instansi.slice(0, 40)}.pdf`, pdfFinish(doc).output("blob"));
+}
+document.addEventListener("input", e => {
+  const t = e.target, f = UI.bt.f; if (!f || current !== "bantuan") return;
+  if (t.dataset && t.dataset.btl) { const [i, k] = t.dataset.btl.split(":"); f.items[+i][k] = t.value; if (k === "jml" || k === "harga") { const tf = $("#bt-total"); if (tf) tf.textContent = rp(btTotal(f)); } return; }
+  const m = { "bt-instansi":"instansi", "bt-nama":"nama", "bt-jab":"jab", "bt-nip":"nip", "bt-alamat":"alamat" };
+  if (m[t.id]) f.p1[m[t.id]] = t.value;
+  else if (t.id === "bt-nomor") { f.nomor = t.value; f._auto = null; }
+  else if (["bt-nomorP1", "bt-dasar", "bt-ket"].includes(t.id)) f[t.id.slice(3)] = t.value;
+  else if (t.id === "bt-q") { UI.bt.q = t.value; render(); }
+});
+document.addEventListener("change", async e => {
+  const t = e.target, f = UI.bt.f; if (!f || current !== "bantuan") return;
+  if (t.dataset && t.dataset.btl) { const [i, k] = t.dataset.btl.split(":"); f.items[+i][k] = t.value; if (k === "jenis" || k === "kond" || k === "kat") render(); return; }
+  if (t.id === "bt-tgl") { f.tgl = t.value; if (f._auto) f._auto = f.tgl; render(); }
+  if (t.id === "bt-catat") f.catat = t.checked;
+  if (t.id === "bt-sumber" || (t.dataset && t.dataset.sumber === "bt-sumber")) f.sumber = t.value;
+  if (t.id === "bt-foto") {
+    const files = [...(t.files || [])]; t.value = ""; if (!files.length) return; UI.bt.up = true; render();
+    for (const file of files) { if ((UI.bt.f.fotos || []).length >= 4) break; try { const r = await assets.upload(await compress(file)); UI.bt.f.fotos = [...(UI.bt.f.fotos || []), { id:r.id }]; render(); } catch (err) { toast("Satu foto gagal diunggah."); } }
+    UI.bt.up = null; render();
+  }
+});
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || current !== "bantuan") return; const B = UI.bt;
+  if (b.id === "bt-add") { B.f.items.push(btLine()); render(); }
+  if (b.dataset.btdel != null) { B.f.items.splice(+b.dataset.btdel, 1); render(); }
+  if (b.dataset.btfdel) { B.f.fotos = B.f.fotos.filter(x => x.id !== b.dataset.btfdel); render(); }
+  if (b.id === "bt-save") btSave();
+  if (b.id === "bt-pdf") { const d = btDoc(); if (!d.items.length) { toast("Isi minimal satu barang."); return; } btPdf(d); }
+  if (b.id === "bt-reset") { B.f = btBlank(); render(); }
+  if (b.dataset.btpdf) { const x = S.bantuan.find(y => y._id === b.dataset.btpdf); if (x) btPdf(x); }
+  if (b.dataset.btedit) { const x = S.bantuan.find(y => y._id === b.dataset.btedit); if (x) { B.f = Object.assign(JSON.parse(JSON.stringify(x)), { id:x._id, _auto:null, catat:false, items:x.items.map(i => Object.assign(btLine(), i)) }); window.scrollTo(0, 0); render(); } }
+  if (b.dataset.btask) { B.confirm = b.dataset.btask; render(); }
+  if (b.dataset.btdelno) { B.confirm = null; render(); }
+  if (b.dataset.btdelok) { const id = b.dataset.btdelok; B.confirm = null; W.group("Hapus BAST bantuan", () => W.del("bantuan/" + id)).then(() => { toast(isMaster() ? "BAST bantuan dihapus." : "Usulan hapus dikirim."); render(); }).catch(writeErr); }
+  if (b.id === "bt-xlsx") xlsxSave(`BAST Penerimaan Bantuan ${today()}.xlsx`, [["BAST Bantuan", S.bantuan.flatMap(x => (x.items || []).map(i => ({ "Tanggal":x.tgl, "Nomor BAST":x.nomor, "Nomor Pemberi":x.nomorP1 || "", "Pemberi":x.p1.instansi, "Diserahkan oleh":x.p1.nama, "Dasar/Program":x.dasar || "", "Sumber Dana":x.sumber || "", "Nama Barang":i.nama, "Spesifikasi":i.spes || "", "Jumlah":i.jml, "Satuan":i.satuan, "Kondisi":i.kond, "Harga Satuan (Rp)":i.harga, "Jumlah Nilai (Rp)":(+i.jml || 0) * (+i.harga || 0), "Dicatat sebagai":i.jenis === "aset" ? "Aset " + ((KATMAP[i.kat] || {}).kib || "") : "Persediaan", "Sudah dicatat":x.dicatat ? "ya" : "belum" })))]]);
+});
+
+/* ================= aplikasi permintaan barang persediaan ================= */
+UI.mt = { tab:"ajukan", f:null, q:"", fst:"Diajukan", sel:null, ok:{}, tolak:"", dari:"", sampai:"", busy:false };
+const myName = () => { const me = AK.list.find(a => a._id === S.me); return me ? me.nama || shownLogin(me.email) : ""; };
+function mtPendingForMe() { return S.role && can("minta_proses") ? (S.minta || []).filter(m => m.st === "Diajukan").length : 0; }
+const mtBlank = () => ({ tgl:today(), unit:"", keperluan:"", items:[], cari:"" });
+const stokOf = id => psdLedger(id).qty;
+const MT_ST = { Diajukan:"warn", Diserahkan:"ok", Ditolak:"bad", Dibatalkan:"" };
+function mtNomor(tgl) { const y = tgl.slice(0, 4), m = +tgl.slice(5, 7); let max = 0; for (const x of S.minta) { const mm = /^BKP\/(\d+)\/.*\/(\d{4})$/.exec(x.nomor || ""); if (mm && mm[2] === y) max = Math.max(max, +mm[1]); } return `BKP/${max + 1}/SMAN1-Berau-Sarpras/${ROMAWI[m - 1]}/${y}`; }
+function vMinta() {
+  const M = UI.mt, proses = can("minta_proses");
+  if (!M.f) M.f = mtBlank();
+  const tabs = [["ajukan", "Buat permintaan"], ["daftar", proses ? "Daftar permintaan" : "Permintaan saya"], ["stok", "Stok tersedia"], ...(proses ? [["rekap", "Rekap pengeluaran"]] : [])];
+  const nW = S.minta.filter(m => m.st === "Diajukan" && (proses || m.by === S.me)).length;
+  const head = `<h2>Permintaan Barang Persediaan</h2><p class="lead">Ajukan kebutuhan ATK dan bahan habis pakai dari gudang persediaan. Saat pengurus barang menyerahkan barang, pengeluaran langsung tercatat di menu Persediaan (stok berkurang, nilai dihitung FIFO) dan bukti pengeluaran bisa dicetak.</p>
+  <div class="chips" style="margin-bottom:14px">${tabs.map(([k, l]) => `<button class="chip" data-mttab="${k}" aria-pressed="${M.tab === k}">${l}${k === "daftar" && nW ? ` <span class="pill warn">${nW}</span>` : ""}</button>`).join("")}</div>`;
+  if (!S.ready && !S.psdBarang.length) return head + `<div class="empty"><b>Data persediaan sedang dimuat…</b></div>`;
+  if (M.tab === "stok") {
+    const rows = S.psdBarang.map(b => ({ b, q:stokOf(b._id) })).filter(r => matches(M.q, [r.b.nama, r.b.kategori]));
+    return head + `<div class="toolbar"><label class="f grow">Cari barang<input id="mt-q" type="search" value="${esc(M.q)}" placeholder="mis. kertas, spidol, tinta"></label></div>
+    <div class="tablebox"><table><thead><tr><th>Barang</th><th class="hide-sm">Kategori</th><th class="num">Stok</th></tr></thead><tbody>${rows.sort((a, b) => (b.q > 0) - (a.q > 0) || a.b.nama.localeCompare(b.b.nama)).map(r => `<tr><td>${esc(r.b.nama)}</td><td class="hide-sm">${esc(r.b.kategori || "")}</td><td class="num">${r.q > 0 ? `<b>${fmt(r.q)}</b> ${esc(r.b.satuan)}` : '<span class="pill bad">habis</span>'}</td></tr>`).join("") || '<tr><td colspan="3"><div class="empty"><b>Belum ada barang persediaan</b></div></td></tr>'}</tbody></table></div>`;
+  }
+  if (M.tab === "rekap" && proses) {
+    if (!M.dari) { const y = new Date().getFullYear(); M.dari = y + "-01-01"; M.sampai = y + "-12-31"; }
+    const done = S.minta.filter(m => m.st === "Diserahkan" && (m.tglSerah || m.tgl) >= M.dari && (m.tglSerah || m.tgl) <= M.sampai);
+    const tx = S.psdTrx.filter(t => t.jenis === "keluar" && t.minta && done.some(m => m._id === t.minta));
+    const byUnit = {}, byBrg = {};
+    for (const m of done) { const u = m.unit || "-"; byUnit[u] = byUnit[u] || { n:0, v:0 }; byUnit[u].n++; }
+    for (const t of tx) { const m = done.find(x => x._id === t.minta), u = (m && m.unit) || "-"; byUnit[u].v += +t.nilai || 0; const b = barangOf(t.barang) || { nama:"(dihapus)", satuan:"" }; byBrg[t.barang] = byBrg[t.barang] || { b, q:0, v:0 }; byBrg[t.barang].q += +t.jml; byBrg[t.barang].v += +t.nilai || 0; }
+    return head + `<div class="toolbar"><label class="f">Dari<input id="mt-dari" type="date" value="${esc(M.dari)}"></label><label class="f">Sampai<input id="mt-sampai" type="date" value="${esc(M.sampai)}"></label><span class="sp"></span><button class="primary" id="mt-xlsx">Unduh rekap (Excel)</button></div>
+    <div class="grid kpis" style="margin-bottom:14px"><div class="kpi"><span class="l">Permintaan diserahkan</span><span class="v">${fmt(done.length)}</span></div><div class="kpi"><span class="l">Nilai keluar (FIFO)</span><span class="v" style="font-size:21px">${rp(tx.reduce((t, x) => t + (+x.nilai || 0), 0))}</span></div><div class="kpi"><span class="l">Menunggu diproses</span><span class="v">${fmt(S.minta.filter(m => m.st === "Diajukan").length)}</span></div></div>
+    <div class="grid two"><section class="panel"><h3>Per unit / bagian</h3><div class="tablebox"><table><thead><tr><th>Unit</th><th class="num">Permintaan</th><th class="num">Nilai</th></tr></thead><tbody>${Object.entries(byUnit).sort((a, b) => b[1].v - a[1].v).map(([u, r]) => `<tr><td>${esc(u)}</td><td class="num">${fmt(r.n)}</td><td class="num">${rp(r.v)}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">Belum ada</td></tr>'}</tbody></table></div></section>
+    <section class="panel"><h3>Per barang</h3><div class="tablebox"><table><thead><tr><th>Barang</th><th class="num">Keluar</th><th class="num">Nilai</th></tr></thead><tbody>${Object.values(byBrg).sort((a, b) => b.v - a.v).map(r => `<tr><td>${esc(r.b.nama)}</td><td class="num">${fmt(r.q)} ${esc(r.b.satuan)}</td><td class="num">${rp(r.v)}</td></tr>`).join("") || '<tr><td colspan="3" class="muted">Belum ada</td></tr>'}</tbody></table></div></section></div>`;
+  }
+  if (M.tab === "daftar") {
+    const list = S.minta.filter(m => (proses || m.by === S.me) && (!M.fst || m.st === M.fst));
+    const sel = M.sel && S.minta.find(m => m._id === M.sel);
+    return head + `<div class="toolbar"><div class="chips">${["Diajukan", "Diserahkan", "Ditolak", "Dibatalkan", ""].map(s2 => `<button class="chip" data-mtfst="${s2}" aria-pressed="${M.fst === s2}">${s2 || "Semua"}</button>`).join("")}</div></div>
+    <div class="grid two"><section style="min-width:0">${list.length ? `<div class="tablebox"><table><thead><tr><th>Tanggal</th><th>Pemohon · unit</th><th>Barang</th><th>Status</th></tr></thead><tbody>${list.map(m => `<tr class="rowlink ${M.sel === m._id ? "selrow" : ""}" tabindex="0" data-mtsel="${esc(m._id)}"><td>${esc(tglID(m.tgl))}</td><td>${esc(m.nama || "")}<div class="sm">${esc(m.unit || "")}</div></td><td class="sm">${esc((m.items || []).map(i => i.nama + " " + fmt(i.jml) + " " + i.satuan).join(", "))}</td><td><span class="pill ${MT_ST[m.st] || ""}">${esc(m.st)}</span></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty"><b>Tidak ada permintaan${M.fst ? " berstatus " + M.fst.toLowerCase() : ""}</b></div>`}</section>
+    <section class="panel">${sel ? mtDetail(sel, proses) : '<p class="muted">Pilih permintaan di daftar untuk melihat rincian' + (proses ? " dan memprosesnya" : "") + ".</p>"}</section></div>`;
+  }
+  // ajukan
+  const F = M.f, have = new Set(F.items.map(i => i.barang));
+  const cands = words(F.cari).length ? S.psdBarang.filter(b => !have.has(b._id) && matches(F.cari, [b.nama, b.kategori])).slice(0, 12) : [];
+  const units = [...new Set(S.minta.map(m => m.unit).filter(Boolean))];
+  return head + `<div class="grid two"><section class="panel"><h3>Formulir permintaan</h3>
+    <p class="sm" style="margin:0 0 8px">Pemohon: <b>${esc(myName() || "-")}</b></p>
+    <div class="fgrid">
+      <label class="f">Tanggal<input id="mt-tgl" type="date" value="${esc(F.tgl)}"></label>
+      <label class="f">Unit / bagian<input id="mt-unit" list="dl-mtunit" value="${esc(F.unit)}" placeholder="TU, Kurikulum, Lab Kimia, Kelas X-1…"></label>
+      <label class="f full">Keperluan<input id="mt-kep" value="${esc(F.keperluan)}" placeholder="mis. ujian semester, administrasi kelas"></label>
+    </div><datalist id="dl-mtunit">${units.map(u => `<option value="${esc(u)}">`).join("")}</datalist>
+    <label class="f full" style="margin-top:10px">Cari barang persediaan<input id="mt-cari" type="search" value="${esc(F.cari)}" placeholder="ketik nama barang, mis. kertas"></label>
+    ${cands.length ? `<div class="suggest" style="margin-top:6px">${cands.map(b => { const q = stokOf(b._id); return `<button data-mtpick="${esc(b._id)}" ${q > 0 ? "" : "disabled"}><span><b>${esc(b.nama)}</b><br><span class="faint">${esc(b.kategori || "")}</span></span><span class="num">${q > 0 ? "stok " + fmt(q) + " " + esc(b.satuan) : "habis"}</span></button>`; }).join("")}</div>` : ""}
+    <div class="tablebox" style="margin-top:10px"><table><thead><tr><th>Barang</th><th class="num">Stok</th><th class="num">Diminta</th><th></th></tr></thead><tbody>${F.items.map((i, n) => { const q = stokOf(i.barang); return `<tr><td>${esc(i.nama)}</td><td class="num">${fmt(q)} ${esc(i.satuan)}</td><td class="num"><input data-mtj="${n}" type="number" min="0" step="any" value="${esc(i.jml)}" style="width:80px"> ${esc(i.satuan)}${+i.jml > q ? '<div class="sm" style="color:var(--bad)">melebihi stok</div>' : ""}</td><td><button class="ghost" data-mtdel="${n}">Hapus</button></td></tr>`; }).join("") || '<tr><td colspan="4" class="muted">Belum ada barang. Cari lalu klik barangnya.</td></tr>'}</tbody></table></div>
+    <button class="primary" id="mt-kirim" style="margin-top:12px" ${F.items.length && !M.busy ? "" : "disabled"}>Kirim permintaan</button>
+    <p class="hint">Permintaan dikirim ke pengurus barang. Jumlah yang diserahkan bisa disesuaikan dengan stok.</p></section>
+    <section class="panel"><h3>Permintaan saya terakhir</h3>${S.minta.filter(m => m.by === S.me).slice(0, 8).map(m => `<div class="row" style="display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line)"><span style="flex:1">${esc(tglID(m.tgl))} · ${esc((m.items || []).length)} barang<div class="sm">${esc(m.keperluan || "")}</div></span><span class="pill ${MT_ST[m.st] || ""}">${esc(m.st)}</span></div>`).join("") || '<p class="muted">Belum ada.</p>'}</section></div>`;
+}
+function mtDetail(m, proses) {
+  const M = UI.mt, ok = M.ok[m._id] || (M.ok[m._id] = Object.fromEntries((m.items || []).map(i => [i.barang, Math.min(+i.jml, Math.max(0, stokOf(i.barang)))])));
+  const can2 = proses && m.st === "Diajukan";
+  return `<h3 style="margin-top:0">Permintaan ${esc(m.nama || "")}</h3>
+  <p class="sm">${esc(tglID(m.tgl))} · ${esc(m.unit || "-")} · ${esc(m.keperluan || "-")}<br>Status: <span class="pill ${MT_ST[m.st] || ""}">${esc(m.st)}</span>${m.nomor ? ` · <span class="mono">${esc(m.nomor)}</span>` : ""}${m.okNama ? ` · diproses ${esc(m.okNama)} ${esc(tglJam(m.okAt))}` : ""}${m.alasan ? `<br>Alasan: ${esc(m.alasan)}` : ""}</p>
+  <div class="tablebox"><table><thead><tr><th>Barang</th><th class="num">Diminta</th>${can2 ? '<th class="num">Stok</th><th class="num">Diserahkan</th>' : m.st === "Diserahkan" ? '<th class="num">Diserahkan</th>' : ""}</tr></thead><tbody>${(m.items || []).map(i => `<tr><td>${esc(i.nama)}</td><td class="num">${fmt(i.jml)} ${esc(i.satuan)}</td>${can2 ? `<td class="num">${fmt(stokOf(i.barang))}</td><td class="num"><input data-mtok="${esc(m._id)}|${esc(i.barang)}" type="number" min="0" step="any" value="${esc(ok[i.barang])}" style="width:80px"></td>` : m.st === "Diserahkan" ? `<td class="num">${fmt(i.ok || 0)} ${esc(i.satuan)}</td>` : ""}</tr>`).join("")}</tbody></table></div>
+  ${can2 ? `<div class="fgrid" style="margin-top:10px"><label class="f">Tanggal diserahkan<input id="mt-tserah" type="date" value="${esc(M.tserah || today())}"></label><label class="f">Nomor bukti<input id="mt-nomor" class="mono" value="${esc(M.nomor || mtNomor(M.tserah || today()))}"></label></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="primary" data-mtserah="${esc(m._id)}" ${M.busy ? "disabled" : ""}>${M.busy ? "Menyimpan…" : "Serahkan & catat keluar"}</button></div>
+    <div class="fgrid" style="margin-top:10px"><label class="f full">Alasan penolakan<input id="mt-tolak" value="${esc(M.tolak)}" placeholder="mis. stok habis, ajukan lewat usulan kebutuhan"></label></div><button class="danger" data-mttolak="${esc(m._id)}" style="margin-top:6px">Tolak permintaan</button>` : ""}
+  ${m.st === "Diajukan" && m.by === S.me ? `<button class="ghost" data-mtbatal="${esc(m._id)}" style="margin-top:10px">Batalkan permintaan saya</button>` : ""}
+  ${m.st === "Diserahkan" ? `<button data-mtpdf="${esc(m._id)}" style="margin-top:10px">Unduh bukti pengeluaran (PDF)</button>` : ""}`;
+}
+async function mtKirim() {
+  const M = UI.mt, F = M.f, items = F.items.filter(i => +i.jml > 0);
+  if (!items.length) { toast("Isi jumlah barang yang diminta."); return; }
+  if (!(F.unit || "").trim()) { toast("Isi unit / bagian."); return; }
+  M.busy = true; render();
+  try { await db.doc("minta/" + uid("m")).set({ by:S.me || "", nama:myName(), tgl:F.tgl || today(), unit:F.unit.trim(), keperluan:(F.keperluan || "").trim(), items:items.map(i => ({ barang:i.barang, nama:i.nama, satuan:i.satuan, jml:+i.jml })), st:"Diajukan", at:new Date().toISOString() }); M.f = mtBlank(); M.tab = "daftar"; M.fst = "Diajukan"; toast("Permintaan terkirim ke pengurus barang."); }
+  catch (e) { writeErr(e); }
+  M.busy = false; render();
+}
+async function mtSerah(id) {
+  const M = UI.mt, m = S.minta.find(x => x._id === id); if (!m || M.busy) return;
+  const ok = M.ok[id] || {}, tgl = M.tserah || today(), nomor = (M.nomor || mtNomor(tgl)).trim();
+  const lines = (m.items || []).map(i => Object.assign({}, i, { ok:Math.max(0, +ok[i.barang] || 0) }));
+  if (!lines.some(l => l.ok > 0)) { toast("Isi jumlah yang diserahkan, atau tolak permintaan ini."); return; }
+  for (const l of lines) if (l.ok > stokOf(l.barang) + 1e-9) { toast(`Stok ${l.nama} tidak cukup (tersisa ${fmt(stokOf(l.barang))}).`); return; }
+  M.busy = true; render();
+  try {
+    const temp = [];
+    for (const l of lines) if (l.ok > 0) {
+      const t = { jenis:"keluar", tgl, barang:l.barang, jml:l.ok, bukti:nomor, penerima:m.nama || "", unit:m.unit || "", keperluan:m.keperluan || "", ket:"Permintaan barang persediaan", minta:id, dibuat:new Date().toISOString(), oleh:S.me || "" };
+      const tmp = Object.assign({ _id:"tmp" + temp.length }, t); S.psdTrx.push(tmp); temp.push(tmp);
+      const row = psdLedger(l.barang).rows.find(r => r.t === tmp); t.nilai = row ? Math.round(row.vOut) : 0; tmp.nilai = t.nilai;
+      await db.doc("psd_trx/" + uid("p")).set(t);
+    }
+    for (const t of temp) { const i = S.psdTrx.indexOf(t); if (i >= 0) S.psdTrx.splice(i, 1); }
+    await db.doc("minta/" + id).update({ st:"Diserahkan", items:lines, nomor, tglSerah:tgl, okBy:S.me || "", okNama:myName(), okAt:new Date().toISOString() });
+    toast("Barang diserahkan. Pengeluaran sudah tercatat di Persediaan.");
+    M.nomor = ""; M.busy = false; render();
+    mtPdf(Object.assign({}, m, { st:"Diserahkan", items:lines, nomor, tglSerah:tgl, okNama:myName() }));
+  } catch (e) { M.busy = false; render(); writeErr(e); }
+}
+function mtPdf(m) {
+  if (!window.jspdf) { toast("Modul PDF belum termuat."); return; }
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4" }), c = cfg();
+  let y = pdfKop(doc); y = pdfJudul(doc, y, ["BUKTI PERMINTAAN DAN PENGELUARAN", "BARANG PERSEDIAAN"], "Nomor: " + (m.nomor || "-"));
+  doc.setFontSize(10);
+  [["Pemohon", m.nama || "-"], ["Unit / bagian", m.unit || "-"], ["Keperluan", m.keperluan || "-"], ["Tanggal permintaan", tglID(m.tgl)], ["Tanggal diserahkan", tglID(m.tglSerah || m.tgl)]].forEach(([k, v]) => { doc.text(k, 20, y); doc.text(": " + v, 60, y); y += 5; });
+  doc.autoTable({ startY:y + 2, margin:{ left:20, right:20 }, theme:"grid", styles:{ fontSize:9.5, cellPadding:1.5, lineColor:[60,60,60], lineWidth:0.15, textColor:[20,20,20] }, headStyles:{ fillColor:[230,230,230], textColor:[20,20,20], halign:"center" },
+    head:[["No", "Nama Barang", "Satuan", "Jumlah Diminta", "Jumlah Diserahkan", "Keterangan"]], body:(m.items || []).map((i, n) => [n + 1, i.nama, i.satuan, fmt(i.jml), fmt(i.ok || 0), (i.ok || 0) < i.jml ? "stok terbatas" : ""]),
+    columnStyles:{ 0:{ cellWidth:9, halign:"center" }, 2:{ cellWidth:20, halign:"center" }, 3:{ cellWidth:24, halign:"center" }, 4:{ cellWidth:26, halign:"center" }, 5:{ cellWidth:28 } } });
+  y = doc.lastAutoTable.finalY + 10; if (y + 50 > 282) { doc.addPage(); y = 25; }
+  const peg = findPeg(m.nama);
+  signBlock(doc, y, { nama:c.pengurus || c.waka, nip:c.pengurus ? c.nipPengurus : c.nipWaka }, { nama:m.nama || "", nip:peg ? peg.nip : "" }, { nama:c.waka, nip:c.nipWaka }, "Yang menyerahkan,\nPengurus Barang", "Yang meminta / menerima,", { tgl:m.tglSerah || m.tgl, row3:true, ksLabel:"Mengetahui,\nWaka Sarpras" });
+  saveFile(`Bukti Pengeluaran Persediaan ${m.tglSerah || m.tgl} ${(m.nama || "").split(",")[0]}.pdf`, pdfFinish(doc).output("blob"));
+}
+document.addEventListener("input", e => {
+  if (current !== "minta") return; const t = e.target, M = UI.mt;
+  if (t.id === "mt-cari") { M.f.cari = t.value; render(); }
+  else if (t.id === "mt-unit") M.f.unit = t.value; else if (t.id === "mt-kep") M.f.keperluan = t.value;
+  else if (t.id === "mt-q") { M.q = t.value; render(); }
+  else if (t.dataset.mtj != null) M.f.items[+t.dataset.mtj].jml = t.value;
+  else if (t.dataset.mtok) { const [id, bid] = t.dataset.mtok.split("|"); (M.ok[id] = M.ok[id] || {})[bid] = t.value; }
+  else if (t.id === "mt-tolak") M.tolak = t.value; else if (t.id === "mt-nomor") M.nomor = t.value;
+});
+document.addEventListener("change", e => {
+  if (current !== "minta") return; const t = e.target, M = UI.mt;
+  if (t.id === "mt-tgl") M.f.tgl = t.value;
+  if (t.dataset.mtj != null) render();
+  if (t.id === "mt-tserah") { M.tserah = t.value; M.nomor = ""; render(); }
+  if (t.id === "mt-dari") { M.dari = t.value; render(); } if (t.id === "mt-sampai") { M.sampai = t.value; render(); }
+});
+document.addEventListener("click", async e => {
+  if (current !== "minta") return; const M = UI.mt;
+  const r = e.target.closest("tr[data-mtsel]"); if (r) { M.sel = r.dataset.mtsel; M.tolak = ""; M.nomor = ""; render(); return; }
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.mttab) { M.tab = b.dataset.mttab; render(); }
+  if (b.dataset.mtfst != null) { M.fst = b.dataset.mtfst; render(); }
+  if (b.dataset.mtpick) { const x = barangOf(b.dataset.mtpick); if (x) { M.f.items.push({ barang:x._id, nama:x.nama, satuan:x.satuan, jml:1 }); M.f.cari = ""; render(); } }
+  if (b.dataset.mtdel != null) { M.f.items.splice(+b.dataset.mtdel, 1); render(); }
+  if (b.id === "mt-kirim") mtKirim();
+  if (b.dataset.mtserah) mtSerah(b.dataset.mtserah);
+  if (b.dataset.mttolak) { if (!M.tolak.trim()) { toast("Isi alasan penolakan."); return; } try { await db.doc("minta/" + b.dataset.mttolak).update({ st:"Ditolak", alasan:M.tolak.trim(), okBy:S.me || "", okNama:myName(), okAt:new Date().toISOString() }); M.tolak = ""; toast("Permintaan ditolak."); } catch (err) { writeErr(err); } render(); }
+  if (b.dataset.mtbatal) { try { await db.doc("minta/" + b.dataset.mtbatal).update({ st:"Dibatalkan", okBy:S.me || "", okAt:new Date().toISOString() }); toast("Permintaan dibatalkan."); } catch (err) { writeErr(err); } render(); }
+  if (b.dataset.mtpdf) { const m = S.minta.find(x => x._id === b.dataset.mtpdf); if (m) mtPdf(m); }
+  if (b.id === "mt-xlsx") {
+    const done = S.minta.filter(m => m.st === "Diserahkan" && (m.tglSerah || m.tgl) >= M.dari && (m.tglSerah || m.tgl) <= M.sampai);
+    xlsxSave(`Rekap Permintaan Persediaan ${M.dari} sd ${M.sampai}.xlsx`, [["Pengeluaran", done.flatMap(m => (m.items || []).map(i => { const t = S.psdTrx.find(x => x.minta === m._id && x.barang === i.barang); return { "Tanggal Diserahkan":m.tglSerah || m.tgl, "Nomor Bukti":m.nomor || "", "Pemohon":m.nama, "Unit":m.unit, "Keperluan":m.keperluan, "Barang":i.nama, "Satuan":i.satuan, "Diminta":i.jml, "Diserahkan":i.ok || 0, "Nilai FIFO (Rp)":t ? t.nilai || 0 : 0 }; }))], ["Semua permintaan", S.minta.map(m => ({ "Tanggal":m.tgl, "Pemohon":m.nama, "Unit":m.unit, "Keperluan":m.keperluan, "Status":m.st, "Barang":(m.items || []).map(i => i.nama + " " + i.jml + " " + i.satuan).join("; "), "Diproses oleh":m.okNama || "", "Alasan":m.alasan || "" }))]]);
+  }
+});
 
 /* ================= validasi & riwayat ================= */
 function opSummary(ops) {
@@ -3853,29 +4170,31 @@ const PRESET = {
 function myIzin() { const me = AK.list.find(a => a._id === S.me); return me && me.izin ? me.izin : PRESET.staf.izin; }
 function can(k) { return isMaster() || (S.role === "operator" && !!myIzin()[k]); }
 // which applications an account may open (accounts without the setting keep Sarpras only)
-const APP_IZIN = [["app_sarpras", "Aset & Persediaan", "Aset, ruang, pemeliharaan, BAST, persediaan"], ["app_jadwal", "Jadwal Penggunaan Aula dan Multimedia", "Melihat jadwal Aula & Multimedia"], ["app_keuangan", "Keuangan", "RKAS, usulan, realisasi (sedang disiapkan)"], ["app_waka", "Waka Sarpras", "Akun & hak akses hanya untuk master; menu lain disiapkan"], ["app_outsourcing", "Outsourcing", "Laporan kinerja kebersihan & keamanan (sedang disiapkan)"]];
+const APP_IZIN = [["app_sarpras", "Aset & Persediaan", "Aset, ruang, pemeliharaan, BAST, persediaan"], ["app_jadwal", "Jadwal Penggunaan Aula dan Multimedia", "Melihat jadwal Aula & Multimedia"], ["app_minta", "Permintaan Barang Persediaan", "Mengajukan permintaan ATK / bahan habis pakai"], ["app_keuangan", "Keuangan", "RKAS, usulan, realisasi (sedang disiapkan)"], ["app_waka", "Waka Sarpras", "Akun & hak akses hanya untuk master; menu lain disiapkan"], ["app_outsourcing", "Outsourcing", "Laporan kinerja kebersihan & keamanan (sedang disiapkan)"]];
+const MT_IZIN = [["minta_proses", "Memproses permintaan persediaan", "Menyerahkan barang (stok keluar tercatat otomatis di Persediaan) atau menolak permintaan; melihat rekap"]];
 const JD_IZIN = [["jadwal_ajukan", "Mengajukan peminjaman", "Mengisi pengajuan pemakaian Aula / Multimedia"], ["jadwal_setuju", "Menyetujui peminjaman", "Menyetujui, menolak, atau membatalkan pengajuan siapa pun"]];
-const APP_DEFAULT_ON = ["sarpras", "jadwal"];
+const APP_DEFAULT_ON = ["sarpras", "jadwal", "minta"];
 function appAccess(id) { if (isMaster()) return true; if (S.role !== "operator") return false; const v = myIzin()["app_" + id]; return APP_DEFAULT_ON.includes(id) ? v !== false : !!v; }
-const TAB_IZIN = { bast:"bast", pemegang:"bast", laporan:"bast", hapus:"hapus", persediaan:"persediaan", surat:"surat", kertas:"kertas", rekon:"kertas" };
-function canView(v) { if (v === "home" || v === "akun") return true; if (v === "jadwal") return appAccess("jadwal"); if (v === "surat") return appAccess("waka") && can("surat"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
+const TAB_IZIN = { bantuan:"bast", bast:"bast", pemegang:"bast", laporan:"bast", hapus:"hapus", persediaan:"persediaan", surat:"surat", kertas:"kertas", rekon:"kertas" };
+function canView(v) { if (v === "home" || v === "akun") return true; if (v === "jadwal") return appAccess("jadwal"); if (v === "minta") return appAccess("minta"); if (v === "surat") return appAccess("waka") && can("surat"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
 function izinSummary(iz) {
   if (!iz) return PRESET.staf.nama;
   for (const p of Object.values(PRESET)) if (IZIN.every(([k]) => !!iz[k] === !!p.izin[k])) return p.nama;
   const on = IZIN.filter(([k]) => iz[k]).map(([, l]) => l.split(":")[0].replace("Aset", "aset"));
   return on.length ? [...new Set(on)].join(", ") : "hanya lihat";
 }
-function appSummary(iz) { iz = iz || {}; const on = APP_IZIN.filter(([k]) => APP_DEFAULT_ON.includes(k.slice(4)) ? iz[k] !== false : !!iz[k]).map(([, l]) => l); const j = JD_IZIN.filter(([k]) => iz[k]).map(([, l]) => l.toLowerCase()); return (on.join(", ") || "tidak ada aplikasi") + (j.length ? " (jadwal: " + j.join(", ") + ")" : ""); }
+function appSummary(iz) { iz = iz || {}; const on = APP_IZIN.filter(([k]) => APP_DEFAULT_ON.includes(k.slice(4)) ? iz[k] !== false : !!iz[k]).map(([, l]) => l); const j = [...JD_IZIN, ...MT_IZIN].filter(([k]) => iz[k]).map(([, l]) => l.toLowerCase()); return (on.join(", ") || "tidak ada aplikasi") + (j.length ? " (jadwal: " + j.join(", ") + ")" : ""); }
 function izinChecklist(prefix, iz) {
   const appOn = k => iz && (APP_DEFAULT_ON.includes(k.slice(4)) ? iz[k] !== false : !!iz[k]);
   return `<p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Aplikasi yang boleh dibuka</b></p><div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 14px;margin-bottom:12px">${APP_IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${(iz ? appOn(k) : APP_DEFAULT_ON.includes(k.slice(4))) ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
     <p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Hak akses di Jadwal Penggunaan Aula dan Multimedia</b> <span class="hint">semua akun yang terdaftar bisa melihat jadwal</span></p><div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px;margin-bottom:12px">${JD_IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${iz && iz[k] ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
+    <p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Hak akses di Permintaan Barang Persediaan</b> <span class="hint">semua akun yang membuka aplikasi ini bisa mengajukan permintaan</span></p><div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px;margin-bottom:12px">${MT_IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${iz && iz[k] ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
     <p class="sm" style="margin:0 0 6px"><b style="font-weight:500">Hak akses di aplikasi Aset & Persediaan</b></p>
     <div class="chips" style="margin-bottom:8px">${Object.entries(PRESET).map(([k, p]) => `<button type="button" class="chip" data-preset="${k}" data-for="${prefix}">${p.nama}</button>`).join("")}</div>
     <div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px">${IZIN.map(([k, l, d]) => `<label class="ck"><input type="checkbox" id="${prefix}-${k}" ${iz && iz[k] ? "checked" : ""}><span><b style="font-weight:500">${l}</b><br><span class="hint">${d}</span></span></label>`).join("")}</div>
     <p class="hint">Semua akun bisa melihat Rekap, Aset/Modal, Kondisi Ruangan, dan Catatan Temuan. Semua perubahan dari operator tetap menunggu validasi master.</p>`;
 }
-const readIzin = prefix => Object.fromEntries([...IZIN, ...APP_IZIN, ...JD_IZIN].map(([k]) => [k, !!(document.getElementById(prefix + "-" + k) || {}).checked]));
+const readIzin = prefix => Object.fromEntries([...IZIN, ...APP_IZIN, ...JD_IZIN, ...MT_IZIN].map(([k]) => [k, !!(document.getElementById(prefix + "-" + k) || {}).checked]));
 document.addEventListener("click", async e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.dataset.preset) { const iz = PRESET[t.dataset.preset].izin; for (const [k] of IZIN) { const el = document.getElementById(t.dataset.for + "-" + k); if (el) el.checked = !!iz[k]; } }

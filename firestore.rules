@@ -75,6 +75,27 @@ service cloud.firestore {
             && request.resource.data.st == 'Dibatalkan'
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 'okBy', 'okAt']));
     }
+    // permintaan barang persediaan: semua akun aktif mengajukan atas namanya sendiri;
+    // yang dicentang "Memproses permintaan persediaan" menyerahkan/menolak; pemohon boleh membatalkan
+    match /minta/{id} {
+      allow create: if isMember()
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.st == 'Diajukan'
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 50;
+      allow update: if izinKhusus('minta_proses')
+        || (resource.data.by == request.auth.uid && isMember()
+            && resource.data.st == 'Diajukan'
+            && request.resource.data.st == 'Dibatalkan'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 'okBy', 'okAt']));
+    }
+    // penyerahan permintaan langsung mencatat persediaan keluar (tanpa menunggu validasi)
+    match /psd_trx/{id} {
+      allow create: if izinKhusus('minta_proses')
+        && request.resource.data.jenis == 'keluar'
+        && request.resource.data.minta is string
+        && request.resource.data.oleh == request.auth.uid;
+    }
     // catatan temuan: ditulis langsung oleh operator yang punya hak "catatan"
     // riwayat cetak BAST: setiap akun mencatat cetakannya sendiri
     match /cetak/{id} {
