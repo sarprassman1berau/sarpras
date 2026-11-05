@@ -518,7 +518,7 @@ async function saveUpd(key, patch) {
     return true;
   } catch (e) { writeErr(e); return false; }
 }
-const FIELD_LABEL = { batas:"batas penggunaan", grp:"kelompok BOSP Daerah", kib:"kelengkapan data KIB", pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
+const FIELD_LABEL = { kat:"golongan", batas:"batas penggunaan", grp:"kelompok BOSP Daerah", kib:"kelengkapan data KIB", pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
 
 /* ================= change layer: master writes directly, operators propose ================= */
 const isMaster = () => S.role === "master";
@@ -1089,6 +1089,10 @@ function bulkPanel() {
       ${inp("bk-untuk", "Peruntukan", "text", 'list="dl-untuk"')}${untukList()}
       <label class="f">Sumber dana<input id="bk-sumber" data-bk="1" list="dl-sumberbk" value="${bkv("bk-sumber")}" placeholder="kosong = tidak diubah"><datalist id="dl-sumberbk">${SUMBER_DANA.map(o => `<option value="${esc(o)}">`).join("")}</datalist></label>
       ${inp("bk-spj", "No. SPJ / kuitansi")}</div>` : ""}
+    ${canU && items.every(x => x.src !== "S" && x.src !== "P") ? `<p class="sectionlabel" style="margin-top:12px">Migrasi / pindahkan aset</p><div class="fgrid">
+      <label class="f">Pindahkan ke<select id="bk-mig" data-bk="1"><option value="">— tidak dipindah —</option><option value="tak" ${(UI.bulk.v || {})["bk-mig"] === "tak" ? "selected" : ""}>Aset tidak tercatat di SIPBMD</option><option value="bospda" ${(UI.bulk.v || {})["bk-mig"] === "bospda" ? "selected" : ""}>Aset BOSP Daerah (menunggu SIPBMD)</option><option value="sip" ${(UI.bulk.v || {})["bk-mig"] === "sip" ? "selected" : ""}>Sudah tercatat di SIPBMD (menu golongan KIB)</option></select></label>
+      <label class="f">Golongan<select id="bk-kat" data-bk="1"><option value="">— tidak diubah —</option>${KAT.map(k => `<option value="${k.id}" ${(UI.bulk.v || {})["bk-kat"] === k.id ? "selected" : ""}>${k.kib} · ${k.nama}</option>`).join("")}</select></label>
+      ${(UI.bulk.v || {})["bk-mig"] === "sip" ? `${inp("bk-kode", "Kode aset SIPBMD (sama untuk semua)")}<label class="f">No. register awal<input id="bk-noreg" data-bk="1" type="number" min="1" value="${bkv("bk-noreg")}" placeholder="mis. 12 → 12, 13, 14, …"></label><p class="hint full" style="margin:0">No. register diberikan berurutan sesuai urutan daftar terpilih. Golongan otomatis mengikuti kode aset. Untuk kode/no. register yang berbeda-beda, ubah per aset di detailnya.</p>` : ""}</div>` : ""}
     ${canK ? `<p class="sectionlabel" style="margin-top:12px">Cek fisik</p><div class="fgrid">
       <label class="f">Kondisi<select id="bk-kond" data-bk="1"><option value="">— tidak diubah —</option>${KOND.map(k => `<option ${(UI.bulk.v || {})["bk-kond"] === k ? "selected" : ""}>${k}</option>`).join("")}</select></label>
       ${inp("bk-tcek", "Tanggal cek", "date")}${inp("bk-cek", "Pemeriksa")}</div>` : ""}
@@ -1102,12 +1106,19 @@ async function bulkApply() {
   const common = {};
   if (canU) { const pjN = val("bk-pj"); if (pjN) { const pg = findPeg(pjN); Object.assign(common, { pj:pjN, nip:(pg && pg.nip) || "", jab:(pg && pg.jab) || "" }); } for (const [id, f] of [["bk-lok", "lokasi"], ["bk-untuk", "untuk"], ["bk-sumber", "sumber"], ["bk-spj", "spj"]]) { const v = val(id); if (v) common[f] = v; } }
   if (canK) { for (const [id, f] of [["bk-kond", "kond"], ["bk-tcek", "tcek"], ["bk-cek", "cek"]]) { const v = val(id); if (v) common[f] = v; } if (common.kond && !common.tcek) common.tcek = today(); }
+  const mig = canU ? val("bk-mig") || "" : "", katN = canU ? val("bk-kat") || "" : "";
+  let migKode = "", migNo = 0;
+  if (mig === "sip") { migKode = val("bk-kode") || ""; migNo = parseInt(val("bk-noreg")) || 0; if (!migKode || !migNo) { toast("Isi kode aset SIPBMD dan no. register awal."); return; } }
+  if (mig === "tak") Object.assign(common, { sip:false, grp:"" }); else if (mig === "bospda") Object.assign(common, { sip:false, grp:"bospda" }); else if (mig === "sip") Object.assign(common, { sip:true, grp:"", kode:migKode, kat:katFromKode(migKode) || katN || undefined });
+  if (katN && mig !== "sip") common.kat = katN;
+  for (const k of Object.keys(common)) if (common[k] === undefined) delete common[k];
   if (!Object.keys(kib).length && !Object.keys(common).length) { toast("Isi minimal satu kolom yang ingin diterapkan."); return; }
   const same = (a, b) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
   const work = [];
   for (const x of items) {
     const patch = {};
     for (const [k, v] of Object.entries(common)) if (!same(x[k], v)) patch[k] = v;
+    if (mig === "sip") patch.noreg = String(migNo + items.indexOf(x));
     if (canU && Object.keys(kib).length && KIB_FMT[x.kat]) {
       const nk = Object.assign({}, x.kib || {});
       for (const f of kibFields(x.kat)) { if (!(f.l in kib) || f.ro) continue; const sip = kibVal(x, f.src, null).v, v = kib[f.l]; if (!kibEmpty(sip) && (norm(String(sip)) === norm(v) || (f.u === "tgl" && parseTgl(String(sip)) === v))) delete nk[f.l]; else nk[f.l] = v; }
@@ -1127,7 +1138,7 @@ async function bulkApply() {
 const bkKeep = e => { const t = e.target; if (t.dataset && t.dataset.bk) { UI.bulk.v = UI.bulk.v || {}; UI.bulk.v[t.id] = t.value; } };
 document.addEventListener("input", bkKeep);
 document.addEventListener("change", e => {
-  bkKeep(e); const t = e.target;
+  bkKeep(e); const t = e.target; if (t.id === "bk-mig") render();
   if (t.dataset && t.dataset.selkey) { if (t.checked) UI.sel.add(t.dataset.selkey); else UI.sel.delete(t.dataset.selkey); render(); }
   if (t.id === "sel-page") { const f = UI.aset, rows = filterAset(), per = 60, slice = rows.slice(f.page * per, (f.page + 1) * per); for (const x of slice) { if (t.checked) UI.sel.add(x.key); else UI.sel.delete(x.key); } render(); }
 });
@@ -1724,6 +1735,7 @@ function drawerItem(x) {
           ${x.src === "S" || x.src === "P" ? "" : `<div class="full"><span class="f" style="margin-bottom:6px;display:block">Status pencatatan</span>
             <div class="seg" id="d-sipseg"><button type="button" data-sipv="0" aria-pressed="${!x.sip && !isBospda(x)}">Tidak tercatat di SIPBMD</button><button type="button" data-sipv="bospda" aria-pressed="${isBospda(x)}">BOSP Daerah · menunggu SIPBMD</button><button type="button" data-sipv="1" aria-pressed="${!!x.sip && !isBospda(x)}">Sudah tercatat di SIPBMD</button></div><input type="hidden" id="d-sip" value="${isBospda(x) ? "bospda" : x.sip ? "1" : "0"}">
             <span class="hint">${isBospda(x) ? "Aset belanja BOSP Daerah oleh cabang dinas yang belum tercatat di SIPBMD. Jika sudah tercatat di SIPBMD BPKAD, pilih <b>Sudah tercatat di SIPBMD</b> dan isi kode aset serta no. register." : x.sip ? "Aset ini sudah dinyatakan tercatat di SIPBMD." : "Jika kemudian catatannya ditemukan di SIPBMD, pilih <b>Sudah tercatat di SIPBMD</b>, isi kode aset dan no. register, lalu Simpan."}</span></div>
+          <label class="f full">Golongan aset<select id="d-kat">${KAT.map(k => `<option value="${k.id}" ${x.kat === k.id ? "selected" : ""}>${k.kib} · ${k.nama}</option>`).join("")}</select><span class="hint">Pindahkan bila golongannya keliru. Saat dinyatakan tercatat di SIPBMD, golongan otomatis mengikuti kode aset.</span></label>
           <div class="full fgrid" id="d-sipf" ${x.sip ? "" : "hidden"}><label class="f">Kode aset SIPBMD<input id="d-kode" class="mono" value="${esc(x.kode || "")}" placeholder="mis. 1.3.2.10.01.02.002"></label><label class="f">No. register SIPBMD<input id="d-noreg" class="mono" value="${esc(x.noreg || "")}"></label></div>`}
           <label class="f">No. registrasi internal<input id="d-reg" class="mono" value="${esc(x.reg || "")}"></label>
           <label class="f">No. SPJ / kuitansi<input id="d-spj" value="${esc(x.spj || "")}"></label>
@@ -3864,10 +3876,12 @@ document.addEventListener("click", async e => {
       if (document.getElementById("d-rehab")) patch.rehab = $("#d-rehab").checked;
       if (document.getElementById("d-sip")) {
         patch.sip = val("d-sip") === "1"; patch.grp = val("d-sip") === "bospda" ? "bospda" : ""; patch.kode = val("d-kode"); patch.noreg = val("d-noreg");
+        if (document.getElementById("d-kat")) patch.kat = val("d-kat");
+        if (patch.sip && katFromKode(patch.kode)) patch.kat = katFromKode(patch.kode);
         if (patch.sip && !x.sip && can("aset_ubah") && (!patch.kode || !patch.noreg)) { toast("Isi kode aset dan no. register SIPBMD untuk mengubah status menjadi tercatat."); break; }
       }
       // only the fields this account may change are sent
-      const allow = new Set([...(can("aset_ubah") ? ["pj", "nip", "jab", "untuk", "lokasi", "reg", "spj", "sumber", "sip", "grp", "kode", "noreg"] : []), ...(can("aset_kondisi") ? ["kond", "tcek", "cek", "cat"] : []), ...(can("hapus") ? ["hapusNo", "rehab"] : [])]);
+      const allow = new Set([...(can("aset_ubah") ? ["pj", "nip", "jab", "untuk", "lokasi", "reg", "spj", "sumber", "sip", "grp", "kode", "noreg", "kat"] : []), ...(can("aset_ubah") || can("bast") ? ["batas"] : []), ...(can("aset_kondisi") ? ["kond", "tcek", "cek", "cat"] : []), ...(can("hapus") ? ["hapusNo", "rehab"] : [])]);
       for (const f of Object.keys(patch)) if (!allow.has(f)) delete patch[f];
       if (await saveUpd(x.key, patch)) { drawer.fresh = true; renderDrawer(); } else break;
       toast((kond === "Rusak Berat" || kond === "Hilang") && !patch.rehab ? "Tersimpan. Aset masuk usulan penghapusan." : "Tersimpan.");

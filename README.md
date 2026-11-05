@@ -76,6 +76,11 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 
 ---
 
+### Migrasi aset tidak tercatat / BOSP Daerah ke menu lain
+- **Per aset** (detail aset → Pencatatan): status *Tidak tercatat* · *BOSP Daerah* · *Sudah tercatat di SIPBMD* (isi kode aset dan no. register → pindah ke menu golongan KIB yang sesuai kode), pilihan **Golongan aset** untuk memindah golongan, dan *Padanan di SIPBMD* bila barang yang sama sudah ada di data SIPBMD (catatan sekolah disembunyikan, data SIPBMD yang dipakai).
+- **Sekaligus** (centang beberapa aset → Isi sekaligus → *Migrasi / pindahkan aset*): pindahkan ke Aset tidak tercatat, Aset BOSP Daerah, atau **Sudah tercatat di SIPBMD** (kode aset sama untuk semua, no. register berurutan mulai dari angka awal; golongan mengikuti kode), dan/atau ubah golongan.
+- Pemindahan hanya mengubah field `sip`, `grp`, `kode`, `noreg`, `kat` lewat `saveUpd`, sehingga riwayat, foto, pemegang, kondisi, dan batas penggunaan ikut terbawa; dari akun operator menunggu validasi.
+
 ### Masa penggunaan barang (BAST penyerahan) dan kondisi saat penarikan
 - **BAST Penyerahan** memuat **batas waktu penggunaan** (pilihan cepat: 1 tahun, akhir tahun ajaran 30 Juni, 2 tahun, atau tanpa batas). Kalimat BAST menyebut batas tersebut dan kewajiban memperbarui atau mengembalikan barang. Batas disimpan di setiap barang (`batas`).
 - **Pengingat**: barang yang masih dipegang dan batasnya sudah lewat (merah) atau berakhir ≤30 hari (kuning) tampil di atas halaman BAST (per pegawai, tombol **Perbarui masa penggunaan** = BAST penyerahan baru yang sudah terisi, dan **Tarik barang**), di Rekap, di detail aset, angka merah di menu BAST, dan status kartu Aset & Persediaan di Beranda.
