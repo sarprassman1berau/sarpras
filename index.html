@@ -609,10 +609,10 @@ function xlsxSave(filename, sheets) {
 const VIEWS = ["home","jadwal","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
 let current = "ringkasan", sub = "";
 const UI = {
-  aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"" },
+  aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"", th:"" },
   surat:{ q:"" }, val:{ q:"", askAll:false }, rekon:{ dari:"", sampai:"" }, lap:{ jenis:"", q:"", dari:"", sampai:"", st:"" }, pem:{ q:"", sel:"", semua:false, kat:"" }, kk:{ sumber:"BOSP Reguler", tahun:String(new Date().getFullYear()), smt:new Date().getMonth() < 6 ? "1" : "2", q:"", imp:null }, rg:{ g:"", q:"", kond:"", edit:null, imp:null }, imp:{ file:"", sheets:[], mode:"merge", busy:false, done:0, total:0, ask:null, err:"" }, pr:{ edit:null, q:"" },
   bast:{ jenis:"serah", items:[], p:"", q:"", tgl:today(), untuk:"" },
-  hapus:{ kat:"" },
+  hapus:{ kat:"", th:"" },
   psd:{ dari:"", sampai:"", q:"", form:{} },
 };
 function route() {
@@ -781,11 +781,19 @@ document.addEventListener("click", e => {
   location.hash = a.href;
 });
 
+/* ================= filter tahun perolehan (dipakai di beberapa menu) ================= */
+const thMatch = (x, v) => !v || (v === "-" ? !tahunOf(x) : String(tahunOf(x)) === String(v));
+function thSelect(id, items, v, label = "Tahun perolehan") {
+  const c = {}; let none = 0; for (const x of items) { const t = tahunOf(x); if (t) c[t] = (c[t] || 0) + 1; else none++; }
+  const ys = Object.keys(c).sort((a, b) => b - a);
+  return `<label class="f">${label}<select id="${id}"><option value="">Semua tahun</option>${ys.map(y => `<option value="${y}" ${String(v) === y ? "selected" : ""}>${y} · ${fmt(c[y])}</option>`).join("")}${none ? `<option value="-" ${v === "-" ? "selected" : ""}>Tanpa tahun · ${fmt(none)}</option>` : ""}</select></label>`;
+}
+
 /* ================= view: pemeliharaan & perbaikan ================= */
 // Rusak Sedang (aset and ruang) enters automatically; Rusak Berat aset goes to penghapusan instead,
 // Rusak Berat ruang (cannot be written off) is listed here as needing rehabilitation.
 const PL_ST = ["Belum ditangani", "Dijadwalkan", "Sedang diperbaiki", "Menunggu dana / suku cadang", "Selesai"];
-UI.pl = { jenis:"", st:"aktif", q:"", edit:null };
+UI.pl = { jenis:"", st:"aktif", q:"", edit:null, th:"" };
 function plRows(mode) {
   const out = [], push = (t, id, nama, kode, lokasi, kond, pl, ref) => {
     const masuk = kond === "Rusak Sedang" || (t === "ruang" && kond === "Rusak Berat");
@@ -801,7 +809,7 @@ function plRows(mode) {
 const plPill = st => `<span class="pill ${st === "Selesai" ? "ok" : st === "Belum ditangani" ? "bad" : st === "Sedang diperbaiki" ? "info" : "warn"}">${esc(st)}</span>`;
 function vPelihara() {
   const f = UI.pl, all = plRows("semua"), aktif = all.filter(r => r.st !== "Selesai"), ed = can("pelihara");
-  const rows = all.filter(r => (f.st === "aktif" ? r.st !== "Selesai" : !f.st || r.st === f.st) && (!f.jenis || r.t === f.jenis) && matches(f.q, [r.nama, r.kode, r.lokasi, r.pl.oleh, r.pl.ket]));
+  const rows = all.filter(r => (f.st === "aktif" ? r.st !== "Selesai" : !f.st || r.st === f.st) && (!f.jenis || r.t === f.jenis) && (!f.th || (r.t === "aset" && thMatch(r.ref, f.th))) && matches(f.q, [r.nama, r.kode, r.lokasi, r.pl.oleh, r.pl.ket]));
   const ntPerbaikan = S.catatan.filter(c => c.val !== false && c.st !== "Selesai" && c.kat === "Perlu perbaikan / perawatan").length;
   const biaya = all.reduce((t, r) => t + (+r.pl.biaya || 0), 0);
   const editor = r => `<tr><td colspan="7" style="background:var(--sunk)"><div class="fgrid">
@@ -823,6 +831,7 @@ function vPelihara() {
   ${ntPerbaikan ? `<div class="note info" style="margin-top:14px">${fmt(ntPerbaikan)} catatan temuan berkategori "Perlu perbaikan / perawatan" belum selesai. <button class="link" id="pl-nt">Lihat catatannya</button></div>` : ""}
   <div class="toolbar" style="margin-top:14px"><div class="chips"><button class="chip" data-plst="aktif" aria-pressed="${f.st === "aktif"}">Belum selesai · ${fmt(aktif.length)}</button>${PL_ST.map(o => `<button class="chip" data-plst="${o}" aria-pressed="${f.st === o}">${o}</button>`).join("")}<button class="chip" data-plst="" aria-pressed="${!f.st}">Semua</button></div></div>
   <div class="toolbar"><label class="f grow">Cari<input id="pl-q" type="search" value="${esc(f.q)}" placeholder="nama barang/ruang, kode, posisi, pelaksana…"></label>
+    ${thSelect("pl-th", all.filter(r => r.t === "aset").map(r => r.ref), f.th, "Tahun perolehan (aset)")}
     <label class="f">Jenis<select id="pl-jenis"><option value="">Aset dan ruang</option><option value="aset" ${f.jenis === "aset" ? "selected" : ""}>Aset</option><option value="ruang" ${f.jenis === "ruang" ? "selected" : ""}>Ruang</option></select></label>
     <span class="sp"></span><button id="pl-xlsx" ${all.length ? "" : "disabled"}>Unduh Excel</button></div>
   <div class="tablebox"><table><thead><tr><th>Jenis</th><th>Aset / ruang</th><th class="hide-sm">Posisi</th><th>Kondisi</th><th>Status perbaikan</th><th class="hide-sm">Pelaksana</th><th class="num hide-sm">Biaya</th></tr></thead><tbody>
@@ -855,7 +864,7 @@ document.addEventListener("click", e => {
 });
 function plOpen(key) { const [t, ...rest] = key.split("|"), id = rest.join("|"); if (t === "aset") openItem(id); else openRuang(id); }
 document.addEventListener("input", e => { if (e.target.id === "pl-q") { UI.pl.q = e.target.value; render(); } });
-document.addEventListener("change", e => { if (e.target.id === "pl-jenis") { UI.pl.jenis = e.target.value; render(); } });
+document.addEventListener("change", e => { if (e.target.id === "pl-jenis") { UI.pl.jenis = e.target.value; render(); } if (e.target.id === "pl-th") { UI.pl.th = e.target.value; render(); } if (e.target.id === "h-th") { UI.hapus.th = e.target.value; render(); } });
 
 /* ================= aplikasi: jadwal ruang (Aula & Multimedia) ================= */
 const JD_RUANG = [{ id:"aula", nama:"Aula" }, { id:"mm", nama:"Ruang Multimedia" }];
@@ -1359,7 +1368,7 @@ function biExcel() {
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
-  if (b.id === "a-bi") { UI.bi.open = !UI.bi.open; render(); }
+  if (b.id === "a-bi") { UI.bi.open = !UI.bi.open; if (UI.bi.open && UI.aset.th && UI.aset.th !== "-") { UI.bi.dari = UI.aset.th; UI.bi.sampai = UI.aset.th; } render(); }
   if (b.dataset.biall != null) { UI.bi.all = b.dataset.biall === "1"; render(); }
   if (b.dataset.bifoto != null) { UI.bi.foto2 = b.dataset.bifoto === "1"; render(); }
   if (b.id === "bi-close") { UI.bi.open = false; render(); }
@@ -1508,6 +1517,7 @@ function filterAset() {
     else if (sub === "bospda") { if (!isBospda(x)) return false; if (f.kat && x.kat !== f.kat) return false; }
     else if (x.kat !== sub || !x.sip || isBospda(x)) return false;
     if (f.kond === "-" ? x.kond : (f.kond && x.kond !== f.kond)) return false;
+    if (!thMatch(x, f.th)) return false;
     if (f.gol && golOf(x.kode) !== f.gol) return false;
     if (f.gedung && x.gedung !== f.gedung) return false;
     if (f.flag && FLAGS[f.flag] && !FLAGS[f.flag][1](x)) return false;
@@ -1536,6 +1546,7 @@ function vAset() {
   </div>
   <div class="toolbar">
     <label class="f grow">Cari<input id="a-q" type="search" placeholder="nama, merek, kode, no. registrasi, pemegang, ruang…" value="${esc(f.q)}"></label>
+    ${thSelect("a-th", inKat, f.th)}
     <label class="f">Kondisi<select id="a-kond"><option value="">Semua</option><option value="-" ${f.kond==="-"?"selected":""}>Belum dicek</option>${KOND.map(x => `<option ${x===f.kond?"selected":""}>${x}</option>`).join("")}</select></label>
     ${gols.length > 1 ? `<label class="f">Kelompok<select id="a-gol"><option value="">Semua</option>${gols.map(g => `<option ${g===f.gol?"selected":""}>${esc(g)}</option>`).join("")}</select></label>` : ""}
     ${gedungs.length ? `<label class="f">Gedung<select id="a-gedung"><option value="">Semua</option>${gedungs.map(g => `<option ${g===f.gedung?"selected":""}>${esc(g)}</option>`).join("")}</select></label>` : ""}
@@ -1986,7 +1997,7 @@ async function saveBast0() {
 /* ================= penghapusan ================= */
 function vHapus() {
   const all = allItems().visible.filter(usulHapus);
-  const f = UI.hapus, rows = all.filter(x => !f.kat || x.kat === f.kat).sort((a, b) => (KAT.findIndex(k => k.id === a.kat) - KAT.findIndex(k => k.id === b.kat)) || ((parseInt(String(a.hapusNo).replace(/\D/g, "")) || 1e9) - (parseInt(String(b.hapusNo).replace(/\D/g, "")) || 1e9)));
+  const f = UI.hapus, rows = all.filter(x => (!f.kat || x.kat === f.kat) && thMatch(x, f.th)).sort((a, b) => (KAT.findIndex(k => k.id === a.kat) - KAT.findIndex(k => k.id === b.kat)) || ((parseInt(String(a.hapusNo).replace(/\D/g, "")) || 1e9) - (parseInt(String(b.hapusNo).replace(/\D/g, "")) || 1e9)));
   const rehab = allItems().visible.filter(x => (x.kond === "Rusak Berat" || x.kond === "Hilang") && x.rehab);
   const sv = a => a.reduce((t, x) => t + itemNilai(x), 0);
   const noFoto = all.filter(x => !x.foto && !(x.fotos || []).length), noNo = all.filter(x => !x.hapusNo);
@@ -2000,6 +2011,7 @@ function vHapus() {
     <div class="kpi"><span class="l">Belum bernomor usulan</span><span class="v">${fmt(noNo.length)}</span><span class="s">${noNo.length ? '<button class="link" id="h-number">Beri nomor otomatis</button>' : "semua sudah bernomor"}</span></div>
   </div>
   <div class="toolbar" style="margin-top:14px">
+    ${thSelect("h-th", all, f.th)}
     <div class="chips"><button class="chip" data-hkat="" aria-pressed="${!f.kat}">Semua · ${all.length}</button>${byKat.map(([k, a]) => `<button class="chip" data-hkat="${k.id}" aria-pressed="${f.kat === k.id}">${k.kib} ${k.nama} · ${a.length}</button>`).join("")}</div>
     <span class="sp"></span><button id="h-foto">Unduh lembar foto (PDF)</button><button class="primary" id="h-xlsx">Unduh lampiran usulan (Excel)</button></div>
   ${all.some(x => x.kat === "gedung") ? `<div class="note" style="margin-bottom:12px">Ruang/bangunan rusak berat ikut masuk daftar. Untuk ruang yang akan direhabilitasi, buka detailnya dan centang "Jangan usulkan hapus".</div>` : ""}
@@ -2008,7 +2020,7 @@ function vHapus() {
   </tbody></table></div>
   ${rehab.length ? `<details style="margin-top:14px"><summary class="muted">${fmt(rehab.length)} aset rusak berat/hilang dikecualikan dari usulan</summary><div class="tablebox" style="margin-top:8px"><table><tbody>${rehab.map(x => `<tr class="rowlink" tabindex="0" data-key="${esc(x.key)}"><td>${esc(itemNama(x))}</td><td class="mono">${esc(idLabel(x))}</td><td>${kondPill(x.kond)}</td></tr>`).join("")}</tbody></table></div></details>` : ""}`;
 }
-function hapusRows() { return allItems().visible.filter(usulHapus).sort((a, b) => (KAT.findIndex(k => k.id === a.kat) - KAT.findIndex(k => k.id === b.kat))); }
+function hapusRows() { return allItems().visible.filter(x => usulHapus(x) && thMatch(x, UI.hapus.th)).sort((a, b) => (KAT.findIndex(k => k.id === a.kat) - KAT.findIndex(k => k.id === b.kat))); }
 async function hapusFotoPdf() {
   if (!window.jspdf) { toast("Modul PDF belum termuat."); return; }
   const rows = hapusRows().filter(x => !UI.hapus.kat || x.kat === UI.hapus.kat).filter(x => (x.fotos || []).length);
@@ -3243,6 +3255,7 @@ document.addEventListener("change", e => {
   const A = UI.aset;
   if (id === "a-kond") { A.kond = t.value; A.page = 0; render(); }
   else if (id === "a-gol") { A.gol = t.value; A.page = 0; render(); }
+  else if (id === "a-th") { A.th = t.value; A.page = 0; render(); }
   else if (id === "a-kat") { A.kat = t.value; A.page = 0; render(); }
   else if (id === "a-gedung") { A.gedung = t.value; A.page = 0; render(); }
   else if (id === "b-tgl") { UI.bast.tgl = t.value; render(); }
@@ -3367,7 +3380,7 @@ document.addEventListener("click", async e => {
     case "a-next": UI.aset.page++; render(); break;
     case "a-xlsx": { const kk = subMeta(sub); xlsxSave(`Aset ${kk.kib} ${kk.nama} ${today()}.xlsx`, [[kk.kib.slice(0, 31), filterAset().map(asetRow)]]); break; }
     case "a-kir": {
-      const g = {}; for (const x of subItems(sub)) { const k = x.lokasi || x.pj || "(belum ada posisi/pemegang)"; (g[k] = g[k] || []).push(x); }
+      const g = {}; for (const x of filterAset()) { const k = x.lokasi || x.pj || "(belum ada posisi/pemegang)"; (g[k] = g[k] || []).push(x); }
       xlsxSave(`KIR ${subMeta(sub).nama} ${today()}.xlsx`, [["Rekap", Object.entries(g).sort().map(([k, a]) => ({ "Posisi / Pemegang":k, "Jumlah":a.length, "Nilai":a.reduce((s, x) => s + itemNilai(x), 0), "Sudah dicek":a.filter(x => x.kond).length }))], ["KIR", Object.entries(g).sort().flatMap(([k, a]) => a.map(x => Object.assign({ "Posisi / Pemegang":k }, asetRow(x))))]]);
       break;
     }
