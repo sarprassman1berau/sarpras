@@ -379,6 +379,8 @@ function buildItems() {
   const byKey = new Map(out.map(x => [x.key, x]));
   // a paired internal note is represented by its SIPBMD record
   for (const x of out) if ((x.src === "I" || x.src === "N") && x.pair && byKey.get(x.pair)) x.hidden = true;
+  // validated school updates (nama, merek, tahun, …) replace the shown value everywhere; the SIPBMD original stays in x.orig for comparison
+  for (const x of out) if (x.kib && Object.keys(x.kib).length) for (const f of kibFields(x.kat)) { if (typeof f.src !== "string" || f.ro) continue; const v = x.kib[f.l]; if (v == null || v === "") continue; const k = f.src.slice(1); x.orig = x.orig || {}; if (!(k in x.orig)) x.orig[k] = x[k]; x[k] = v; }
   return { list:out, byKey, visible:out.filter(x => !x.hidden) };
 }
 function allItems() { if (!cache) cache = buildItems(); return cache; }
@@ -989,20 +991,20 @@ document.addEventListener("change", e => {
 // each field: [label, source] where source is a core field name ("@nodok") or a regex on the SIPBMD column title kept in x.extra
 const KIB_FMT = {
   tanah:{ judul:"Kartu Inventarisasi Barang (KIBAR) Tanah", grup:[
-    ["Data barang", [["Kode lokasi", /^kode\s*lokasi/i], ["Spesifikasi nama barang", /spesifikasi/i], ["Luas", /^(luas|jumlah\s*\(luas\))/i, "m²"], ["Satuan", /^satuan/i], ["Harga satuan perolehan", /harga\s*satuan/i, "rp"], ["Nilai perolehan", "@nilai", "rp"], ["Kondisi di SIPBMD", "@ksip"]]],
+    ["Data barang", [["Nama barang", "@nama"], ["Kode lokasi", /^kode\s*lokasi/i], ["Spesifikasi nama barang", /spesifikasi/i], ["Luas", /^(luas|jumlah\s*\(luas\))/i, "m²"], ["Satuan", /^satuan/i], ["Harga satuan perolehan", /harga\s*satuan/i, "rp"], ["Nilai perolehan", "@nilai", "rp"], ["Kondisi di SIPBMD", "@ksip"]]],
     ["Lokasi", [["Provinsi", /^provinsi/i], ["Kabupaten/Kota", /^kab/i], ["Kecamatan", /^kecamatan/i], ["Kelurahan/Desa", /kelurahan|desa/i], ["Jalan", /^(jalan|alamat)/i], ["RT/RW", /^rt/i], ["Titik koordinat", /koordinat/i]]],
     ["Dokumen kepemilikan", [["Nama dokumen", /^(nama\s*dokumen|hak|jenis\s*dokumen)/i], ["Nomor", "@nodok"], ["Tanggal", /^(tanggal|tgl\.?)\s*(dokumen|sertifikat)/i, "tgl"], ["Nama kepemilikan dalam dokumen", /kepemilikan|^nama\s*pemilik/i]]],
     ["Tanda batas tanah", [["Utara", /utara/i], ["Timur", /timur/i], ["Selatan", /selatan/i], ["Barat", /barat/i]]],
   ] },
   gedung:{ judul:"Data Gedung dan Bangunan (SIPBMD)", grup:[
-    ["Data bangunan", [["Tanggal perolehan", "@tgl", "tgl"], ["Nomor dokumen", "@nodok"], ["Tanggal dokumen", /^(tanggal|tgl\.?)\s*dokumen/i, "tgl"], ["Bertingkat", /bertingkat/i], ["Beton", /^beton/i], ["Luas bangunan", /luas/i, "m²"], ["Kondisi di SIPBMD", "@ksip"]]],
+    ["Data bangunan", [["Nama barang", "@nama"], ["Tanggal perolehan", "@tgl", "tgl"], ["Nomor dokumen", "@nodok"], ["Tanggal dokumen", /^(tanggal|tgl\.?)\s*dokumen/i, "tgl"], ["Bertingkat", /bertingkat/i], ["Beton", /^beton/i], ["Luas bangunan", /luas/i, "m²"], ["Kondisi di SIPBMD", "@ksip"]]],
     ["Lokasi & tanah", [["Lokasi", /^(lokasi|alamat)/i], ["Status tanah", /status\s*tanah/i], ["Asal usul", "@asal"]]],
     ["Nilai & keterangan", [["Nilai perolehan", "@nilai", "rp"], ["Keterangan", "@ket"]]],
   ] },
 };
 // the other golongan follow the SIPBMD list columns
 const GEN_FMT = (judul, atl) => ({ judul, grup:[
-  ["Data barang", [...(atl ? [["Judul", "@judul"], ["Pencipta / pengarang", "@pencipta"]] : []), ["Merek", "@merek"], ["Tipe", "@tipe"], ["Ukuran / CC", "@ukuran"], ["Bahan", "@bahan"], ["Spesifikasi", "@spes"], ["No. pabrik / rangka / mesin / polisi / BPKB", "@sn"]]],
+  ["Data barang", [["Nama barang", "@nama"], ...(atl ? [["Judul", "@judul"], ["Pencipta / pengarang", "@pencipta"]] : []), ["Merek", "@merek"], ["Tipe", "@tipe"], ["Ukuran / CC", "@ukuran"], ["Bahan", "@bahan"], ["Spesifikasi", "@spes"], ["No. pabrik / rangka / mesin / polisi / BPKB", "@sn"]]],
   ["Perolehan", [["Tahun perolehan", "@th"], ["Tanggal perolehan", "@tgl", "tgl"], ["Nomor dokumen", "@nodok"], ["Asal usul", "@asal"], ["Nilai perolehan", "@nilai", "rp", "ro"], ["Kapitalisasi", "@kap"], ["Kondisi di SIPBMD", "@ksip", "", "ro"], ["Keterangan", "@ket"]]],
 ] });
 KIB_FMT.pm = GEN_FMT("Data Peralatan dan Mesin (KIB B)");
@@ -1015,7 +1017,7 @@ const kibFields = kat => (KIB_FMT[kat] ? KIB_FMT[kat].grup.flatMap(([g, fs]) => 
 const kibEmpty = v => v == null || v === "" || v === "-";
 function kibVal(x, src, label) {
   let r;
-  if (typeof src === "string") r = { key:null, v:x[src.slice(1)] };
+  if (typeof src === "string") { const k = src.slice(1); r = { key:null, v:x.orig && k in x.orig ? x.orig[k] : x[k] }; }
   else { const ex = x.extra || {}, key = Object.keys(ex).find(k => src.test(k)); r = { key, v:key ? ex[key] : "" }; }
   const man = label && x.kib ? x.kib[label] : null;
   if (!kibEmpty(man)) return { key:r.key, v:man, sip:r.v, isi:true, beda:!kibEmpty(r.v) && norm(String(r.v)) !== norm(String(man)) };
@@ -1237,7 +1239,7 @@ document.addEventListener("change", e => {
 });
 
 /* ================= buku induk ================= */
-UI.bi = { open:false, all:false, dari:"", sampai:"", sumber:"", st:"", kond:"", lok:"", pj:"", foto:false, busy:false };
+UI.bi = { open:false, all:false, cover:true, dari:"", sampai:"", sumber:"", st:"", kond:"", lok:"", pj:"", foto:false, busy:false };
 const biBase = () => UI.bi.all ? allItems().visible.filter(x => x.src !== "G") : subItems(sub);
 // groups for a combined book: every SIPBMD golongan, then the two special lists
 function biGroups(list) {
@@ -1285,13 +1287,13 @@ function biPanel() {
       <label class="f">Pemegang mengandung<input id="bi-pj" value="${esc(B.pj)}" placeholder="mis. Ika"></label>
       <label class="ck full"><input type="checkbox" id="bi-foto" ${B.foto ? "checked" : ""}> Hanya aset yang sudah berfoto</label>
     </div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px"><span class="chips" role="group" aria-label="Foto di PDF"><button class="chip" data-bifoto="1" aria-pressed="${B.foto2 !== false}">Dengan foto</button><button class="chip" data-bifoto="0" aria-pressed="${B.foto2 === false}">Tanpa foto</button></span><button class="primary" id="bi-pdf" ${list.length && !B.busy ? "" : "disabled"}>${B.busy ? "Menyusun…" : `Unduh Buku Induk (PDF, ${B.foto2 === false ? "tanpa" : "dengan"} foto)`}</button><button id="bi-xlsx" ${list.length ? "" : "disabled"}>Unduh Buku Induk (Excel)</button>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px"><label class="ck"><input type="checkbox" id="bi-cover" ${B.cover ? "checked" : ""}> Sertakan cover</label><span class="chips" role="group" aria-label="Foto di PDF"><button class="chip" data-bifoto="1" aria-pressed="${B.foto2 !== false}">Dengan foto</button><button class="chip" data-bifoto="0" aria-pressed="${B.foto2 === false}">Tanpa foto</button></span><button class="primary" id="bi-pdf" ${list.length && !B.busy ? "" : "disabled"}>${B.busy ? "Menyusun…" : `Unduh Buku Induk (PDF, ${B.foto2 === false ? "tanpa" : "dengan"} foto)`}</button><button id="bi-xlsx" ${list.length ? "" : "disabled"}>Unduh Buku Induk (Excel)</button>
       <span class="muted">${fmt(list.length)} aset · ${fmt(nf)} berfoto · ${rp(list.reduce((t, x) => t + itemNilai(x), 0))}</span></div>
     <p class="hint">Excel berisi data lengkap tanpa foto; foto hanya ada di versi PDF.</p></section>`;
 }
 // SIPBMD / KIB details folded into one readable text for the book
 function biSpes(x) {
-  const skip = new Set(["Nilai perolehan", "Kondisi di SIPBMD", "Tahun perolehan", "Tanggal perolehan", "Asal usul"]);
+  const skip = new Set(["Nama barang", "Nilai perolehan", "Kondisi di SIPBMD", "Tahun perolehan", "Tanggal perolehan", "Asal usul"]);
   return kibFields(x.kat).filter(f => !skip.has(f.l)).map(f => { const r = kibVal(x, f.src, f.l), v = kibFmtVal(r.v, f.u); return v ? f.l + ": " + v + (r.isi && x.sip ? (r.beda ? " (SIPBMD: " + kibFmtVal(r.sip, f.u) + ")" : " (diisi sekolah)") : "") : ""; }).filter(Boolean).join("; ");
 }
 async function biPdf() {
@@ -1328,6 +1330,7 @@ async function biPdf() {
     // draws everything except the signatures; keepLast > 0 moves the last rows to a new page so they stay with the signatures
     const draw = keepLast => {
       const doc = new jsPDF({ unit:"mm", format:"a4", orientation:"landscape" });
+      if (UI.bi.cover) { pdfCover(doc, { judul:["BUKU INDUK", "BARANG MILIK DAERAH"], sub:[gol, "Keadaan per " + tglID(today()), biFilterText() !== "semua data" ? "Data: " + biFilterText() : "", fmt(list.length) + " catatan barang · nilai Rp" + fm(total)], rows:COVER_ID(), tahun:(UI.bi.dari && UI.bi.dari === UI.bi.sampai ? "Tahun Perolehan " + UI.bi.dari : new Date().getFullYear()) }); doc.addPage(); }
       let y = pdfKop(doc); y = pdfJudul(doc, y, ["BUKU INDUK BARANG MILIK DAERAH"], gol);
       doc.setFontSize(9.5);
       [["Kuasa Pengguna Barang", "SMA Negeri 1 Berau"], ["Pengguna Barang", "Dinas Pendidikan dan Kebudayaan Provinsi Kalimantan Timur"], ["Data", biFilterText()], ["Jumlah", fmt(list.length) + " catatan barang · nilai Rp" + fm(total)], ["Keadaan per", tglID(today())], ["Foto", withFoto ? "dicantumkan" : "tidak dicantumkan"]].forEach(([k, v]) => { doc.text(k, 20, y); doc.text(": " + v, 62, y); y += 4.6; });
@@ -1355,7 +1358,7 @@ async function biPdf() {
     doc.setFontSize(10); doc.text("Tanjung Redeb, " + tglID(today()), Wp - 60, y, { align:"center" }); y += 5;
     // pimpinan di kiri: Kepala Sekolah · Waka Sarpras · Pengurus Barang (label rata bawah supaya nama sejajar)
     sb(60, "Kepala Sekolah\nselaku Kuasa Pengguna Barang,", c.kepsek, c.nipKepsek); sb(Wp / 2, "\nWaka Sarpras,", c.waka, c.nipWaka); sb(Wp - 60, "\nPengurus Barang,", c.pengurus, c.nipPengurus);
-    saveFile(`Buku Induk ${biNama()}${withFoto ? "" : " (tanpa foto)"} ${today()}.pdf`, pdfFinish(doc).output("blob"));
+    saveFile(`Buku Induk ${biNama()}${withFoto ? "" : " (tanpa foto)"} ${today()}.pdf`, pdfFinish(doc, { cover:UI.bi.cover }).output("blob"));
   } catch (e) { toast("Buku induk gagal disusun (" + (e.message || e) + ")."); }
   UI.bi.busy = false; render();
 }
@@ -1377,7 +1380,7 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("change", e => {
   const t = e.target, m = { "bi-dari":"dari", "bi-sampai":"sampai", "bi-sumber":"sumber", "bi-st":"st", "bi-kond":"kond", "bi-lok":"lok", "bi-pj":"pj" };
-  if (m[t.id]) { UI.bi[m[t.id]] = t.value; render(); } if (t.id === "bi-foto") { UI.bi.foto = t.checked; render(); }
+  if (m[t.id]) { UI.bi[m[t.id]] = t.value; render(); } if (t.id === "bi-foto") { UI.bi.foto = t.checked; render(); } if (t.id === "bi-cover") { UI.bi.cover = t.checked; render(); }
 });
 
 /* ================= unduh KIB ================= */
@@ -1394,7 +1397,8 @@ const tahunOf = x => +(String(x.th || "").slice(0, 4) || String(x.tgl || "").sli
 function kibRow(x, cols, n) {
   const r = {}, on = k => cols.includes(k);
   if (on("id")) Object.assign(r, { "No":n, "Kode Aset":x.kode || "", "No Register":x.noreg || "", "No Registrasi Internal":x.reg || "", "Nama Aset":x.nama || "", "Golongan":KATMAP[x.kat] ? KATMAP[x.kat].kib + " " + KATMAP[x.kat].nama : "", "Status Pencatatan":isBospda(x) ? "BOSP Daerah, menunggu SIPBMD" : x.sip ? "Tercatat SIPBMD" : "Tidak tercatat" });
-  if (on("kib")) for (const f of kibFields(x.kat)) { const v = kibVal(x, f.src, f.l).v; r[f.l] = f.u === "rp" ? numVal(v) : f.u === "tgl" ? (parseTgl(String(v || "")) || v || "") : (kibEmpty(v) ? "" : v); }
+  if (on("id") && x.orig && x.orig.nama != null && x.orig.nama !== x.nama) r["Nama di SIPBMD"] = x.orig.nama;
+  if (on("kib")) for (const f of kibFields(x.kat)) { if (f.l === "Nama barang") continue; const v = kibVal(x, f.src, f.l).v; r[f.l] = f.u === "rp" ? numVal(v) : f.u === "tgl" ? (parseTgl(String(v || "")) || v || "") : (kibEmpty(v) ? "" : v); }
   if (on("beda")) r["Isian sekolah berbeda dari SIPBMD"] = kibFields(x.kat).map(f => { const k = kibVal(x, f.src, f.l); return k.isi ? `${f.l}: ${kibEmpty(k.sip) ? "(kosong)" : k.sip} → ${k.v}` : ""; }).filter(Boolean).join("; ");
   if (on("serah")) Object.assign(r, { "Diserahkan ke":x.pj || "", "Jabatan":x.jab || "", "NIP":x.nip || "", "Peruntukan":x.untuk || "", "Posisi Barang (Lokasi Sekolah)":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "" });
   if (on("kond")) Object.assign(r, { "Kondisi Cek Fisik":x.kond || "Belum dicek", "Tgl Cek":x.tcek || "", "Pemeriksa":x.cek || "", "Catatan Kondisi":x.cat || "", "Pemeliharaan":x.kond === "Rusak Sedang" ? ((x.pl && x.pl.st !== "Selesai" && x.pl.st) || "Belum ditangani") : "", "Usulan Penghapusan":usulHapus(x) ? (x.hapusNo || "Ya") : "" });
@@ -1747,7 +1751,8 @@ function nextNomor(jenis, tgl) {
   const klas = jenis === "tarik" ? c.klasTarik : c.klasSerah, bag = jenis === "tarik" ? c.bagTarik : c.bagSerah;
   return `${klas}/${max + 1}/SMAN1-Berau-${bag}/${ROMAWI[m - 1]}/${y}`;
 }
-function bastItem(x) { return { key:x.key, th:tahunOf(x) ? String(tahunOf(x)) : "", nama:x.nama, merek:x.src === "P" ? "" : x.merek || "", spes:x.src === "S" ? x.tipe || "" : x.spes || "", jml:1, reg:x.reg || "", kode:x.kode || "", noreg:x.noreg || "", nilai:x.src === "S" ? x.nilai || 0 : x.harga || x.nilai || 0 }; }
+function bastItem(x) { return { key:x.key, th:tahunOf(x) ? String(tahunOf(x)) : "", nama:x.nama, // x.nama already carries validated name updates
+ merek:x.src === "P" ? "" : x.merek || "", spes:x.src === "S" ? x.tipe || "" : x.spes || "", jml:1, reg:x.reg || "", kode:x.kode || "", noreg:x.noreg || "", nilai:x.src === "S" ? x.nilai || 0 : x.harga || x.nilai || 0 }; }
 function vBast() {
   const f = UI.bast;
   const picked = new Set(f.items.map(i => i.key));
@@ -1886,9 +1891,36 @@ function pdfPara(doc, y, text, x = 20, w = 170, lh = 4.7) {
   return y + 1.8;
 }
 // footer on every page: app name, print time, page numbers
-function pdfFinish(doc) {
+// cover page: logos, title block, identity box, issuing institution at the bottom
+function pdfCover(doc, o) {
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), cx = W / 2, land = W > H;
+  doc.setDrawColor(30, 90, 76); doc.setLineWidth(1.2); doc.rect(10, 10, W - 20, H - 20); doc.setLineWidth(0.3); doc.rect(12.5, 12.5, W - 25, H - 25); doc.setDrawColor(0);
+  const LH = land ? 30 : 38, top = land ? 22 : 30;
+  try { if (LOGO_JPG.kaltim) doc.addImage(LOGO_JPG.kaltim.data, "JPEG", cx - 8 - LH * LOGO_JPG.kaltim.r, top, LH * LOGO_JPG.kaltim.r, LH); } catch (e) {}
+  try { if (LOGO_JPG.sekolah) doc.addImage(LOGO_JPG.sekolah.data, "JPEG", cx + 8, top, LH * LOGO_JPG.sekolah.r, LH); } catch (e) {}
+  let y = top + LH + (land ? 16 : 26);
+  doc.setTextColor(20); doc.setFont("helvetica", "bold");
+  o.judul.forEach((t, i) => { doc.setFontSize(i === 0 ? (land ? 26 : 28) : (land ? 17 : 18)); doc.text(t, cx, y, { align:"center" }); y += i === 0 ? (land ? 10 : 12) : (land ? 7.5 : 9); });
+  doc.setLineWidth(0.6); doc.setDrawColor(30, 90, 76); doc.line(cx - 45, y - 2, cx + 45, y - 2); doc.setDrawColor(0); y += 6;
+  doc.setFont("helvetica", "normal"); doc.setFontSize(land ? 12 : 12.5);
+  for (const t of [].concat(o.sub || []).filter(Boolean)) { for (const ln of doc.splitTextToSize(t, W - 70)) { doc.text(ln, cx, y, { align:"center" }); y += 6; } }
+  y += land ? 6 : 14;
+  if (o.rows && o.rows.length) {
+    const bw = Math.min(W - 60, 170), bx = cx - bw / 2, rh = 6.2, bh = o.rows.length * rh + 8;
+    doc.setDrawColor(150); doc.setLineWidth(0.25); doc.rect(bx, y, bw, bh); doc.setDrawColor(0); let yy = y + 7;
+    doc.setFontSize(10.5);
+    for (const [k, v] of o.rows) { doc.setFont("helvetica", "normal"); doc.text(k, bx + 6, yy); doc.text(":", bx + 58, yy); doc.setFont("helvetica", "bold"); doc.text(doc.splitTextToSize(String(v || "-"), bw - 70)[0], bx + 62, yy); yy += rh; }
+    doc.setFont("helvetica", "normal");
+  }
+  let yb = H - (land ? 34 : 46);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(land ? 12 : 13);
+  for (const t of ["PEMERINTAH PROVINSI KALIMANTAN TIMUR", "DINAS PENDIDIKAN DAN KEBUDAYAAN", "SMA NEGERI 1 BERAU"]) { doc.text(t, cx, yb, { align:"center" }); yb += land ? 5.6 : 6.4; }
+  doc.setFont("helvetica", "normal"); doc.setFontSize(land ? 11 : 12); doc.text(String(o.tahun || new Date().getFullYear()), cx, yb + 1, { align:"center" });
+}
+const COVER_ID = () => [["Satuan Pendidikan", "SMA Negeri 1 Berau"], ["NPSN / NSS", "30400382 / 30.1.16.301.002"], ["Kuasa Pengguna Barang", "SMA Negeri 1 Berau"], ["Pengguna Barang", "Dinas Pendidikan dan Kebudayaan"], ["Pemerintah Daerah", "Provinsi Kalimantan Timur"], ["Alamat", "Jl. Mangga I No. 14, Tanjung Redeb, Berau"]];
+function pdfFinish(doc, opt = {}) {
   const n = doc.getNumberOfPages(), W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
-  for (let i = 1; i <= n; i++) { doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(120); doc.text("Aplikasi Aset & Persediaan SMAN 1 Berau · dicetak " + tglJam(new Date().toISOString()), 20, H - 8); doc.text("Halaman " + i + " dari " + n, W - 20, H - 8, { align:"right" }); doc.setTextColor(20); }
+  for (let i = opt.cover ? 2 : 1; i <= n; i++) { doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(120); doc.text("Aplikasi Aset & Persediaan SMAN 1 Berau · dicetak " + tglJam(new Date().toISOString()), 20, H - 8); doc.text("Halaman " + (opt.cover ? i - 1 : i) + " dari " + (opt.cover ? n - 1 : n), W - 20, H - 8, { align:"right" }); doc.setTextColor(20); }
   return doc;
 }
 async function pdfFotos(list) {
@@ -2430,7 +2462,7 @@ function vKertas() {
     <div class="kpi"><span class="l">Reklas ke persediaan</span><span class="v" style="font-size:21px">${rp(reklas)}</span><span class="s">${fmt(linked)} aset tercipta dari kertas kerja ini</span></div>
   </div>
   <div class="toolbar" style="margin-top:14px"><label class="f grow">Cari<input id="kk-q" type="search" value="${esc(f.q)}" placeholder="nama pekerjaan, nomor SPK, barang, penyedia…"></label><span class="sp"></span>
-    <button id="kk-pdf" ${all.length ? "" : "disabled"}>Unduh PDF</button><button class="primary" id="kk-xlsx" ${all.length ? "" : "disabled"}>Unduh kertas kerja (Excel)</button></div>
+    <label class="ck"><input type="checkbox" id="kk-cover" ${UI.kk.cover !== false ? "checked" : ""}> Cover</label><button id="kk-pdf" ${all.length ? "" : "disabled"}>Unduh PDF</button><button class="primary" id="kk-xlsx" ${all.length ? "" : "disabled"}>Unduh kertas kerja (Excel)</button></div>
   <div class="tablebox"><table><thead><tr><th>No</th><th>Pekerjaan · SPK/SPB/Nota</th><th>Rincian barang</th><th class="hide-sm">SP2D · BAST/TTB</th><th class="hide-sm">Penyedia</th><th class="num">Nilai</th></tr></thead><tbody>
   ${list.map((k, n) => { const tb = kkTotal(k), bad = Math.abs((+k.nilai || 0) - tb) > 1; return `<tr class="rowlink" tabindex="0" data-kk="${esc(k._id)}"><td class="num">${n + 1}</td><td><div class="nm">${esc(k.nama)}</div><div class="sm mono">${esc(k.nomor || "")}</div><div class="sm">${esc(tglID(k.tgl))}</div></td>
     <td>${(k.items || []).map(l => `<div>${esc(l.nama)} <span class="faint">· ${fmt(l.jml)} ${esc(l.satuan || "")} × ${rp(l.harga)}</span> ${l.reklas ? '<span class="pill warn">reklas</span>' : `<span class="pill">${esc(KATMAP[l.kat || katFromRek(l.rek)].kib)}</span>`}</div>`).join("")}</td>
@@ -2623,6 +2655,7 @@ function kkPdf() {
   if (!window.jspdf) { toast("Modul PDF belum termuat."); return; }
   const f = UI.kk, list = kkList(), c = cfg(), { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:"mm", format:[215, 330], orientation:"landscape" }), fm = n => Math.round(n || 0).toLocaleString("id-ID");
+  if (UI.kk.cover !== false) { pdfCover(doc, { judul:["BERKAS REKON", "KERTAS KERJA ASET TETAP (MODAL)"], sub:["Sumber dana " + f.sumber + " · Tahun " + f.tahun, smtLabel(f.smt, f.tahun), fmt(list.length) + " pekerjaan · nilai Rp" + fm(list.reduce((t, k) => t + kkTotal(k), 0))], rows:COVER_ID(), tahun:"Tahun Anggaran " + f.tahun }); doc.addPage(); }
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Format Isian Kertas Kerja Aset Tetap (Modal)", 165, 12, { align:"center" });
   doc.text(`Sumber Dana : ${f.sumber.toUpperCase()} TAHUN ${f.tahun}`, 165, 17, { align:"center" }); doc.text(`Per : ${smtLabel(f.smt, f.tahun)}`, 165, 22, { align:"center" });
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.text("Nama Sekolah : SMAN 1 BERAU    Kabupaten/Kota : Berau    Provinsi : Kalimantan Timur", 10, 29);
@@ -2641,7 +2674,7 @@ function kkPdf() {
   let y = doc.lastAutoTable.finalY + 8; if (y > 165) { doc.addPage(); y = 20; }
   doc.setFontSize(9); doc.text("Mengetahui,", 40, y); doc.text("Berau, " + smtEnd(f.smt, f.tahun), 250, y); y += 5; doc.text("Kepala SMAN 1 Berau,", 40, y); doc.text("Pengurus Barang Pembantu,", 250, y); y += 20;
   doc.setFont("helvetica", "bold"); doc.text(c.kepsek, 40, y); doc.text(c.pengurus || c.waka, 250, y); doc.setFont("helvetica", "normal"); y += 4.5; doc.text("NIP " + c.nipKepsek, 40, y); doc.text("NIP " + (c.pengurus ? c.nipPengurus : c.nipWaka), 250, y);
-  saveFile(`Kertas Kerja Modal ${f.sumber} ${f.tahun} Semester ${f.smt}.pdf`, pdfFinish(doc).output("blob"));
+  saveFile(`Kertas Kerja Modal ${f.sumber} ${f.tahun} Semester ${f.smt}.pdf`, pdfFinish(doc, { cover:UI.kk.cover !== false }).output("blob"));
 }
 /* ---- import an existing kertas kerja workbook ---- */
 async function kkReadFile(file) {
@@ -3103,13 +3136,48 @@ function rekonData() {
   for (const x of masukInt) { const k = x.sumber || "(sumber belum diisi)"; (bySumber[k] = bySumber[k] || { n:0, v:0, spj:0, pair:0 }); bySumber[k].n += x.jml || 1; bySumber[k].v += itemNilai(x); if (x.spj) bySumber[k].spj++; if (x.pair) bySumber[k].pair++; }
   return { masukSip, masukInt, mut, bySumber };
 }
+function rekonPdf() {
+  if (!window.jspdf) { toast("Modul PDF belum termuat. Coba lagi sebentar."); return; }
+  const r = rekonData(), c = cfg(), { jsPDF } = window.jspdf, fm = n => Math.round(n || 0).toLocaleString("id-ID"), sv = a => a.reduce((t, x) => t + itemNilai(x), 0);
+  const { dari, sampai } = UI.rekon, per = tglID(dari) + " s.d. " + tglID(sampai), d = sv(r.masukSip) - sv(r.masukInt), cover = UI.rekon.cover !== false;
+  const ts = { theme:"grid", margin:{ left:15, right:15, top:18, bottom:16 }, styles:{ fontSize:8, cellPadding:1.2, lineColor:[60,60,60], lineWidth:0.12, textColor:[20,20,20], overflow:"linebreak" }, headStyles:{ fillColor:[230,230,230], textColor:[20,20,20], fontStyle:"bold", halign:"center" }, showHead:"everyPage" };
+  const sec = (doc, y, t) => { if (y > 255) { doc.addPage(); y = 22; } doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text(t, 15, y); doc.setFont("helvetica", "normal"); return y + 3; };
+  const draw = keepLast => {
+    const doc = new jsPDF({ unit:"mm", format:"a4" });
+    if (cover) { pdfCover(doc, { judul:["BERKAS REKON", "REKONSILIASI ASET MASUK"], sub:["Periode " + per, "Perolehan aset menurut SIPBMD dibandingkan catatan penerimaan sekolah", "Selisih nilai: Rp" + fm(Math.abs(d)) + (Math.abs(d) > 1 ? (d >= 0 ? " (SIPBMD lebih besar)" : " (catatan sekolah lebih besar)") : " (sesuai)")], rows:COVER_ID(), tahun:"Tahun " + String(sampai).slice(0, 4) }); doc.addPage(); }
+    let y = pdfKop(doc); y = pdfJudul(doc, y, ["REKONSILIASI ASET MASUK"], "Periode " + per);
+    doc.autoTable(Object.assign({}, ts, { startY:y, head:[["Uraian", "Jumlah", "Nilai (Rp)"]], body:[["Masuk menurut SIPBMD", fmt(r.masukSip.length), fm(sv(r.masukSip))], ["Masuk menurut catatan sekolah", fmt(r.masukInt.reduce((t, x) => t + (x.jml || 1), 0)) + " unit", fm(sv(r.masukInt))], [{ content:"Selisih nilai", styles:{ fontStyle:"bold" } }, "", { content:fm(Math.abs(d)) + (Math.abs(d) > 1 ? (d >= 0 ? " (SIPBMD lebih besar)" : " (catatan sekolah lebih besar)") : ""), styles:{ fontStyle:"bold" } }], ["BAST pada periode ini", fmt(r.mut.length), ""]], columnStyles:{ 1:{ halign:"right", cellWidth:30 }, 2:{ halign:"right", cellWidth:60 } } }));
+    y = sec(doc, doc.lastAutoTable.finalY + 8, "A. Penerimaan per sumber dana (catatan sekolah)");
+    doc.autoTable(Object.assign({}, ts, { startY:y, head:[["Sumber dana", "Unit", "Nilai (Rp)", "Ber-SPJ", "Terpasang SIPBMD"]], body:Object.entries(r.bySumber).sort((a, b) => b[1].v - a[1].v).map(([k, v]) => [k, fmt(v.n), fm(v.v), fmt(v.spj), fmt(v.pair)]), columnStyles:{ 1:{ halign:"right" }, 2:{ halign:"right" }, 3:{ halign:"right" }, 4:{ halign:"right" } } }));
+    y = sec(doc, doc.lastAutoTable.finalY + 8, "B. Aset masuk menurut SIPBMD");
+    const rowsS = r.masukSip.map((x, i) => [i + 1, (x.kode || "") + "\nNo. " + (x.noreg || "-"), itemNama(x) + (x.orig && x.orig.nama && x.orig.nama !== x.nama ? "\n(SIPBMD: " + x.orig.nama + ")" : ""), tglID(x.tgl) || x.th || "-", x.nodok || "-", fm(itemNilai(x))]);
+    doc.autoTable(Object.assign({}, ts, { startY:y, head:[["No", "Kode / No. Register", "Nama Barang", "Tgl Perolehan", "No. Dokumen", "Nilai (Rp)"]], body:[...rowsS, [{ content:"JUMLAH", colSpan:5, styles:{ fontStyle:"bold", halign:"right" } }, { content:fm(sv(r.masukSip)), styles:{ fontStyle:"bold", halign:"right" } }]], columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 1:{ cellWidth:34 }, 3:{ cellWidth:24 }, 5:{ halign:"right", cellWidth:26 } } }));
+    y = sec(doc, doc.lastAutoTable.finalY + 8, "C. Aset masuk menurut catatan sekolah");
+    const rowsI = r.masukInt.map(x => [itemNama(x), x.sumber || "-", tglID(x.tgl) || x.th || "-", x.spj || "-", fmt(x.jml || 1), fm(itemNilai(x)), x.sip ? "tercatat" : isBospda(x) ? "BOSP Daerah" : "belum"]);
+    const tail = keepLast ? rowsI.splice(Math.max(0, rowsI.length - keepLast)) : [];
+    const sumI = [{ content:"JUMLAH", colSpan:5, styles:{ fontStyle:"bold", halign:"right" } }, { content:fm(sv(r.masukInt)), styles:{ fontStyle:"bold", halign:"right" } }, ""];
+    const optI = { head:[["Nama Barang", "Sumber Dana", "Tgl / Tahun", "No. SPJ", "Jml", "Nilai (Rp)", "SIPBMD"]], columnStyles:{ 4:{ halign:"right", cellWidth:10 }, 5:{ halign:"right", cellWidth:26 }, 6:{ cellWidth:20 } } };
+    if (rowsI.length) doc.autoTable(Object.assign({}, ts, optI, { startY:y, body:keepLast ? rowsI : [...rowsI, sumI] }));
+    if (keepLast) { doc.addPage(); doc.autoTable(Object.assign({}, ts, optI, { startY:22, body:[...tail, sumI] })); }
+    y = doc.lastAutoTable.finalY + 10;
+    return { doc, y };
+  };
+  let o = draw(0); if (o.y + 48 > 282) o = draw(3); if (o.y + 48 > 282) o = draw(1);
+  const doc = o.doc; let y = o.y; if (y + 48 > 282) { doc.addPage(); y = 25; }
+  doc.setFontSize(10); doc.text("Tanjung Redeb, " + tglID(today()), 165, y, { align:"center" }); y += 5;
+  const sb = (x, lab, nama, nip) => { doc.setFont("helvetica", "normal"); doc.text(lab, x, y, { align:"center" }); doc.setFont("helvetica", "bold"); doc.text(nama || "", x, y + 24, { align:"center" }); const w = doc.getTextWidth(nama || ""); doc.setLineWidth(0.25); if (nama) doc.line(x - w / 2, y + 25, x + w / 2, y + 25); doc.setFont("helvetica", "normal"); doc.text("NIP. " + (nip || "-"), x, y + 29.5, { align:"center" }); };
+  sb(45, "Kepala Sekolah\nselaku Kuasa Pengguna Barang,", c.kepsek, c.nipKepsek); sb(105, "\nWaka Sarpras,", c.waka, c.nipWaka); sb(165, "\nPengurus Barang,", c.pengurus, c.nipPengurus);
+  saveFile(`Berkas Rekon Aset ${dari} sd ${sampai}.pdf`, pdfFinish(doc, { cover }).output("blob"));
+}
+document.addEventListener("click", e => { if (e.target.closest("#r-pdf")) rekonPdf(); });
+document.addEventListener("change", e => { if (e.target.id === "r-cover") { UI.rekon.cover = e.target.checked; render(); } if (e.target.id === "kk-cover") { UI.kk.cover = e.target.checked; render(); } });
 function vRekon() {
   const f = UI.rekon; if (!f.dari) { const y = new Date().getFullYear(); f.dari = y + "-01-01"; f.sampai = y + "-12-31"; }
   const r = rekonData(), sv = a => a.reduce((t, x) => t + itemNilai(x), 0), d = sv(r.masukSip) - sv(r.masukInt);
   return `<h2>Rekon aset masuk</h2>
   <p class="lead">Perolehan aset di SIPBMD dibandingkan dengan catatan penerimaan sekolah per sumber dana, supaya selisihnya terlihat sebelum rekon dengan BPKAD. Rekon persediaan ada di menu <a href="#persediaan-mutasi">Persediaan → Mutasi</a>.</p>
   <div class="toolbar"><label class="f">Dari<input id="r-dari" type="date" value="${esc(f.dari)}"></label><label class="f">Sampai<input id="r-sampai" type="date" value="${esc(f.sampai)}"></label>
-    <div class="chips">${[0, 1, 2].map(n => { const y = new Date().getFullYear() - n; return `<button class="chip" data-year="${y}" aria-pressed="${f.dari === y + "-01-01" && f.sampai === y + "-12-31"}">${y}</button>`; }).join("")}</div><span class="sp"></span><button class="primary" id="r-xlsx">Unduh Excel rekon</button></div>
+    <div class="chips">${[0, 1, 2].map(n => { const y = new Date().getFullYear() - n; return `<button class="chip" data-year="${y}" aria-pressed="${f.dari === y + "-01-01" && f.sampai === y + "-12-31"}">${y}</button>`; }).join("")}</div><span class="sp"></span><label class="ck"><input type="checkbox" id="r-cover" ${UI.rekon.cover !== false ? "checked" : ""}> Cover</label><button id="r-pdf">Unduh PDF berkas rekon</button><button class="primary" id="r-xlsx">Unduh Excel rekon</button></div>
   <div class="grid kpis">
     <div class="kpi"><span class="l">Masuk menurut SIPBMD</span><span class="v">${fmt(r.masukSip.length)}</span><span class="s">${rp(sv(r.masukSip))}</span></div>
     <div class="kpi"><span class="l">Masuk menurut catatan sekolah</span><span class="v">${fmt(r.masukInt.reduce((t, x) => t + (x.jml || 1), 0))}</span><span class="s">${rp(sv(r.masukInt))} · ${fmt(r.masukInt.length)} baris</span></div>
