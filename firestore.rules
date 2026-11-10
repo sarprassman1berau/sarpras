@@ -31,9 +31,10 @@ service cloud.firestore {
       return isMaster() || (isOperator() && ('izin' in akunData()) && akunData().izin.get(k, false) == true);
     }
 
-    // semua data: anggota membaca, hanya master menulis
-    match /{document=**} {
-      allow read: if isMember();
+    // semua data: anggota membaca, hanya master menulis.
+    // Data keuangan (koleksi berawalan keu_) hanya dibaca akun yang dicentang aplikasi Keuangan.
+    match /{col}/{docId=**} {
+      allow read: if isMember() && (!col.matches('keu_.*') || izinKhusus('app_keuangan'));
       allow write: if isMaster();
     }
     // daftar akun: dibaca anggota (untuk menampilkan nama), dibaca juga oleh pemilik akunnya
@@ -96,6 +97,24 @@ service cloud.firestore {
         && request.resource.data.minta is string
         && request.resource.data.oleh == request.auth.uid;
     }
+    // ===== Keuangan: ditulis langsung sesuai centang hak akses (tanpa validasi master) =====
+    // usulan & KAK: pengusul menulis miliknya selama belum disetujui; pengelola RKAS mengasistensi
+    match /keu_usul/{id} {
+      allow create: if izinKhusus('keu_usul') && request.resource.data.by == request.auth.uid && request.resource.data.st == 'Diajukan';
+      allow update: if izinKhusus('keu_rkas')
+        || (izinKhusus('keu_usul') && resource.data.by == request.auth.uid && resource.data.st != 'Disetujui'
+            && request.resource.data.by == request.auth.uid && request.resource.data.st == 'Diajukan');
+      allow delete: if izinKhusus('keu_rkas') || (izinKhusus('keu_usul') && resource.data.by == request.auth.uid && resource.data.st != 'Disetujui');
+    }
+    match /keu_kak/{id} {
+      allow create: if izinKhusus('keu_usul') && request.resource.data.by == request.auth.uid;
+      allow update, delete: if izinKhusus('keu_rkas') || (izinKhusus('keu_usul') && resource.data.by == request.auth.uid);
+    }
+    match /keu_rkas/{id} { allow write: if izinKhusus('keu_rkas'); }
+    match /keu_pagu/{id} { allow write: if izinKhusus('keu_rkas'); }
+    match /keu_spj/{id} { allow write: if izinKhusus('keu_spj'); }
+    match /keu_honor/{id} { allow write: if izinKhusus('keu_spj'); }
+    match /keu_perjadin/{id} { allow write: if izinKhusus('keu_spj'); }
     // catatan temuan: ditulis langsung oleh operator yang punya hak "catatan"
     // riwayat cetak BAST: setiap akun mencatat cetakannya sendiri
     match /cetak/{id} {
