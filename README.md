@@ -76,6 +76,9 @@ Setiap data yang tersimpan diberi cap `_by` (yang mengubah), `_ok` (yang memvali
 
 ---
 
+### Unggah foto: kamera atau galeri
+Semua tempat unggah foto (detail aset, catatan temuan, foto ruang, BAST, BAST bantuan) di HP/tablet kini menampilkan pilihan **Ambil foto dengan kamera** atau **Pilih dari galeri / file** (pendengar klik global untuk `input[type=file][accept^=image]`: atribut `capture` dipasang hanya bila memilih kamera). Di komputer langsung membuka jendela pilih file.
+
 ### Migrasi aset tidak tercatat / BOSP Daerah ke menu lain
 - **Per aset** (detail aset → Pencatatan): status *Tidak tercatat* · *BOSP Daerah* · *Sudah tercatat di SIPBMD* (isi kode aset dan no. register → pindah ke menu golongan KIB yang sesuai kode), pilihan **Golongan aset** untuk memindah golongan, dan *Padanan di SIPBMD* bila barang yang sama sudah ada di data SIPBMD (catatan sekolah disembunyikan, data SIPBMD yang dipakai).
 - **Sekaligus** (centang beberapa aset → Isi sekaligus → *Migrasi / pindahkan aset*): pindahkan ke Aset tidak tercatat, Aset BOSP Daerah, atau **Sudah tercatat di SIPBMD** (kode aset sama untuk semua, no. register berurutan mulai dari angka awal; golongan mengikuti kode), dan/atau ubah golongan.
