@@ -2365,7 +2365,8 @@ document.addEventListener("click", e => {
   box.addEventListener("click", ev => {
     const b = ev.target.closest("[data-fsrc]"); if (!b && ev.target !== box) return;
     const src = b ? b.dataset.fsrc : ""; box.remove(); if (!src) return;
-    if (src === "cam") inp.setAttribute("capture", "environment"); else inp.removeAttribute("capture");
+    // galeri: tanpa capture + daftar ekstensi eksplisit, supaya browser HP (Samsung, Xiaomi, WebView) membuka pemilih galeri/file, bukan kamera
+    if (src === "cam") { inp.setAttribute("capture", "environment"); inp.accept = "image/*"; } else { inp.removeAttribute("capture"); inp.accept = "image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"; }
     inp.__ok = true; inp.click();
   });
   document.body.appendChild(box);
