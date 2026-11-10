@@ -360,7 +360,7 @@ const usulHapus = x => (x.kond === "Rusak Berat" || x.kond === "Hilang") && !x.r
 const BUKU_RE = /\b(buku|novel|bahan ajar|monograf|kamus|ensiklopedi|atlas|majalah|modul|komik|antologi)\b/i;
 
 /* ================= state ================= */
-const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], cetak:[], bantuan:[], minta:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
+const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], cetak:[], bantuan:[], minta:[], keuGtk:[], gtkCfg:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
 const CFG_DEFAULT = {
   kepsek:"Dr. H. Saleh, S.T., M.Pd.", nipKepsek:"19780708 200604 1 004",
   waka:"Ika Novita Mulia, S.Pd.", nipWaka:"199211102022212025", jabWaka:"Wakil Kepala Sekolah Sarana dan Prasarana",
@@ -481,7 +481,7 @@ async function boot() {
   sub("gdg", rows => { S.gdg = rows; });
   sub("pinjam", rows => { S.pinjam = rows; });
   sub("bantuan", rows => { S.bantuan = rows.sort((a, b) => String(b.tgl).localeCompare(String(a.tgl))); });
-  for (const [c, k] of [["keu_usul", "keuUsul"], ["keu_kak", "keuKak"], ["keu_rkas", "keuRkas"], ["keu_pagu", "keuPagu"], ["keu_spj", "keuSpj"], ["keu_honor", "keuHonor"], ["keu_perjadin", "keuPerjadin"]]) sub(c, rows => { S[k] = rows; });
+  for (const [c, k] of [["keu_gtk", "keuGtk"], ["gtk_cfg", "gtkCfg"], ["keu_usul", "keuUsul"], ["keu_kak", "keuKak"], ["keu_rkas", "keuRkas"], ["keu_pagu", "keuPagu"], ["keu_spj", "keuSpj"], ["keu_honor", "keuHonor"], ["keu_perjadin", "keuPerjadin"]]) sub(c, rows => { S[k] = rows; });
   sub("minta", rows => { S.minta = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
   sub("cetak", rows => { S.cetak = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
   sub("pengingat", rows => { S.pengingat = rows; });
@@ -781,7 +781,7 @@ function vHome() {
   const status = a => {
     if (!a.siap) return "Sedang disiapkan";
     if (a.id === "sarpras") { const t = S.catatan.filter(c => c.val !== false && c.st !== "Selesai").length, v = pendingList().length; return [ready ? fmt(allItems().visible.length) + " aset" : "memuat…", ready && masaPakai().lewat.length ? fmt(masaPakai().lewat.length) + " masa pakai lewat" : "", t ? fmt(t) + " temuan terbuka" : "", v ? fmt(v) + " menunggu validasi" : ""].filter(Boolean).join(" · "); }
-    if (a.id === "keuangan") { const th = thNow(), w = (S.keuUsul || []).filter(u => u.th === th && u.st === "Diajukan").length, re = realisasi(th, "").total; return (w ? fmt(w) + " usulan menunggu · " : "") + "Realisasi " + th + " " + rp(re); }
+    if (a.id === "keuangan") { const th = thNow(), w = allUsul().filter(u => u.st === "Diajukan").length, re = realisasi(th, "").total; return (w ? fmt(w) + " usulan menunggu · " : "") + "Realisasi " + th + " " + rp(re); }
     if (a.id === "minta") { const w = S.minta.filter(m => m.st === "Diajukan"), mine = w.filter(m => m.by === S.me).length; return (can("minta_proses") ? (w.length ? fmt(w.length) + " menunggu diproses" : "Tidak ada antrean") : (mine ? fmt(mine) + " permintaan Anda menunggu" : "Ajukan permintaan barang")) + " · " + fmt(S.psdBarang.filter(b => psdLedger(b._id).qty > 0).length) + " jenis tersedia"; }
     if (a.id === "jadwal") { const h = jdToday().length, w = S.pinjam.filter(b => b.st === "Diajukan").length; return (h ? fmt(h) + " pemakaian hari ini" : "Hari ini kosong") + (w ? " · " + fmt(w) + " menunggu" : ""); }
     if (a.id === "waka") { const n = AK.list.filter(x => x.aktif !== false).length; return fmt(n) + " akun aktif · " + fmt(typeof onlineList === "function" ? onlineList().length : 0) + " online"; }
@@ -2707,7 +2707,7 @@ const terbilang = n => {
 const keuNum = v => { if (typeof v === "number") return v; if (/[a-z]/i.test(String(v ?? "").replace(/^rp\.?/i, ""))) return 0; const t = String(v ?? "").replace(/[^\d,.-]/g, ""); if (!t) return 0; return /,\d{1,2}$/.test(t) ? +t.replace(/\./g, "").replace(",", ".") : +t.replace(/[.,]/g, "") || 0; };
 const fmR = n => Math.round(n || 0).toLocaleString("id-ID");
 const canKeu = k => isMaster() || can(k);
-const noId = o => { const x = Object.assign({}, o); delete x._id; return x; };
+const noId = o => { const x = Object.assign({}, o); delete x._id; delete x._col; return x; };
 
 /* ---- standar harga (SSH barang, SBU jasa, katalog sekolah) dimuat saat dibutuhkan ---- */
 const SH = { data:null, all:null, loading:null, err:false };
@@ -2756,7 +2756,7 @@ const rkasOpts = (th, sd, cur) => `<option value="">— tidak dihubungkan —</o
 const pegOptions = () => `<datalist id="dl-peg">${penerimaList().map(p => `<option value="${esc(p.nama)}">`).join("")}</datalist>`;
 
 function vKeu() {
-  const th = keuTh(), R = realisasi(th, ""), usW = (S.keuUsul || []).filter(u => u.th === th && u.st === "Diajukan").length;
+  const th = keuTh(), R = realisasi(th, ""), usW = allUsul().filter(u => u.th === th && u.st === "Diajukan").length;
   const rows = KEU_SD.map(([k, l]) => { const p = paguOf(th, k), rk = rkasLines(th, k).reduce((t, r) => t + rkasJml(r), 0), re = realisasi(th, k).total; return { k, l, p, rk, re }; }).filter(r => r.p || r.rk || r.re);
   const tot = rows.reduce((t, r) => ({ p:t.p + r.p, rk:t.rk + r.rk, re:t.re + r.re }), { p:0, rk:0, re:0 });
   const docs = [...(S.keuSpj || []).map(s => ({ t:"Belanja", tgl:s.tglTerima || s.tglSPB, u:s.uraian, v:spjJml(s), sd:s.sd, th:s.th, h:"#keu-spj" })), ...(S.keuHonor || []).map(h => ({ t:"Honor", tgl:h.tgl, u:h.kegiatan, v:honJml(h), sd:h.sd, th:h.th, h:"#keu-honor" })), ...(S.keuPerjadin || []).map(p => ({ t:"Perjalanan dinas", tgl:p.tglBayar || p.tglSPT, u:(p.nama || "") + " · " + (p.maksud || ""), v:pjJml(p), sd:p.sd, th:p.th, h:"#keu-perjadin" }))].filter(d => d.th === th).sort((a, b) => String(b.tgl).localeCompare(String(a.tgl))).slice(0, 10);
@@ -2787,6 +2787,23 @@ function vKeuHarga() {
 const usBlank = () => ({ id:"", sd:UI.keu.sd || "BOSNAS", bidang:"", kak:"", uraian:"", spek:"", vol:"", satuan:"", harga:"", rek:"", output:"", cari:"" });
 const kakBlank = () => ({ id:"", nama:"", bidang:"", latar:"", tujuan:"", sasaran:"", output:"", spesifikasi:"", jadwal:"" });
 const US_ST = { Diajukan:"warn", Revisi:"info", Disetujui:"ok", Ditolak:"bad" };
+// semua usulan: dari aplikasi (keu_usul) dan dari Portal GTK (keu_gtk)
+const allUsul = () => [...(S.keuUsul || []).map(u => Object.assign({ _col:"keu_usul" }, u)), ...(S.keuGtk || []).map(u => Object.assign({ _col:"keu_gtk" }, u))];
+const GTK_URL = () => location.origin + location.pathname.replace(/[^/]*$/, "") + "gtk.html";
+function gtkPanel() {
+  if (!isMaster() && !canKeu("keu_rkas")) return "";
+  const kode = ((S.gtkCfg || []).find(d => d._id === "kode") || {}).kode || "", nW = (S.keuGtk || []).filter(u => u.st === "Diajukan").length;
+  return `<details class="panel" id="gtk-det" style="margin-bottom:14px" ${UI.keu.gOpen ? "open" : ""}><summary><b>Portal GTK</b> · usulan dari seluruh GTK tanpa akun ${nW ? `<span class="pill warn">${nW} baru</span>` : ""} ${kode ? '<span class="pill ok">aktif</span>' : '<span class="pill warn">kode belum diatur</span>'}</summary>
+    <p class="sm" style="margin:10px 0 6px">Bagikan tautan ini ke grup GTK. GTK memilih namanya, mengisi kode GTK, lalu mengusulkan kebutuhan dan melihat jadwal Aula & Multimedia. Usulan masuk ke daftar di bawah dengan tanda <span class="pill info">Portal GTK</span>.</p>
+    <div class="toolbar"><label class="f grow">Tautan Portal GTK<input id="gtk-url" readonly value="${esc(GTK_URL())}"></label><button id="gtk-copy" style="align-self:end">Salin tautan</button></div>
+    ${isMaster() ? `<div class="toolbar"><label class="f">Kode GTK<input id="gtk-kode" value="${esc(UI.keu.gk ?? kode)}" placeholder="mis. gtk2027" style="max-width:200px"></label><button class="primary" id="gtk-save" style="align-self:end">Simpan kode & perbarui daftar nama</button></div><p class="hint">Daftar nama di portal diambil dari Daftar pegawai/penerima (${fmt(penerimaList().length)} nama). Ganti kode bila bocor ke luar sekolah; usulan lama tidak terpengaruh.</p>` : '<p class="hint">Kode GTK diatur oleh akun master.</p>'}</details>`;
+}
+async function gtkSave() {
+  const kode = String(UI.keu.gk ?? "").trim() || (((S.gtkCfg || []).find(d => d._id === "kode") || {}).kode || "");
+  if (kode.length < 4) { toast("Kode GTK minimal 4 karakter."); return; }
+  try { await db.doc("gtk_cfg/kode").set({ kode, at:new Date().toISOString() }); await db.doc("gtk_pub/info").set(plain({ pegawai:penerimaList().map(p => ({ nama:p.nama, jab:p.jab || "" })), at:new Date().toISOString() })); UI.keu.gk = undefined; toast("Kode GTK dan daftar nama di portal diperbarui."); render(); }
+  catch (e) { writeErr(e); }
+}
 function vKeuUsul() {
   const K = UI.keu, th = keuTh(), ed = canKeu("keu_usul"), rev = canKeu("keu_rkas");
   if (!K.uf) K.uf = usBlank(); if (!K.kf) K.kf = kakBlank();
@@ -2801,9 +2818,9 @@ function vKeuUsul() {
       <section class="panel"><h3>KAK tahun ${th}</h3>${kaks.map(k => { const us = (S.keuUsul || []).filter(u => u.kak === k._id); return `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${esc(k.nama)}</b> <span class="pill">${esc(k.bidang || "-")}</span><div class="sm">${fmt(us.length)} komponen · ${rp(us.reduce((t, u) => t + rkasJml(u), 0))} · ${esc(k.nama2 || k.oleh || "")}</div><div style="display:flex;gap:6px;margin-top:4px"><button class="ghost" data-kkpdf="${esc(k._id)}">Cetak KAK</button>${ed && (rev || k.by === S.me) ? `<button class="ghost" data-kkedit="${esc(k._id)}">Ubah</button>${K.confirm === k._id ? `<button class="danger" data-kkdelok="${esc(k._id)}">Ya, hapus</button><button data-kcancel="1">Batal</button>` : `<button class="ghost" data-kask="${esc(k._id)}">Hapus</button>`}` : ""}</div></div>`; }).join("") || '<p class="muted">Belum ada KAK.</p>'}</section></div>`;
   }
   const f = K.uf;
-  const list = (S.keuUsul || []).filter(u => u.th === th && (!K.sd || u.sd === K.sd) && (rev || u.by === S.me || !ed) && (!K.ust || u.st === K.ust) && (!K.ubid || u.bidang === K.ubid) && matches(K.qs[current], [u.uraian, u.spek, u.nama, u.rek, u.bidang]));
+  const list = allUsul().filter(u => u.th === th && (!K.sd || u.sd === K.sd) && (rev || u.by === S.me || !ed) && (!K.ust || u.st === K.ust) && (!K.ubid || u.bidang === K.ubid) && matches(K.qs[current], [u.uraian, u.spek, u.nama, u.rek, u.bidang]));
   const sel = list.filter(u => K.usel.has(u._id));
-  return `<h2>Usulan & KAK</h2>${keuBar()}${tabs}
+  return `<h2>Usulan & KAK</h2>${keuBar()}${tabs}${gtkPanel()}
   ${ed ? `<section class="panel" style="margin-bottom:14px"><h3>${f.id ? "Ubah usulan" : "Tambah usulan kebutuhan"}</h3>
     <label class="f full">Cari di standar harga<input id="ku-cari" type="search" value="${esc(f.cari)}" placeholder="ketik nama barang/jasa, lalu pilih"></label>${words(f.cari).length ? shSuggest(f.cari, "kupick") : ""}
     <div class="fgrid" style="margin-top:8px"><label class="f full">Uraian<input id="ku-uraian" value="${esc(f.uraian)}"></label><label class="f full">Spesifikasi<input id="ku-spek" value="${esc(f.spek)}"></label>
@@ -2812,7 +2829,7 @@ function vKeuUsul() {
       <label class="f">Sumber dana<select id="ku-sd">${KEU_SD.map(([k, l]) => `<option value="${k}" ${f.sd === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="f">Bidang<select id="ku-bidang"><option value="">—</option>${KEU_BIDANG.map(b => `<option ${f.bidang === b ? "selected" : ""}>${b}</option>`).join("")}</select></label>
       <label class="f">Kegiatan (KAK)<select id="ku-kak"><option value="">—</option>${kaks.map(k => `<option value="${esc(k._id)}" ${f.kak === k._id ? "selected" : ""}>${esc(k.nama)}</option>`).join("")}</select></label>
-      <label class="f full">Keterangan / output / luaran<input id="ku-output" value="${esc(f.output)}"></label></div>
+      <label class="f full">Keterangan: menunjang kegiatan/aktivitas apa? <span style="color:var(--bad)">*</span><input id="ku-output" value="${esc(f.output)}" placeholder="mis. Praktikum kimia kelas XI semester genap; Ujian sekolah"></label></div>
     <p style="margin:8px 0"><b>Jumlah: ${rp((+f.vol || 0) * (+f.harga || 0))}</b></p>
     <div style="display:flex;gap:8px"><button class="primary" id="ku-save" ${K.busy ? "disabled" : ""}>${f.id ? "Simpan perubahan" : "Kirim usulan"}</button>${f.id ? '<button class="ghost" id="ku-reset">Batal</button>' : ""}</div></section>` : ""}
   <div class="toolbar"><div class="chips">${["Diajukan", "Revisi", "Disetujui", "Ditolak", ""].map(s2 => `<button class="chip" data-kust="${s2}" aria-pressed="${K.ust === s2}">${s2 || "Semua"}</button>`).join("")}</div>
@@ -2820,28 +2837,29 @@ function vKeuUsul() {
     <span class="sp"></span><button id="ku-asist" ${list.length ? "" : "disabled"}>Cetak lembar asistensi</button><button id="ku-xlsx" ${list.length ? "" : "disabled"}>Excel</button></div>
   ${rev && sel.length ? `<div class="selbar" style="flex-wrap:wrap;gap:8px"><b>${fmt(sel.length)} dipilih · ${rp(sel.reduce((t, u) => t + rkasJml(u), 0))}</b><span class="sp"></span><input id="ku-cat" placeholder="catatan asistensi (untuk revisi/tolak)" value="${esc(K.catat)}" style="min-width:220px"><button class="primary" id="ku-ok">Setujui → masuk RKAS</button><button id="ku-rev">Minta revisi</button><button class="danger" id="ku-tolak">Tolak</button></div>` : ""}
   <div class="tablebox"><table><thead><tr>${rev ? `<th class="selc"><input type="checkbox" id="ku-all" ${list.length && list.every(u => K.usel.has(u._id)) ? "checked" : ""}></th>` : ""}<th>Uraian</th><th class="num">Vol × harga</th><th class="num">Jumlah</th><th class="hide-sm">Rekening</th><th>Pengusul</th><th>Status</th><th></th></tr></thead><tbody>
-  ${list.map(u => `<tr>${rev ? `<td class="selc"><input type="checkbox" data-kusel="${esc(u._id)}" ${K.usel.has(u._id) ? "checked" : ""}></td>` : ""}<td><b>${esc(u.uraian)}</b><div class="sm">${esc(u.spek || "")}${u.output ? " · " + esc(u.output) : ""}</div>${u.catatan ? `<div class="sm" style="color:var(--info)">Catatan: ${esc(u.catatan)}</div>` : ""}</td><td class="num">${fmt(u.vol)} ${esc(u.satuan)}<div class="sm">@ ${rp(u.harga)}</div></td><td class="num">${rp(rkasJml(u))}</td><td class="hide-sm mono sm">${esc(u.rek || "-")}</td><td>${esc(u.nama || "")}<div class="sm">${esc(u.bidang || "")} · ${esc(u.sd)}</div></td><td><span class="pill ${US_ST[u.st] || ""}">${esc(u.st)}</span></td>
-    <td style="white-space:nowrap">${(u.by === S.me && u.st !== "Disetujui") || (rev && u.st !== "Disetujui") ? `<button class="ghost" data-kuedit="${esc(u._id)}">Ubah</button>${K.confirm === u._id ? `<button class="danger" data-kudelok="${esc(u._id)}">Ya</button><button data-kcancel="1">Batal</button>` : `<button class="ghost" data-kask="${esc(u._id)}">Hapus</button>`}` : ""}</td></tr>`).join("") || `<tr><td colspan="8"><div class="empty"><b>Tidak ada usulan${K.ust ? " berstatus " + K.ust.toLowerCase() : ""}</b></div></td></tr>`}
+  ${list.map(u => `<tr>${rev ? `<td class="selc"><input type="checkbox" data-kusel="${esc(u._id)}" ${K.usel.has(u._id) ? "checked" : ""}></td>` : ""}<td><b>${esc(u.uraian)}</b><div class="sm">${esc(u.spek || "")}${u.output ? " · " + esc(u.output) : ""}</div>${u.catatan ? `<div class="sm" style="color:var(--info)">Catatan: ${esc(u.catatan)}</div>` : ""}</td><td class="num">${fmt(u.vol)} ${esc(u.satuan)}<div class="sm">@ ${rp(u.harga)}</div></td><td class="num">${rp(rkasJml(u))}</td><td class="hide-sm mono sm">${esc(u.rek || "-")}</td><td>${esc(u.nama || "")}${u._col === "keu_gtk" ? ' <span class="pill info">Portal GTK</span>' : ""}<div class="sm">${esc(u.bidang || "")} · ${esc(u.sd)}</div></td><td><span class="pill ${US_ST[u.st] || ""}">${esc(u.st)}</span></td>
+    <td style="white-space:nowrap">${(u.by === S.me && u.st !== "Disetujui") || (rev && u.st !== "Disetujui") ? `${u._col === "keu_usul" ? `<button class="ghost" data-kuedit="${esc(u._id)}">Ubah</button>` : ""}${K.confirm === u._id ? `<button class="danger" data-kudelok="${esc(u._col + "/" + u._id)}">Ya</button><button data-kcancel="1">Batal</button>` : `<button class="ghost" data-kask="${esc(u._id)}">Hapus</button>`}` : ""}</td></tr>`).join("") || `<tr><td colspan="8"><div class="empty"><b>Tidak ada usulan${K.ust ? " berstatus " + K.ust.toLowerCase() : ""}</b></div></td></tr>`}
   </tbody><tfoot><tr><td colspan="${rev ? 3 : 2}">Jumlah</td><td class="num"><b>${rp(list.reduce((t, u) => t + rkasJml(u), 0))}</b></td><td colspan="4"></td></tr></tfoot></table></div>`;
 }
 async function kuSave() {
   const K = UI.keu, f = K.uf, th = keuTh();
   if (!f.uraian.trim() || !(+f.vol > 0) || !(+f.harga > 0)) { toast("Isi uraian, volume, dan harga satuan."); return; }
+  if (!(f.output || "").trim()) { toast("Isi keterangan: usulan ini menunjang kegiatan apa."); return; }
   const id = f.id || uid("ku"), old = f.id && (S.keuUsul || []).find(u => u._id === f.id);
   K.busy = true; render();
   const ok = await keuSet("keu_usul/" + id, { th:old ? old.th : th, sd:f.sd, bidang:f.bidang, kak:f.kak, uraian:f.uraian.trim(), spek:(f.spek || "").trim(), vol:+f.vol, satuan:(f.satuan || "").trim(), harga:+f.harga, rek:(f.rek || "").trim(), output:(f.output || "").trim(), st:old && canKeu("keu_rkas") && old.by !== S.me ? old.st : "Diajukan", catatan:old && canKeu("keu_rkas") && old.by !== S.me ? old.catatan || "" : "", by:old ? old.by : S.me || "", nama:old ? old.nama : myName(), at:old ? old.at : new Date().toISOString() });
   K.busy = false; if (ok) { toast(f.id ? "Usulan diperbarui." : "Usulan terkirim."); K.uf = Object.assign(usBlank(), { sd:f.sd, bidang:f.bidang, kak:f.kak }); } render();
 }
 async function kuReview(act) {
-  const K = UI.keu, sel = (S.keuUsul || []).filter(u => K.usel.has(u._id)); if (!sel.length) return;
+  const K = UI.keu, sel = allUsul().filter(u => K.usel.has(u._id)); if (!sel.length) return;
   if (act !== "ok" && !K.catat.trim()) { toast("Isi catatan asistensi untuk revisi/penolakan."); return; }
   K.busy = true; render(); let n = 0;
   for (const u of sel) {
     if (act === "ok") {
       if (u.st === "Disetujui") continue; const rid = uid("rk");
-      if (!(await keuSet("keu_rkas/" + rid, { th:u.th, sd:u.sd, rek:u.rek || "", rekNama:rekNama(u.rek), uraian:u.uraian, spek:u.spek || "", vol:u.vol, satuan:u.satuan, harga:u.harga, bidang:u.bidang || "", pengusul:u.nama || "", kak:u.kak || "", output:u.output || "", usul:u._id, asal:"usulan", at:new Date().toISOString() }))) break;
-      if (!(await keuSet("keu_usul/" + u._id, Object.assign(noId(u), { st:"Disetujui", rkas:rid, catatan:K.catat.trim(), okBy:S.me || "", okAt:new Date().toISOString() })))) break;
-    } else if (!(await keuSet("keu_usul/" + u._id, Object.assign(noId(u), { st:act === "rev" ? "Revisi" : "Ditolak", catatan:K.catat.trim(), okBy:S.me || "", okAt:new Date().toISOString() })))) break;
+      if (!(await keuSet("keu_rkas/" + rid, { th:u.th, sd:u.sd === "LAIN" && K.sd ? K.sd : u.sd, rek:u.rek || "", rekNama:rekNama(u.rek), uraian:u.uraian, spek:u.spek || "", vol:u.vol, satuan:u.satuan, harga:u.harga, bidang:u.bidang || "", pengusul:u.nama || "", kak:u.kak || "", output:u.output || "", usul:u._id, asal:u._col === "keu_gtk" ? "portal GTK" : "usulan", at:new Date().toISOString() }))) break;
+      if (!(await keuSet(u._col + "/" + u._id, Object.assign(noId(u), { st:"Disetujui", rkas:rid, catatan:K.catat.trim(), okBy:S.me || "", okAt:new Date().toISOString() })))) break;
+    } else if (!(await keuSet(u._col + "/" + u._id, Object.assign(noId(u), { st:act === "rev" ? "Revisi" : "Ditolak", catatan:K.catat.trim(), okBy:S.me || "", okAt:new Date().toISOString() })))) break;
     n++;
   }
   K.busy = false; K.usel = new Set(); K.catat = ""; toast(`${n} usulan ${act === "ok" ? "disetujui dan masuk RKAS" : act === "rev" ? "dikembalikan untuk revisi" : "ditolak"}.`); render();
@@ -2851,9 +2869,9 @@ function asistensiPdf(list) {
   doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("LEMBAR ASISTENSI USULAN RKAS" + (K.ubid ? " · BIDANG " + K.ubid.toUpperCase() : ""), 148.5, 16, { align:"center" });
   doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`SMA Negeri 1 Berau · ${sdLabel(K.sd) || "semua sumber dana"} · Tahun Anggaran ${keuTh()}`, 148.5, 22, { align:"center" });
   doc.autoTable({ startY:28, margin:{ left:12, right:12 }, theme:"grid", styles:{ fontSize:8, cellPadding:1.2, lineColor:[60,60,60], lineWidth:0.12, textColor:[20,20,20] }, headStyles:{ fillColor:[230,230,230], textColor:[20,20,20], halign:"center" },
-    head:[["No", "Kode Rekening", "Uraian", "Spec", "Vol", "Satuan", "Tarif Harga", "Jumlah", "PIC", "Status / Catatan"]],
-    body:[...list.map((u, i) => [i + 1, u.rek || "", u.uraian, u.spek || "", fmt(u.vol), u.satuan, fmR(u.harga), fmR(rkasJml(u)), u.nama || "", u.st + (u.catatan ? " · " + u.catatan : "")]), [{ content:"JUMLAH", colSpan:7, styles:{ halign:"right", fontStyle:"bold" } }, { content:fmR(list.reduce((t, u) => t + rkasJml(u), 0)), styles:{ fontStyle:"bold", halign:"right" } }, { content:"", colSpan:2 }]],
-    columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 1:{ cellWidth:32 }, 4:{ cellWidth:12, halign:"right" }, 5:{ cellWidth:16 }, 6:{ cellWidth:22, halign:"right" }, 7:{ cellWidth:25, halign:"right" }, 8:{ cellWidth:32 }, 9:{ cellWidth:40 } } });
+    head:[["No", "Kode Rekening", "Uraian", "Spec", "Vol", "Satuan", "Tarif Harga", "Jumlah", "Keterangan (penunjang kegiatan)", "PIC", "Status / Catatan"]],
+    body:[...list.map((u, i) => [i + 1, u.rek || "", u.uraian, u.spek || "", fmt(u.vol), u.satuan, fmR(u.harga), fmR(rkasJml(u)), u.output || "", u.nama || "", u.st + (u.catatan ? " · " + u.catatan : "")]), [{ content:"JUMLAH", colSpan:7, styles:{ halign:"right", fontStyle:"bold" } }, { content:fmR(list.reduce((t, u) => t + rkasJml(u), 0)), styles:{ fontStyle:"bold", halign:"right" } }, { content:"", colSpan:3 }]],
+    columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 1:{ cellWidth:28 }, 4:{ cellWidth:11, halign:"right" }, 5:{ cellWidth:14 }, 6:{ cellWidth:20, halign:"right" }, 7:{ cellWidth:22, halign:"right" }, 8:{ cellWidth:40 }, 9:{ cellWidth:28 }, 10:{ cellWidth:30 } } });
   let y = doc.lastAutoTable.finalY + 10; if (y > 165) { doc.addPage(); y = 25; }
   doc.text("Berau, " + tglID(today()), 230, y, { align:"center" }); y += 5;
   doc.text("Mengetahui,", 70, y, { align:"center" }); doc.text("Kepala Sekolah,", 70, y + 5, { align:"center" }); doc.text("Tim Penyusun RKAS,", 230, y + 5, { align:"center" });
@@ -2880,7 +2898,7 @@ function kakPdf(k) {
 }
 
 /* ---- RKAS, pagu, RKBMD, impor, cetak matrik ---- */
-const rfBlank = () => ({ id:"", rek:"", uraian:"", spek:"", vol:"", satuan:"", harga:"", bidang:"", pengusul:"", cari:"" });
+const rfBlank = () => ({ id:"", rek:"", uraian:"", spek:"", vol:"", satuan:"", harga:"", bidang:"", pengusul:"", output:"", cari:"" });
 function vKeuRkas() {
   const K = UI.keu, th = keuTh(); if (!K.sd) K.sd = "BOSNAS"; const sd = K.sd, ed = canKeu("keu_rkas");
   if (!K.rf) K.rf = rfBlank(); shLoad();
@@ -2892,16 +2910,16 @@ function vKeuRkas() {
   ${keuBar({ extra:`<label class="f">Pagu ${esc(sd)} ${th} (Rp)<input id="kr-pagu" type="number" min="0" value="${pagu || ""}" ${ed ? "" : "disabled"} style="max-width:180px"></label>${ed ? '<button id="kr-pagusave" style="align-self:end">Simpan pagu</button>' : ""}` })}
   <div class="grid kpis"><div class="kpi"><span class="l">Pagu</span><span class="v" style="font-size:21px">${rp(pagu)}</span></div><div class="kpi"><span class="l">Input RKAS</span><span class="v" style="font-size:21px">${rp(tot)}</span><span class="s">${fmt(all.length)} baris</span></div><div class="kpi"><span class="l">${sisa >= 0 ? "Belum dianggarkan" : "Melebihi pagu"}</span><span class="v" style="font-size:21px;color:var(--${Math.abs(sisa) < 1 ? "ok" : sisa > 0 ? "warn" : "bad"})">${Math.abs(sisa) < 1 ? "OK" : rp(Math.abs(sisa))}</span></div><div class="kpi"><span class="l">Realisasi</span><span class="v" style="font-size:21px">${rp(R.total)}</span><span class="s">${tot ? Math.round(R.total / tot * 100) + "% dari RKAS" : ""}</span></div></div>
   <div class="toolbar" style="margin-top:12px"><div class="chips">${[["rkas", "Rincian RKAS"], ["rkbmd", "RKBMD (belanja modal 5.2)"]].map(([k, l]) => `<button class="chip" data-krtab="${k}" aria-pressed="${K.rtab === k}">${l}</button>`).join("")}</div><label class="f grow">Cari<input id="kr-q" type="search" value="${esc(K.qs[current])}" placeholder="uraian, rekening, pengusul"></label><span class="sp"></span><button id="kr-pdf" ${list.length ? "" : "disabled"}>Cetak matrik (PDF)</button><button id="kr-xlsx" ${list.length ? "" : "disabled"}>Excel</button></div>
-  ${ed ? `<details class="panel" style="margin-bottom:12px" ${I || f.id ? "open" : ""}><summary><b>Tambah baris manual / impor Excel</b></summary>
+  ${ed ? `<details class="panel" id="kr-det" style="margin-bottom:12px" ${K.rOpen || I || f.id ? "open" : ""}><summary><b>Tambah baris manual / impor Excel</b></summary>
     <div class="grid two" style="margin-top:10px"><div><p class="sectionlabel">${f.id ? "Ubah baris" : "Tambah baris"}</p><label class="f full">Cari di standar harga<input id="kr-cari" type="search" value="${esc(f.cari)}"></label>${words(f.cari).length ? shSuggest(f.cari, "krpick") : ""}
-      <div class="fgrid" style="margin-top:6px"><label class="f">Kode rekening<input id="kr-rek" class="mono" value="${esc(f.rek)}"></label><label class="f">Uraian<input id="kr-uraian" value="${esc(f.uraian)}"></label><label class="f full">Spesifikasi<input id="kr-spek" value="${esc(f.spek)}"></label><label class="f">Volume<input id="kr-vol" type="number" step="any" value="${esc(f.vol)}"></label><label class="f">Satuan<input id="kr-satuan" value="${esc(f.satuan)}"></label><label class="f">Harga satuan<input id="kr-harga" type="number" step="any" value="${esc(f.harga)}"></label><label class="f">Bidang<select id="kr-bidang"><option value="">—</option>${KEU_BIDANG.map(b => `<option ${f.bidang === b ? "selected" : ""}>${b}</option>`).join("")}</select></label><label class="f full">Pengusul / PIC<input id="kr-pengusul" list="dl-peg" value="${esc(f.pengusul)}"></label>${pegOptions()}</div>
+      <div class="fgrid" style="margin-top:6px"><label class="f">Kode rekening<input id="kr-rek" class="mono" value="${esc(f.rek)}"></label><label class="f">Uraian<input id="kr-uraian" value="${esc(f.uraian)}"></label><label class="f full">Spesifikasi<input id="kr-spek" value="${esc(f.spek)}"></label><label class="f">Volume<input id="kr-vol" type="number" step="any" value="${esc(f.vol)}"></label><label class="f">Satuan<input id="kr-satuan" value="${esc(f.satuan)}"></label><label class="f">Harga satuan<input id="kr-harga" type="number" step="any" value="${esc(f.harga)}"></label><label class="f">Bidang<select id="kr-bidang"><option value="">—</option>${KEU_BIDANG.map(b => `<option ${f.bidang === b ? "selected" : ""}>${b}</option>`).join("")}</select></label><label class="f full">Pengusul / PIC<input id="kr-pengusul" list="dl-peg" value="${esc(f.pengusul)}"></label><label class="f full">Keterangan (menunjang kegiatan apa)<input id="kr-output" value="${esc(f.output)}" placeholder="mis. Praktikum kimia kelas XI"></label>${pegOptions()}</div>
       <div style="display:flex;gap:8px;margin-top:8px"><button class="primary" id="kr-save">${f.id ? "Simpan perubahan" : "Tambah ke RKAS"}</button>${f.id ? '<button class="ghost" id="kr-reset">Batal</button>' : ""}</div></div>
     <div><p class="sectionlabel">Impor dari Excel</p><label class="upload" for="kr-file" style="aspect-ratio:auto;min-height:70px">${I && I.file ? `<b>${esc(I.file)}</b>klik untuk ganti file` : "<b>+ Pilih file Excel</b>ekspor ARKAS, SIPD, matrik, atau tabel usulan"}<input id="kr-file" type="file" accept=".xlsx,.xls,.csv" hidden></label>
       ${I && I.err ? `<p class="note bad">${esc(I.err)}</p>` : ""}${I && I.sheets ? `<label class="f" style="margin-top:8px">Sheet<select id="kr-sheet">${I.sheets.map(s2 => `<option ${I.sheet === s2.name ? "selected" : ""} value="${esc(s2.name)}">${esc(s2.name)} · ${fmt(s2.rows.length)} baris · ${rp(s2.rows.reduce((t, r) => t + rkasJml(r), 0))}</option>`).join("")}</select></label>
       ${(() => { const s2 = I.sheets.find(x => x.name === I.sheet); return s2 ? `<p class="hint">Contoh: ${s2.rows.slice(0, 3).map(r => esc(r.uraian) + " (" + fmt(r.vol) + " " + esc(r.satuan) + " × " + rp(r.harga) + ")").join("; ")}</p>
       <label class="ck"><input type="checkbox" id="kr-ganti" ${I.ganti ? "checked" : ""}> Ganti baris hasil impor sebelumnya untuk ${esc(sd)} ${th}</label><button class="primary" id="kr-impgo" style="margin-top:8px" ${K.busy ? "disabled" : ""}>${K.busy ? "Mengimpor…" : `Impor ${fmt(s2.rows.length)} baris ke RKAS ${esc(sd)} ${th}`}</button>` : ""; })()}` : '<p class="hint">Kolom dikenali otomatis: Kode Rekening, Uraian, Spek, Volume/Koefisien, Satuan, Harga/Tarif, Jumlah, Pengusul. Format matrik berjenjang (kode rekening di kolom pertama) juga bisa.</p>'}</div></div></details>` : ""}
-  <div class="tablebox"><table><thead><tr><th>Uraian</th><th class="num">Vol</th><th class="num">Harga</th><th class="num">Jumlah</th><th class="num hide-sm">Realisasi</th><th class="hide-sm">Pengusul</th>${ed ? "<th></th>" : ""}</tr></thead><tbody>
-  ${Object.entries(groups).map(([rk, rs]) => `<tr style="background:var(--soft)"><td colspan="3"><b class="mono">${esc(rk)}</b> <span class="sm">${esc(rekNama(rk))}</span></td><td class="num"><b>${rp(rs.reduce((t, r) => t + rkasJml(r), 0))}</b></td><td class="num hide-sm">${rp(rs.reduce((t, r) => t + (R.byLine[r._id] || 0), 0))}</td><td class="hide-sm"></td>${ed ? "<td></td>" : ""}</tr>${rs.map(r => { const re = R.byLine[r._id] || 0; return `<tr><td>${esc(r.uraian)}<div class="sm">${esc(r.spek || "")}</div></td><td class="num">${fmt(r.vol)} ${esc(r.satuan)}</td><td class="num">${rp(r.harga)}</td><td class="num">${rp(rkasJml(r))}</td><td class="num hide-sm">${re ? rp(re) : "-"}${re > rkasJml(r) + 1 ? '<div class="sm" style="color:var(--bad)">melebihi</div>' : ""}</td><td class="hide-sm sm">${esc(r.pengusul || "")}<div>${esc(r.bidang || "")}</div></td>${ed ? `<td style="white-space:nowrap"><button class="ghost" data-kredit="${esc(r._id)}">Ubah</button>${K.confirm === r._id ? `<button class="danger" data-krdelok="${esc(r._id)}">Ya</button><button data-kcancel="1">Batal</button>` : `<button class="ghost" data-kask="${esc(r._id)}">Hapus</button>`}</td>` : ""}</tr>`; }).join("")}`).join("") || `<tr><td colspan="7"><div class="empty"><b>Belum ada baris RKAS ${esc(sd)} ${th}</b>Setujui usulan, impor Excel, atau tambah manual.</div></td></tr>`}
+  <div class="tablebox"><table><thead><tr><th>Uraian</th><th class="num">Vol</th><th class="num">Harga</th><th class="num">Jumlah</th><th class="num hide-sm">Realisasi</th><th class="hide-sm">Keterangan (penunjang kegiatan)</th><th class="hide-sm">Pengusul</th>${ed ? "<th></th>" : ""}</tr></thead><tbody>
+  ${Object.entries(groups).map(([rk, rs]) => `<tr style="background:var(--soft)"><td colspan="3"><b class="mono">${esc(rk)}</b> <span class="sm">${esc(rekNama(rk))}</span></td><td class="num"><b>${rp(rs.reduce((t, r) => t + rkasJml(r), 0))}</b></td><td class="num hide-sm">${rp(rs.reduce((t, r) => t + (R.byLine[r._id] || 0), 0))}</td><td class="hide-sm"></td><td class="hide-sm"></td>${ed ? "<td></td>" : ""}</tr>${rs.map(r => { const re = R.byLine[r._id] || 0; return `<tr><td>${esc(r.uraian)}<div class="sm">${esc(r.spek || "")}</div></td><td class="num">${fmt(r.vol)} ${esc(r.satuan)}</td><td class="num">${rp(r.harga)}</td><td class="num">${rp(rkasJml(r))}</td><td class="num hide-sm">${re ? rp(re) : "-"}${re > rkasJml(r) + 1 ? '<div class="sm" style="color:var(--bad)">melebihi</div>' : ""}</td><td class="hide-sm sm">${r.output ? esc(r.output) : '<span class="faint">—</span>'}</td><td class="hide-sm sm">${esc(r.pengusul || "")}<div>${esc(r.bidang || "")}</div></td>${ed ? `<td style="white-space:nowrap"><button class="ghost" data-kredit="${esc(r._id)}">Ubah</button>${K.confirm === r._id ? `<button class="danger" data-krdelok="${esc(r._id)}">Ya</button><button data-kcancel="1">Batal</button>` : `<button class="ghost" data-kask="${esc(r._id)}">Hapus</button>`}</td>` : ""}</tr>`; }).join("")}`).join("") || `<tr><td colspan="8"><div class="empty"><b>Belum ada baris RKAS ${esc(sd)} ${th}</b>Setujui usulan, impor Excel, atau tambah manual.</div></td></tr>`}
   </tbody></table></div>`;
 }
 // baca Excel RKAS: tabel datar (header Uraian + Harga/Tarif) atau matrik berjenjang (kode rekening + koefisien)
@@ -3207,6 +3225,7 @@ function pjPdf(p, what) {
 }
 
 /* ---- event keuangan ---- */
+document.addEventListener("toggle", e => { if (e.target && e.target.id === "kr-det") UI.keu.rOpen = e.target.open; if (e.target && e.target.id === "gtk-det") UI.keu.gOpen = e.target.open; }, true);
 const KEU_VIEWS = ["keu", "keu-harga", "keu-usul", "keu-rkas", "keu-spj", "keu-honor", "keu-perjadin"];
 document.addEventListener("input", e => {
   if (!KEU_VIEWS.includes(current)) return; const t = e.target, K = UI.keu, id = t.id || "";
@@ -3215,6 +3234,7 @@ document.addEventListener("input", e => {
   if (id.startsWith("kk2-") && K.kf) { K.kf[id.slice(4)] = t.value; return; }
   if (id.startsWith("kr-") && K.rf && id !== "kr-pagu") { const k = id.slice(3); if (k === "cari") { K.rf.cari = t.value; render(); return; } if (k in K.rf) K.rf[k] = t.value; return; }
   if (id === "ku-cat") { K.catat = t.value; return; }
+  if (id === "gtk-kode") { K.gk = t.value; return; }
   if (id.startsWith("ks-") && K.spj) { const k = id.slice(3); if (k in K.spj) { K.spj[k] = t.value; if (k === "bpu") render(); } return; }
   if (t.dataset.ksi && K.spj) { const [n, k] = t.dataset.ksi.split(":"); K.spj.items[+n][k] = t.value; return; }
   if (id.startsWith("kh2-") && K.hon) { const k = id.slice(4); if (k in K.hon) K.hon[k] = t.value; return; }
@@ -3265,10 +3285,12 @@ document.addEventListener("click", async e => {
   if (d.kuedit) { const u = S.keuUsul.find(x => x._id === d.kuedit); if (u) { K.uf = Object.assign(usBlank(), u, { id:u._id, cari:"" }); window.scrollTo(0, 0); render(); } }
   if (d.kask) { K.confirm = d.kask; render(); }
   if (d.kcancel) { K.confirm = null; render(); }
-  if (d.kudelok) { K.confirm = null; if (await keuDel("keu_usul/" + d.kudelok)) toast("Usulan dihapus."); render(); }
+  if (d.kudelok) { K.confirm = null; if (await keuDel(d.kudelok.includes("/") ? d.kudelok : "keu_usul/" + d.kudelok)) toast("Usulan dihapus."); render(); }
+  if (b.id === "gtk-save") gtkSave();
+  if (b.id === "gtk-copy") { try { await navigator.clipboard.writeText(GTK_URL()); toast("Tautan Portal GTK disalin."); } catch (err) { const el = document.getElementById("gtk-url"); el.select(); toast("Pilih lalu salin tautan."); } }
   if (b.id === "ku-ok") kuReview("ok"); if (b.id === "ku-rev") kuReview("rev"); if (b.id === "ku-tolak") kuReview("tolak");
-  if (b.id === "ku-asist") { const th = keuTh(); asistensiPdf((S.keuUsul || []).filter(u => u.th === th && (!K.sd || u.sd === K.sd) && (!K.ust || u.st === K.ust) && (!K.ubid || u.bidang === K.ubid) && matches(K.qs[current], [u.uraian, u.spek, u.nama, u.rek, u.bidang]))); }
-  if (b.id === "ku-xlsx") { const th = keuTh(); xlsxSave(`Usulan RKAS ${th}.xlsx`, [["Usulan", (S.keuUsul || []).filter(u => u.th === th).map((u, i) => ({ "No":i + 1, "Kode Rekening":u.rek, "Uraian":u.uraian, "Spesifikasi":u.spek, "Volume":u.vol, "Satuan":u.satuan, "Harga":u.harga, "Jumlah":rkasJml(u), "Sumber Dana":u.sd, "Bidang":u.bidang, "Pengusul":u.nama, "Kegiatan (KAK)":((S.keuKak || []).find(k => k._id === u.kak) || {}).nama || "", "Output":u.output, "Status":u.st, "Catatan":u.catatan || "" }))]]); }
+  if (b.id === "ku-asist") { const th = keuTh(); asistensiPdf(allUsul().filter(u => u.th === th && (!K.sd || u.sd === K.sd) && (!K.ust || u.st === K.ust) && (!K.ubid || u.bidang === K.ubid) && matches(K.qs[current], [u.uraian, u.spek, u.nama, u.rek, u.bidang]))); }
+  if (b.id === "ku-xlsx") { const th = keuTh(); xlsxSave(`Usulan RKAS ${th}.xlsx`, [["Usulan", allUsul().filter(u => u.th === th).map((u, i) => ({ "No":i + 1, "Kode Rekening":u.rek, "Uraian":u.uraian, "Spesifikasi":u.spek, "Volume":u.vol, "Satuan":u.satuan, "Harga":u.harga, "Jumlah":rkasJml(u), "Sumber Dana":u.sd, "Bidang":u.bidang, "Pengusul":u.nama, "Kegiatan (KAK)":((S.keuKak || []).find(k => k._id === u.kak) || {}).nama || "", "Keterangan (penunjang kegiatan)":u.output, "Asal":u._col === "keu_gtk" ? "Portal GTK" : "Aplikasi", "Status":u.st, "Catatan":u.catatan || "" }))]]); }
   if (b.id === "kk2-save") { const f = K.kf; if (!f.nama.trim()) { toast("Isi nama kegiatan."); return; } const id = f.id || uid("kk"), old = f.id && S.keuKak.find(k => k._id === f.id); const kd = Object.assign({}, f); delete kd.id; if (await keuSet("keu_kak/" + id, Object.assign(kd, { th:old ? old.th : keuTh(), by:old ? old.by : S.me || "", oleh:old ? old.oleh : myName(), at:old ? old.at : new Date().toISOString() }))) { toast("KAK tersimpan."); K.kf = kakBlank(); render(); } }
   if (b.id === "kk2-reset") { K.kf = kakBlank(); render(); }
   if (d.kkedit) { const k = S.keuKak.find(x => x._id === d.kkedit); if (k) { K.kf = Object.assign(kakBlank(), k, { id:k._id }); render(); } }
@@ -3276,13 +3298,13 @@ document.addEventListener("click", async e => {
   if (d.kkpdf) { const k = S.keuKak.find(x => x._id === d.kkpdf); if (k && window.jspdf) kakPdf(k); }
   if (d.krtab) { K.rtab = d.krtab; render(); }
   if (b.id === "kr-pagusave") { const v = keuNum(val("kr-pagu")); if (await keuSet("keu_pagu/" + keuTh() + "_" + K.sd, { th:keuTh(), sd:K.sd, pagu:v, at:new Date().toISOString(), by:S.me || "" })) toast("Pagu disimpan."); render(); }
-  if (b.id === "kr-save") { const f = K.rf; if (!f.uraian.trim() || !(+f.harga > 0)) { toast("Isi uraian dan harga."); return; } const id = f.id || uid("rk"), old = f.id && S.keuRkas.find(r => r._id === f.id); if (await keuSet("keu_rkas/" + id, Object.assign(old ? noId(old) : { asal:"manual", at:new Date().toISOString() }, { th:old ? old.th : keuTh(), sd:old ? old.sd : K.sd, rek:f.rek.trim(), rekNama:rekNama(f.rek.trim()), uraian:f.uraian.trim(), spek:(f.spek || "").trim(), vol:+f.vol || 1, satuan:(f.satuan || "").trim(), harga:+f.harga, bidang:f.bidang || "", pengusul:(f.pengusul || "").trim() }))) { toast(f.id ? "Baris RKAS diperbarui." : "Baris ditambahkan ke RKAS."); K.rf = rfBlank(); render(); } }
+  if (b.id === "kr-save") { const f = K.rf; if (!f.uraian.trim() || !(+f.harga > 0)) { toast("Isi uraian dan harga."); return; } const id = f.id || uid("rk"), old = f.id && S.keuRkas.find(r => r._id === f.id); if (await keuSet("keu_rkas/" + id, Object.assign(old ? noId(old) : { asal:"manual", at:new Date().toISOString() }, { th:old ? old.th : keuTh(), sd:old ? old.sd : K.sd, rek:f.rek.trim(), rekNama:rekNama(f.rek.trim()), uraian:f.uraian.trim(), spek:(f.spek || "").trim(), vol:+f.vol || 1, satuan:(f.satuan || "").trim(), harga:+f.harga, bidang:f.bidang || "", pengusul:(f.pengusul || "").trim(), output:(f.output || "").trim() }))) { toast(f.id ? "Baris RKAS diperbarui." : "Baris ditambahkan ke RKAS."); K.rf = rfBlank(); render(); } }
   if (b.id === "kr-reset") { K.rf = rfBlank(); render(); }
   if (d.kredit) { const r = S.keuRkas.find(x => x._id === d.kredit); if (r) { K.rf = Object.assign(rfBlank(), r, { id:r._id, cari:"" }); render(); } }
   if (d.krdelok) { K.confirm = null; if (await keuDel("keu_rkas/" + d.krdelok)) toast("Baris RKAS dihapus."); render(); }
   if (b.id === "kr-impgo") krImport();
   if (b.id === "kr-pdf" && window.jspdf) { const all = rkasLines(keuTh(), K.sd); rkasPdf(K.rtab === "rkbmd" ? all.filter(r => /^5\.2/.test(r.rek)) : all, K.rtab === "rkbmd" ? "RENCANA KEBUTUHAN BARANG MILIK DAERAH (RKBMD)" : "RENCANA KEGIATAN DAN ANGGARAN SEKOLAH (RKAS)"); }
-  if (b.id === "kr-xlsx") { const th = keuTh(), R = realisasi(th, K.sd); xlsxSave(`RKAS ${K.sd} ${th}.xlsx`, [["RKAS", rkasLines(th, K.sd).sort((a, b) => String(a.rek).localeCompare(String(b.rek))).map((r, i) => ({ "No":i + 1, "Kode Rekening":r.rek, "Nama Rekening":rekNama(r.rek), "Uraian":r.uraian, "Spesifikasi":r.spek, "Volume":r.vol, "Satuan":r.satuan, "Harga":r.harga, "Jumlah":rkasJml(r), "Realisasi":R.byLine[r._id] || 0, "Sisa":rkasJml(r) - (R.byLine[r._id] || 0), "Bidang":r.bidang, "Pengusul":r.pengusul, "Asal":r.asal }))]]); }
+  if (b.id === "kr-xlsx") { const th = keuTh(), R = realisasi(th, K.sd); xlsxSave(`RKAS ${K.sd} ${th}.xlsx`, [["RKAS", rkasLines(th, K.sd).sort((a, b) => String(a.rek).localeCompare(String(b.rek))).map((r, i) => ({ "No":i + 1, "Kode Rekening":r.rek, "Nama Rekening":rekNama(r.rek), "Uraian":r.uraian, "Spesifikasi":r.spek, "Volume":r.vol, "Satuan":r.satuan, "Harga":r.harga, "Jumlah":rkasJml(r), "Realisasi":R.byLine[r._id] || 0, "Sisa":rkasJml(r) - (R.byLine[r._id] || 0), "Keterangan (penunjang kegiatan)":r.output || "", "Bidang":r.bidang, "Pengusul":r.pengusul, "Asal":r.asal }))]]); }
   if (b.id === "ks-new") { K.spj = spjBlank(); render(); }
   if (b.id === "ks-batal") { K.spj = null; render(); }
   if (b.id === "ks-add") { K.spj.items.push({ uraian:"", vol:"", satuan:"", harga:"", rkas:"", jb:"", plRef:"" }); render(); }
