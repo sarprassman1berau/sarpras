@@ -91,12 +91,18 @@ Semua tempat unggah foto (detail aset, catatan temuan, foto ruang, BAST, BAST ba
 - **BAST Penarikan** wajib mengisi **kondisi terkini** dan **alasan penarikan** setiap barang (alasan umum dipakai bila alasan per barang kosong); keduanya tercetak di tabel BAST.
 - Saat BAST penarikan disimpan, kondisi terkini langsung menjadi kondisi barang (tanggal cek = tanggal BAST, pemeriksa = Pihak Kedua, catatan = alasan), sehingga ikut ke Rekap, Pemeliharaan & Perbaikan (Rusak Sedang), Usulan Penghapusan (Rusak Berat/Hilang), Unduh KIB, Buku Induk, dan Per Pemegang. Dari akun operator perubahan ini menunggu validasi master seperti biasa.
 
-### Portal GTK (halaman terbuka tanpa akun)
-Alamat: `https://sarprassman1berau.github.io/sarpras/gtk.html` — halaman terpisah dari aplikasi utama, sehingga tidak mengganggu aplikasi lain. Seluruh GTK bisa:
-- **mengusulkan kebutuhan RKAS**: pilih nama (dari daftar pegawai), bidang, isi **kode GTK** sekali (tersimpan di perangkat), cari di standar harga (harga, satuan, kode rekening terisi), isi jumlah dan **keterangan: menunjang kegiatan apa** (wajib); melihat status dan catatan asistensi usulannya, mengubah/menghapus selama belum disetujui;
-- **melihat jadwal Aula & Ruang Multimedia** per minggu (disetujui dan menunggu persetujuan).
-Pengaturan (Keuangan → Usulan & KAK → panel **Portal GTK**, untuk master): salin tautan, atur **kode GTK**, dan kirim daftar nama pegawai ke portal (tombol yang sama). Usulan dari portal tampil di daftar usulan dengan tanda *Portal GTK* dan diasistensi seperti usulan lain (setujui → masuk RKAS dengan asal "portal GTK").
-**Langkah sekali di Firebase:** Authentication → Sign-in method → aktifkan **Anonymous**, lalu tempel ulang `firestore.rules`.
+### Aplikasi Usulan RKAS (akun GTK)
+- **Akun GTK dibuat sekaligus** (Waka Sarpras → Akun & hak akses → *Akun GTK pengusul RKAS*): dari Daftar pegawai yang belum punya akun; nama pengguna = NIP (atau namadepan.namabelakang bila tanpa NIP), satu password awal untuk semua; hasilnya bisa diunduh ke Excel untuk dibagikan. GTK baru: tambahkan di Daftar pegawai lalu buat akunnya; GTK pindah/resign: nonaktifkan lalu hapus akunnya. Akun GTK hanya membuka aplikasi **Usulan RKAS** (langsung terbuka setelah masuk) dan bisa mengganti passwordnya sendiri.
+- **Usulan RKAS** (`#gtk`): tab *Usulkan & usulan saya* (form dari standar harga, keterangan penunjang kegiatan wajib, peringatan **usulan serupa** agar tidak dobel, ubah/hapus usulan sendiri selama belum disetujui), *Semua usulan RKAS* (seluruh usulan tahun itu dengan pengusul dan status — hanya lihat), *Jadwal Aula & Multimedia* (lihat per minggu).
+- Akun GTK **tidak bisa mengubah/menghapus usulan orang lain** (dijaga aturan Firestore: hanya pemilik, dan hanya selama belum disetujui).
+- `gtk.html` lama kini hanya mengarahkan ke aplikasi (`./#gtk`); login Anonymous tidak dipakai lagi.
+
+### Status usulan RKAS
+**Menunggu persetujuan** · **Disetujui** (otomatis masuk RKAS) · **Tidak disetujui** (alasan wajib, tampil ke pengusul). Hanya akun bercentang *Mengelola RKAS* (bendahara/tim keuangan) dan master yang mengubah status; *Kembalikan ke menunggu* dan *Tidak disetujui* mengeluarkan lagi baris RKAS-nya.
+
+### Impor usulan & contoh file
+- **Impor usulan dari Excel** (Keuangan → Usulan & KAK, untuk tim keuangan): kolom Tahun, Sumber Dana, Bidang, Uraian, Spesifikasi, Volume, Satuan, Harga Satuan, Kode Rekening, Keterangan, Pengusul, Status, Alasan. Kode rekening/harga kosong dicocokkan dengan standar harga; status Disetujui langsung masuk RKAS. Data awal 2027 disiapkan dalam file *Data awal usulan RKAS 2027.xlsx* (511 usulan dari sheet RENCANA BOSP 2027).
+- Setiap menu impor punya tombol **Unduh contoh file** (format sudah sesuai pembaca aplikasi): usulan RKAS, RKAS, aset (tidak tercatat/BOSP Daerah), SIPBMD, ruang, daftar pegawai, kertas kerja modal (`TPL()`, `tplBtn`).
 
 ### Aplikasi Keuangan (tahap 1)
 Dibuka dari Beranda (akun operator perlu dicentang **Keuangan** di Akun & hak akses; hak tambahan: *Mengajukan usulan & KAK*, *Mengelola RKAS*, *Mencatat SPJ*). Semua isian Keuangan langsung tersimpan (tanpa validasi master) sesuai centang tersebut.
@@ -195,7 +201,7 @@ Menu **BAST Penerimaan Bantuan** (Aset & Persediaan → Penyerahan barang, hak "
 
 **Kotak cari tidak lagi kehilangan kursor**: `render()` mengembalikan fokus dan posisi kursor (juga untuk isian tanpa id yang memakai atribut `data-…`) di semua halaman, termasuk Beranda, Jadwal, Permintaan, dan Keuangan. Teks pencarian Keuangan disimpan per halaman (`UI.keu.qs[current]`).
 
-**Portal GTK** (`gtk.html`, berdiri sendiri, Firebase compat + login anonim): membaca `gtk_pub/info` (daftar nama), `pinjam` (jadwal), dan `keu_gtk` miliknya (`where by == uid`); menulis `keu_gtk` dengan `kode` yang harus sama dengan `gtk_cfg/kode` (dicek aturan lewat `get()`; dokumen kode tidak bisa dibaca anonim). Aturan: `isGtk()` = `sign_in_provider == 'anonymous'`. Di aplikasi utama `allUsul()` menggabungkan `keu_usul` + `keu_gtk` (`_col`), `gtkPanel()`/`gtkSave()` mengatur kode dan daftar nama. Panel *Tambah baris manual / impor Excel* di RKAS mengingat status terbuka (`UI.keu.rOpen`, event `toggle`).
+**Usulan RKAS GTK** (`vGtk`, `gtkJadwal`, `gtkOnly`, app `app_gtk` aktif bawaan; akun massal `gtkAkunPanel`/`gtkAkunGo`, preset `PRESET.gtk`, akun bertanda `gtk:true`): aturan `appOn('app_gtk')` (aktif bila tidak dimatikan) membuka baca `keu_usul`/`keu_kak` dan tulis usulan milik sendiri. Status `Diajukan`/`Disetujui`/`Ditolak` ditampilkan lewat `US_LBL`. Impor usulan `usulImport` (`rkasParse(wb, {allowZero:true})`, `stFromText`, `sdFromText`, `shExact`). Panel *Tambah baris manual / impor Excel* di RKAS mengingat status terbuka (`UI.keu.rOpen`, event `toggle`).
 
 **Keuangan** (`vKeu*`, koleksi `keu_usul`, `keu_kak`, `keu_rkas`, `keu_pagu`, `keu_spj`, `keu_honor`, `keu_perjadin`; izin khusus `app_keuangan`, `keu_usul`, `keu_rkas`, `keu_spj` di `KEU_IZIN`): ditulis langsung ke Firestore (`keuSet`/`keuDel`). Aturan: koleksi `keu_*` hanya **dibaca** akun bercentang Keuangan (aturan umum kini `match /{col}/{docId=**}` dengan `col.matches('keu_.*')`), usulan/KAK oleh pengusulnya selama belum disetujui, RKAS/pagu oleh `keu_rkas`, SPJ/honor/perjadin oleh `keu_spj`. Standar harga statis `data/standar-harga.json` (`SH`, `shLoad`, `shFind`; daftar rekening dipadatkan di `rl`). Impor RKAS `rkasParse` (deteksi judul kolom Uraian + Harga/Tarif, judul dua baris, kode rekening terbawa, baris tanpa volume angka dilewati). Rute `#keu-…` dikenali utuh (rute lain tetap `view-sub`). Realisasi = jumlah SPJ/honor/perjadin per tahun & sumber dana; per baris RKAS lewat tautan `rkas`.
 

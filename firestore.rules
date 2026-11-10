@@ -21,9 +21,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/akun/$(request.auth.uid)).data.aktif == true;
     }
     function isMember() { return isMaster() || isOperator(); }
-    // Portal GTK (gtk.html): masuk anonim tanpa akun, menulis usulan dengan kode GTK yang benar
-    function isGtk() { return signedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous'; }
-    function kodeGtk() { return get(/databases/$(database)/documents/gtk_cfg/kode).data.kode; }
+    // aplikasi yang aktif bawaan (tanpa centang = boleh), mis. Usulan RKAS untuk seluruh GTK
+    function appOn(k) {
+      return isMaster() || (isOperator() && (!('izin' in akunData()) || akunData().izin.get(k, true) == true));
+    }
     // hak akses operator (akun/{uid}.izin). Akun lama tanpa izin = akses penuh staf.
     function akunData() { return get(/databases/$(database)/documents/akun/$(request.auth.uid)).data; }
     function izin(k) {
@@ -37,7 +38,8 @@ service cloud.firestore {
     // semua data: anggota membaca, hanya master menulis.
     // Data keuangan (koleksi berawalan keu_) hanya dibaca akun yang dicentang aplikasi Keuangan.
     match /{col}/{docId=**} {
-      allow read: if isMember() && (!col.matches('keu_.*') || izinKhusus('app_keuangan'));
+      allow read: if isMember() && (!col.matches('keu_.*') || izinKhusus('app_keuangan')
+        || ((col == 'keu_usul' || col == 'keu_kak') && appOn('app_gtk')));
       allow write: if isMaster();
     }
     // daftar akun: dibaca anggota (untuk menampilkan nama), dibaca juga oleh pemilik akunnya
@@ -69,7 +71,6 @@ service cloud.firestore {
     }
     // jadwal ruang (Aula & Multimedia): semua akun membaca; mengajukan dan menyetujui sesuai centang
     match /pinjam/{id} {
-      allow read: if isGtk();
       allow create: if izinKhusus('jadwal_ajukan')
         && request.resource.data.by == request.auth.uid
         && request.resource.data.st == 'Diajukan'
@@ -103,31 +104,20 @@ service cloud.firestore {
     }
     // ===== Keuangan: ditulis langsung sesuai centang hak akses (tanpa validasi master) =====
     // usulan & KAK: pengusul menulis miliknya selama belum disetujui; pengelola RKAS mengasistensi
+    // status usulan (menunggu/disetujui/tidak disetujui) hanya diubah akun "Mengelola RKAS" (bendahara/tim keuangan);
+    // pengusul (tim keuangan atau akun GTK) hanya menulis usulannya sendiri, jadi usulan orang lain tidak bisa dihapus
     match /keu_usul/{id} {
-      allow create: if izinKhusus('keu_usul') && request.resource.data.by == request.auth.uid && request.resource.data.st == 'Diajukan';
+      allow create: if (izinKhusus('keu_usul') || appOn('app_gtk')) && request.resource.data.by == request.auth.uid && request.resource.data.st == 'Diajukan';
       allow update: if izinKhusus('keu_rkas')
-        || (izinKhusus('keu_usul') && resource.data.by == request.auth.uid && resource.data.st != 'Disetujui'
+        || ((izinKhusus('keu_usul') || appOn('app_gtk')) && resource.data.by == request.auth.uid && resource.data.st != 'Disetujui'
             && request.resource.data.by == request.auth.uid && request.resource.data.st == 'Diajukan');
-      allow delete: if izinKhusus('keu_rkas') || (izinKhusus('keu_usul') && resource.data.by == request.auth.uid && resource.data.st != 'Disetujui');
+      allow delete: if izinKhusus('keu_rkas') || ((izinKhusus('keu_usul') || appOn('app_gtk')) && resource.data.by == request.auth.uid && resource.data.st != 'Disetujui');
     }
     match /keu_kak/{id} {
       allow create: if izinKhusus('keu_usul') && request.resource.data.by == request.auth.uid;
       allow update, delete: if izinKhusus('keu_rkas') || (izinKhusus('keu_usul') && resource.data.by == request.auth.uid);
     }
     match /keu_rkas/{id} { allow write: if izinKhusus('keu_rkas'); }
-    // Portal GTK: daftar nama dibaca portal; usulan GTK hanya dibaca/diubah pengirimnya selama belum disetujui
-    match /gtk_pub/{id} { allow read: if isGtk(); }
-    match /keu_gtk/{id} {
-      allow read: if isGtk() && resource.data.by == request.auth.uid;
-      allow create: if isGtk() && request.resource.data.by == request.auth.uid && request.resource.data.st == 'Diajukan'
-        && request.resource.data.kode == kodeGtk() && request.resource.data.uraian is string && request.resource.data.uraian.size() < 300
-        && request.resource.data.keys().size() < 25;
-      allow update: if izinKhusus('keu_rkas')
-        || (isGtk() && resource.data.by == request.auth.uid && resource.data.st != 'Disetujui'
-            && request.resource.data.by == request.auth.uid && request.resource.data.st == 'Diajukan'
-            && request.resource.data.kode == kodeGtk() && request.resource.data.keys().size() < 25);
-      allow delete: if izinKhusus('keu_rkas') || (isGtk() && resource.data.by == request.auth.uid && resource.data.st != 'Disetujui');
-    }
     match /keu_pagu/{id} { allow write: if izinKhusus('keu_rkas'); }
     match /keu_spj/{id} { allow write: if izinKhusus('keu_spj'); }
     match /keu_honor/{id} { allow write: if izinKhusus('keu_spj'); }

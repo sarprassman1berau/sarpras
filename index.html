@@ -272,6 +272,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
   <div class="navsec"><a href="#jadwal" data-v="jadwal">Jadwal Penggunaan Aula dan Multimedia <span id="jbadge"></span></a></div></div>
   <div id="nav-app-minta"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Permintaan Barang Persediaan</p>
   <div class="navsec"><a href="#minta" data-v="minta">Permintaan Barang Persediaan <span id="mbadge"></span></a></div></div>
+  <div id="nav-app-gtk"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Usulan RKAS (GTK)</p>
+  <div class="navsec"><a href="#gtk" data-v="gtk">Usulan RKAS & jadwal aula</a></div></div>
   <div id="nav-app-keuangan"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Keuangan</p>
   <div class="navsec"><a href="#keu" data-v="keu">Ringkasan keuangan</a></div>
   <p class="navgroup">Perencanaan</p><div class="navsec"><a href="#keu-harga" data-v="keu-harga">Standar harga (SSH/SBU)</a><a href="#keu-usul" data-v="keu-usul">Usulan & KAK</a><a href="#keu-rkas" data-v="keu-rkas">RKAS & RKBMD</a></div>
@@ -360,7 +362,7 @@ const usulHapus = x => (x.kond === "Rusak Berat" || x.kond === "Hilang") && !x.r
 const BUKU_RE = /\b(buku|novel|bahan ajar|monograf|kamus|ensiklopedi|atlas|majalah|modul|komik|antologi)\b/i;
 
 /* ================= state ================= */
-const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], cetak:[], bantuan:[], minta:[], keuGtk:[], gtkCfg:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
+const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], cetak:[], bantuan:[], minta:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
 const CFG_DEFAULT = {
   kepsek:"Dr. H. Saleh, S.T., M.Pd.", nipKepsek:"19780708 200604 1 004",
   waka:"Ika Novita Mulia, S.Pd.", nipWaka:"199211102022212025", jabWaka:"Wakil Kepala Sekolah Sarana dan Prasarana",
@@ -481,7 +483,7 @@ async function boot() {
   sub("gdg", rows => { S.gdg = rows; });
   sub("pinjam", rows => { S.pinjam = rows; });
   sub("bantuan", rows => { S.bantuan = rows.sort((a, b) => String(b.tgl).localeCompare(String(a.tgl))); });
-  for (const [c, k] of [["keu_gtk", "keuGtk"], ["gtk_cfg", "gtkCfg"], ["keu_usul", "keuUsul"], ["keu_kak", "keuKak"], ["keu_rkas", "keuRkas"], ["keu_pagu", "keuPagu"], ["keu_spj", "keuSpj"], ["keu_honor", "keuHonor"], ["keu_perjadin", "keuPerjadin"]]) sub(c, rows => { S[k] = rows; });
+  for (const [c, k] of [["keu_usul", "keuUsul"], ["keu_kak", "keuKak"], ["keu_rkas", "keuRkas"], ["keu_pagu", "keuPagu"], ["keu_spj", "keuSpj"], ["keu_honor", "keuHonor"], ["keu_perjadin", "keuPerjadin"]]) sub(c, rows => { S[k] = rows; });
   sub("minta", rows => { S.minta = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
   sub("cetak", rows => { S.cetak = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
   sub("pengingat", rows => { S.pengingat = rows; });
@@ -612,6 +614,40 @@ async function saveFile(filename, data) {
   try { await downloads.save({ filename, data }); toast("File disimpan: " + filename); }
   catch (e) { if (e.code !== "declined") toast("Tidak bisa mengunduh (" + (e.code || "error") + ")."); }
 }
+// contoh file (master file) untuk setiap menu impor, sudah sesuai format yang dibaca aplikasi
+const TPL = () => ({
+  usulan:["Contoh impor usulan RKAS", [["Usulan", [["Tahun", "Sumber Dana", "Bidang", "Uraian", "Spesifikasi", "Volume", "Satuan", "Harga Satuan", "Kode Rekening", "Keterangan (penunjang kegiatan)", "Pengusul", "Status", "Alasan"],
+    [2027, "BOSNAS", "Kurikulum", "Kertas HVS A4", "70 gram", 20, "Rim", 55000, "5.1.02.01.001.00024", "Administrasi pembelajaran kelas X", "Ika Novita Mulia, S.Pd.", "Menunggu persetujuan", ""],
+    [2027, "BOSDA", "Sarpras", "Cat Tembok", "Interior 5 kg", 10, "Kaleng", 185000, "", "Pemeliharaan ruang kelas", "Wahyu Winata", "Disetujui", ""],
+    [2027, "BOSNAS", "Kesiswaan", "Sewa Tenda", "4 hari", 1, "Paket", 2500000, "", "Kegiatan bulan bahasa", "Syamsul, S.Pd", "Tidak disetujui", "Sudah tersedia tenda sekolah"]]], ["Petunjuk", [["Kolom", "Isi"], ["Tahun", "Tahun anggaran, mis. 2027 (kosong = tahun yang dipilih di aplikasi)"], ["Sumber Dana", "BOSNAS, BOSDA, KOMITE, atau LAIN"], ["Bidang", KEU_BIDANG.join(", ")], ["Kode Rekening", "Boleh kosong; dicocokkan otomatis dengan standar harga"], ["Status", "Menunggu persetujuan / Disetujui / Tidak disetujui (kosong = menunggu)"], ["Alasan", "Wajib diisi bila Tidak disetujui"]]]]],
+  rkas:["Contoh impor RKAS", [["RKAS", [["Kode Rekening", "Uraian", "Spesifikasi", "Volume", "Satuan", "Harga Satuan", "Jumlah", "Pengusul", "Keterangan (penunjang kegiatan)"],
+    ["5.1.02.01.001.00024", "Kertas HVS A4", "70 gram", 20, "Rim", 55000, 1100000, "Ika Novita Mulia, S.Pd.", "Administrasi pembelajaran"],
+    ["5.1.02.02.001.00003", "Honorarium Narasumber", "Profesional", 16, "OJ", 400000, 6400000, "Panitia", "Bulan bahasa"],
+    ["5.2.02.05.01.0001", "Laptop", "Core i5, 8 GB", 2, "Unit", 9000000, 18000000, "Sarpras", "Laboratorium komputer"]]]]],
+  aset:["Contoh impor aset", [["Aset", [["Nama Barang", "Merek", "Spesifikasi", "Serial Number", "Golongan", "Sumber Dana", "Tahun Pengadaan", "Tanggal Penerimaan", "Nomor Registrasi", "Jumlah", "Harga per Unit", "Lokasi", "Pemegang", "Keterangan"],
+    ["Laptop", "Asus Vivobook", "Core i5, 8 GB", "SN12345", "KIB B", "BOSP Daerah", 2025, "2025-08-15", "", 2, 9000000, "Ruang Guru", "", "Pengadaan BOSDA 2025"],
+    ["Buku Matematika Kelas X", "Kemendikbud", "Kurikulum Merdeka", "", "KIB E", "BOSP Reguler", 2025, "2025-07-10", "", 30, 85000, "Perpustakaan", "", ""]]]]],
+  sipbmd:["Contoh impor SIPBMD", [["KIB B", [["Kode Aset", "Nama Aset", "No. Register", "Tanggal Perolehan", "Tahun Perolehan", "Nilai Perolehan", "Nomor Dokumen", "Merek", "Tipe", "Ukuran", "Bahan", "Asal Usul", "Kondisi", "Keterangan"],
+    ["1.3.2.10.01.02.001", "Laptop", "000001", "2024-03-12", 2024, 9500000, "BAST/12/2024", "Lenovo", "ThinkPad E14", "", "", "Pembelian", "Baik", ""]]], ["KIB E", [["Kode Aset", "Nama Aset", "No. Register", "Tahun Perolehan", "Nilai Perolehan", "Judul", "Pencipta", "Asal Usul", "Kondisi"],
+    ["1.3.5.01.01.01.001", "Buku Matematika Kelas X", "000001", 2023, 85000, "Matematika X", "Kemendikbud", "Pembelian", "Baik"]]]]],
+  ruang:["Contoh impor ruang", [["Ruang", [["Kode Gedung", "Kode Ruang", "Peruntukan", "Jenis", "Lantai", "Panjang", "Lebar", "Kondisi", "Keterangan"],
+    ["A", "A.1.01", "Ruang Kelas X-1", "Ruang Kelas", 1, 9, 8, "Baik", ""], ["A", "A.1.02", "Laboratorium Kimia", "Laboratorium", 1, 12, 9, "Rusak Ringan", "Plafon bocor"]]]]],
+  pegawai:["Contoh impor daftar pegawai", [["Pegawai", [["Nama", "NIP", "Status Kepegawaian", "Jabatan", "Kelompok"],
+    ["Ika Novita Mulia, S.Pd.", "198501012010012001", "PNS", "Guru Kimia", "Guru"], ["Muhammad Iqbal Sholeh, S.Pd.", "199910042024211006", "PPPK", "Guru Ahli Pertama", "Guru"], ["Samin", "", "Honorer", "Satpam", "Tenaga Kependidikan"]]]]],
+  kk:["Contoh impor kertas kerja modal", [["BOSNAS Smt 1", [["KERTAS KERJA ASET TETAP (MODAL) SMA NEGERI 1 BERAU"], ["Sumber Dana : BOSNAS TAHUN 2026"], ["Per : 1 Januari s.d 30 Juni 2026"],
+    ["", "", "", "", "", "Rincian barang", "", "", "", "", "", "", "", "", "SP2D", "", "BAST", "", "Penyedia", "Sumber Dana", "Keterangan"],
+    ["No", "Nama Pekerjaan", "Nomor SPK/SPB/Nota", "Tanggal", "Nilai", "No", "Nama", "Merek", "Spesifikasi/Type", "Jumlah Barang", "Satuan", "Harga Satuan", "Total", "Kode Rekening Belanja", "Nomor", "Tanggal", "Nomor", "Tanggal", "", "", ""],
+    [1, "Pengadaan Laptop Laboratorium", "027/SPB/BOS/III/2026", "15-03-2026", 18000000, 1, "Laptop", "Asus", "Core i5 8GB", 2, "Unit", 9000000, 18000000, "5.2.02.05.01.0001", "SP2D-001", "20-03-2026", "BAST-01", "18-03-2026", "CV Maju Jaya", "BOSNAS", ""],
+    ["", "", "", "", "", 2, "Mouse", "Logitech", "Wireless", 2, "Unit", 150000, 300000, "5.2.02.05.01.0001", "", "", "", "", "", "", ""],
+    ["Total nilai"]]]]],
+});
+const tplBtn = k => `<button type="button" class="ghost" data-tpl="${k}" title="Unduh contoh file Excel yang formatnya sudah sesuai aplikasi">Unduh contoh file</button>`;
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-tpl]"); if (!b) return; e.preventDefault(); const t = TPL()[b.dataset.tpl]; if (!t) return;
+  if (!window.XLSX) { toast("Modul Excel belum termuat. Coba lagi sebentar."); return; }
+  const wb = XLSX.utils.book_new(); for (const [n, aoa] of t[1]) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), n.slice(0, 31));
+  saveFile(t[0] + ".xlsx", new Blob([XLSX.write(wb, { bookType:"xlsx", type:"array" })]));
+});
 function xlsxSave(filename, sheets) {
   if (!window.XLSX) { toast("Modul Excel belum termuat. Coba lagi sebentar."); return; }
   const wb = XLSX.utils.book_new();
@@ -620,7 +656,7 @@ function xlsxSave(filename, sheets) {
 }
 
 /* ================= router ================= */
-const VIEWS = ["home","jadwal","minta","keu","keu-harga","keu-usul","keu-rkas","keu-spj","keu-honor","keu-perjadin","bantuan","masa","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
+const VIEWS = ["home","jadwal","minta","gtk","keu","keu-harga","keu-usul","keu-rkas","keu-spj","keu-honor","keu-perjadin","bantuan","masa","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
 let current = "ringkasan", sub = "";
 const UI = {
   aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"", th:"" },
@@ -639,11 +675,11 @@ function route() {
   const navV = current === "kertas" ? "rekon" : current;
   for (const a of document.querySelectorAll("#tabs a")) { if (a.dataset.v === navV) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
   const link = document.querySelector(`#tabs a[data-v="${navV}"]`), nama = current === "home" ? "Beranda" : link ? link.firstChild.textContent.trim() : "";
-  const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "minta" ? "minta" : String(current).startsWith("keu") ? "keuangan" : current === "akun" || current === "surat" ? "waka" : "sarpras";
+  const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "minta" ? "minta" : current === "gtk" ? "gtk" : String(current).startsWith("keu") ? "keuangan" : current === "akun" || current === "surat" ? "waka" : "sarpras";
   if (app !== "home") window.__lastApp = app;
-  const APPN = { keuangan:["Keuangan", "Keuangan · SMAN 1 Berau", "SMAN 1 Berau · RKAS, usulan, SPJ belanja, honor, perjalanan dinas"], minta:["Permintaan Barang Persediaan", "Permintaan Barang Persediaan · SMAN 1 Berau", "SMAN 1 Berau · permintaan ATK & bahan habis pakai, stok keluar tercatat otomatis"], home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Penggunaan Aula dan Multimedia", "Jadwal Penggunaan Aula dan Multimedia · SMAN 1 Berau", "SMAN 1 Berau · pengajuan dan persetujuan pemakaian Aula dan Ruang Multimedia"], waka:["Waka Sarpras", "Waka Sarpras · SMAN 1 Berau", "SMAN 1 Berau · akun, hak akses, dan administrasi Waka Sarpras"] }[app];
+  const APPN = { gtk:["Usulan RKAS", "Usulan RKAS · SMAN 1 Berau", "SMAN 1 Berau · usulan kebutuhan RKAS untuk seluruh GTK dan jadwal Aula & Multimedia"], keuangan:["Keuangan", "Keuangan · SMAN 1 Berau", "SMAN 1 Berau · RKAS, usulan, SPJ belanja, honor, perjalanan dinas"], minta:["Permintaan Barang Persediaan", "Permintaan Barang Persediaan · SMAN 1 Berau", "SMAN 1 Berau · permintaan ATK & bahan habis pakai, stok keluar tercatat otomatis"], home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Penggunaan Aula dan Multimedia", "Jadwal Penggunaan Aula dan Multimedia · SMAN 1 Berau", "SMAN 1 Berau · pengajuan dan persetujuan pemakaian Aula dan Ruang Multimedia"], waka:["Waka Sarpras", "Waka Sarpras · SMAN 1 Berau", "SMAN 1 Berau · akun, hak akses, dan administrasi Waka Sarpras"] }[app];
   $(".pageid .app").textContent = APPN[1]; $("#nav-appname").textContent = APPN[0]; $("#nav-appdesc").textContent = APPN[2];
-  for (const a2 of ["sarpras", "jadwal", "waka", "minta", "keuangan"]) $("#nav-app-" + a2).hidden = app !== "home" && app !== a2;
+  for (const a2 of ["sarpras", "jadwal", "waka", "minta", "keuangan", "gtk"]) $("#nav-app-" + a2).hidden = app !== "home" && app !== a2;
   $("#nav-me").hidden = app === "waka";
   const sb = current === "aset" ? (sub === "tak" ? "Aset tidak tercatat di SIPBMD (semua golongan)" : sub === "bospda" ? "Aset BOSP Daerah belum tercatat di SIPBMD" : KATMAP[sub].kib + " · " + KATMAP[sub].nama + " · data SIPBMD") : current === "persediaan" ? ({ masuk:"Persediaan masuk", keluar:"Persediaan keluar", mutasi:"Mutasi persediaan" })[sub] : current === "kertas" ? "Kertas Kerja Modal" : current === "rekon" ? "Rekon Aset" : "";
   $("#pagetitle").textContent = nama; $("#pagesub").textContent = sb;
@@ -693,12 +729,13 @@ function render(soft) {
     if (S.role === "none") { v.innerHTML = lockScreen(); return; }
     for (const a of document.querySelectorAll("#tabs a")) a.hidden = !canView(a.dataset.v);
     for (const sec of document.querySelectorAll("#tabs .navsec")) sec.hidden = ![...sec.querySelectorAll("a")].some(a => !a.hidden);
-    for (const a2 of ["sarpras", "jadwal", "waka", "minta", "keuangan"]) if (!appAccess(a2)) $("#nav-app-" + a2).hidden = true;
+    for (const a2 of ["sarpras", "jadwal", "waka", "minta", "keuangan", "gtk"]) if (!appAccess(a2)) $("#nav-app-" + a2).hidden = true;
+    if (current === "home" && gtkOnly()) { location.hash = "#gtk"; return; }
     { const mb = $("#mbadge"), mn = mtPendingForMe(); if (mb) mb.innerHTML = mn ? `<span class="pill warn">${mn}</span>` : ""; }
     if (current === "akun" && appAccess("waka")) $("#nav-me").hidden = true;
     if (!canView(current)) { v.innerHTML = `<div class="empty"><b>Menu ini tidak termasuk akses akun Anda</b>Minta akun master menambahkan akses jika Anda perlu membukanya.</div>`; return; }
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
-    if (current === "home" || current === "jadwal" || current === "akun" || current === "minta" || String(current).startsWith("keu")) { v.innerHTML = pinBar() + (current === "home" ? vHome() : current === "akun" ? vAkunPage() : current === "minta" ? vMinta() : current === "keu" ? vKeu() : current === "keu-harga" ? vKeuHarga() : current === "keu-usul" ? vKeuUsul() : current === "keu-rkas" ? vKeuRkas() : current === "keu-spj" ? vKeuSpj() : current === "keu-honor" ? vKeuHonor() : current === "keu-perjadin" ? vKeuPerjadin() : vJadwal()); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); refocus(); return; }
+    if (current === "home" || current === "jadwal" || current === "akun" || current === "minta" || current === "gtk" || String(current).startsWith("keu")) { v.innerHTML = pinBar() + (current === "home" ? vHome() : current === "akun" ? vAkunPage() : current === "minta" ? vMinta() : current === "gtk" ? vGtk() : current === "keu" ? vKeu() : current === "keu-harga" ? vKeuHarga() : current === "keu-usul" ? vKeuUsul() : current === "keu-rkas" ? vKeuRkas() : current === "keu-spj" ? vKeuSpj() : current === "keu-honor" ? vKeuHonor() : current === "keu-perjadin" ? vKeuPerjadin() : vJadwal()); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); refocus(); return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
     v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, bantuan:vBantuan, masa:vMasa, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
     refocus();
@@ -763,6 +800,8 @@ const APPS = [
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="31" width="25" height="22" rx="2" fill="#d99a4e"/><path d="M9 37h25" stroke="#b97a32" stroke-width="2"/><rect x="18" y="31" width="7" height="8" fill="#f3d6a3"/><rect x="14" y="12" width="21" height="19" rx="2" fill="#e8b46b"/><path d="M14 17h21" stroke="#c98d43" stroke-width="2"/><rect x="21" y="12" width="7" height="7" fill="#f6e0b6"/><rect x="38" y="15" width="19" height="38" rx="3" fill="#fff" stroke="#1e5a4c" stroke-width="2.2"/><rect x="43" y="11" width="9" height="7" rx="2" fill="#1e5a4c"/><path d="m41.5 26 2 2 3.5-4M41.5 35l2 2 3.5-4M41.5 44l2 2 3.5-4" stroke="#2f9a5a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M49 26h5M49 35h5M49 44h5" stroke="#8aa69c" stroke-width="2" stroke-linecap="round"/></svg>' },
   { id:"jadwal", nama:"Jadwal Penggunaan Aula dan Multimedia", desc:"Jadwal pemakaian Aula dan Ruang Multimedia berdampingan, pengajuan peminjaman, dan persetujuan.", href:"#jadwal", ac:"#7e5bb5", acs:"color-mix(in srgb, #7e5bb5 16%, transparent)", siap:true,
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="11" width="42" height="41" rx="5" fill="#fff" stroke="#6b4fa0" stroke-width="2.2"/><path d="M6 16a5 5 0 0 1 5-5h32a5 5 0 0 1 5 5v6H6z" fill="#7e5bb5"/><path d="M16 7v8M38 7v8" stroke="#4b3578" stroke-width="3" stroke-linecap="round"/><rect x="11" y="27" width="15" height="7" rx="2" fill="#4caf7a"/><rect x="29" y="27" width="14" height="11" rx="2" fill="#b49be0"/><rect x="11" y="37" width="15" height="9" rx="2" fill="#b49be0"/><rect x="29" y="41" width="14" height="6" rx="2" fill="#4caf7a"/><circle cx="48" cy="46" r="12" fill="#fff" stroke="#6b4fa0" stroke-width="2.2"/><path d="M48 39v7l5 3" stroke="#6b4fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>' },
+  { id:"gtk", nama:"Usulan RKAS", desc:"Seluruh GTK mengusulkan kebutuhan RKAS, melihat usulan yang sudah ada agar tidak dobel, dan jadwal Aula & Multimedia.", href:"#gtk", ac:"#7a5a1e", acs:"color-mix(in srgb, #c08a2a 16%, transparent)", siap:true,
+    icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="6" width="36" height="48" rx="4" fill="#fff" stroke="#7a5a1e" stroke-width="2.4"/><rect x="22" y="2" width="16" height="9" rx="2.5" fill="#e9c27a" stroke="#7a5a1e" stroke-width="2"/><path d="M19 22h22M19 30h22M19 38h14" stroke="#7a5a1e" stroke-width="2.4" stroke-linecap="round"/><circle cx="47" cy="47" r="12" fill="#2f8a5b"/><path d="M41 47h12M47 41v12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>' },
   { id:"minta", nama:"Permintaan Barang Persediaan", desc:"Guru dan staf mengajukan permintaan ATK / bahan habis pakai; pengurus barang menyerahkan dan stok keluar tercatat otomatis di Persediaan.", href:"#minta", ac:"#2f8a5b", acs:"color-mix(in srgb, #2f8a5b 16%, transparent)", siap:true,
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 26 32 14l24 12-24 12z" fill="#f3d6a3" stroke="#a8742c" stroke-width="2" stroke-linejoin="round"/><path d="M8 26v20l24 12V38z" fill="#d99a4e" stroke="#a8742c" stroke-width="2" stroke-linejoin="round"/><path d="M56 26v20L32 58V38z" fill="#e8b46b" stroke="#a8742c" stroke-width="2" stroke-linejoin="round"/><rect x="38" y="4" width="20" height="26" rx="2.5" fill="#fff" stroke="#2f8a5b" stroke-width="2"/><path d="M42 11h12M42 16h12M42 21h8" stroke="#2f8a5b" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="12" r="7" fill="#2f8a5b"/><path d="M13 12h6M16 9v6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>' },
   { id:"keuangan", nama:"Keuangan", desc:"Standar harga, usulan & KAK, RKAS/RKBMD, SPJ belanja (SPB, TTB, kuitansi), honorarium, dan perjalanan dinas.", href:"#keu", ac:"var(--info)", acs:"var(--info-soft)", siap:true,
@@ -781,6 +820,7 @@ function vHome() {
   const status = a => {
     if (!a.siap) return "Sedang disiapkan";
     if (a.id === "sarpras") { const t = S.catatan.filter(c => c.val !== false && c.st !== "Selesai").length, v = pendingList().length; return [ready ? fmt(allItems().visible.length) + " aset" : "memuat…", ready && masaPakai().lewat.length ? fmt(masaPakai().lewat.length) + " masa pakai lewat" : "", t ? fmt(t) + " temuan terbuka" : "", v ? fmt(v) + " menunggu validasi" : ""].filter(Boolean).join(" · "); }
+    if (a.id === "gtk") { const th = String(new Date().getFullYear() + (new Date().getMonth() >= 6 ? 1 : 0)), mine = allUsul().filter(u => u.by === S.me).length; return (mine ? fmt(mine) + " usulan Anda · " : "") + fmt(allUsul().filter(u => u.th === th).length) + " usulan " + th; }
     if (a.id === "keuangan") { const th = thNow(), w = allUsul().filter(u => u.st === "Diajukan").length, re = realisasi(th, "").total; return (w ? fmt(w) + " usulan menunggu · " : "") + "Realisasi " + th + " " + rp(re); }
     if (a.id === "minta") { const w = S.minta.filter(m => m.st === "Diajukan"), mine = w.filter(m => m.by === S.me).length; return (can("minta_proses") ? (w.length ? fmt(w.length) + " menunggu diproses" : "Tidak ada antrean") : (mine ? fmt(mine) + " permintaan Anda menunggu" : "Ajukan permintaan barang")) + " · " + fmt(S.psdBarang.filter(b => psdLedger(b._id).qty > 0).length) + " jenis tersedia"; }
     if (a.id === "jadwal") { const h = jdToday().length, w = S.pinjam.filter(b => b.st === "Diajukan").length; return (h ? fmt(h) + " pemakaian hari ini" : "Hari ini kosong") + (w ? " · " + fmt(w) + " menunggu" : ""); }
@@ -1239,7 +1279,7 @@ function aiDocs() {
 function aiPanel() {
   const A = UI.ai, bos = sub === "bospda", docs = A.rows ? aiDocs() : [], tot = docs.reduce((t, d) => t + (d.harga || 0) * (d.jml || 1), 0);
   return `<section class="panel" style="margin-bottom:14px;border-color:var(--accent)"><div style="display:flex;gap:8px;align-items:baseline"><h3 style="margin:0;flex:1">Import ke ${esc(subMeta(sub).nama)}</h3><button class="ghost" id="ai-close">Tutup</button></div>
-    <p class="hint" style="margin:4px 0 10px">File Excel berisi daftar barang dengan kolom seperti: Nama Barang, Merek, Spesifikasi, Serial Number, Sumber, Tahun Pengadaan, Tanggal Penerimaan, Nomor Registrasi, Jumlah, Harga per Unit, Keterangan. Judul kolom dikenali otomatis. Semua aset masuk sebagai ${bos ? "<b>BOSP Daerah · menunggu SIPBMD</b>" : "<b>tidak tercatat di SIPBMD</b>"}.</p>
+    <p class="hint" style="margin:4px 0 10px">File Excel berisi daftar barang dengan kolom seperti: Nama Barang, Merek, Spesifikasi, Serial Number, Sumber, Tahun Pengadaan, Tanggal Penerimaan, Nomor Registrasi, Jumlah, Harga per Unit, Keterangan. Judul kolom dikenali otomatis. Semua aset masuk sebagai ${bos ? "<b>BOSP Daerah · menunggu SIPBMD</b>" : "<b>tidak tercatat di SIPBMD</b>"}. ${tplBtn("aset")}</p>
     <div class="fgrid"><label class="upload" for="ai-file" style="aspect-ratio:auto;min-height:70px">${A.file ? `<b>${esc(A.file)}</b>klik untuk ganti file` : "<b>+ Pilih file Excel</b>.xlsx atau .xls"}<input id="ai-file" type="file" accept=".xlsx,.xls,.csv" hidden></label>
       <div><label class="f">Golongan (bila file tidak punya kolom golongan)<select id="ai-kat">${KAT.map(k => `<option value="${k.id}" ${A.kat === k.id ? "selected" : ""}>${k.kib} · ${k.nama}</option>`).join("")}</select></label>
       <label class="ck" style="margin-top:8px"><input type="checkbox" id="ai-pecah" ${A.pecah ? "checked" : ""}><span>Pecah per unit<br><span class="hint">Barang berjumlah 10 menjadi 10 catatan, supaya pemegang, lokasi, kondisi, dan foto bisa diisi per unit. Matikan untuk menyimpan satu catatan dengan jumlahnya.</span></span></label></div></div>
@@ -2787,22 +2827,26 @@ function vKeuHarga() {
 const usBlank = () => ({ id:"", sd:UI.keu.sd || "BOSNAS", bidang:"", kak:"", uraian:"", spek:"", vol:"", satuan:"", harga:"", rek:"", output:"", cari:"" });
 const kakBlank = () => ({ id:"", nama:"", bidang:"", latar:"", tujuan:"", sasaran:"", output:"", spesifikasi:"", jadwal:"" });
 const US_ST = { Diajukan:"warn", Revisi:"info", Disetujui:"ok", Ditolak:"bad" };
-// semua usulan: dari aplikasi (keu_usul) dan dari Portal GTK (keu_gtk)
-const allUsul = () => [...(S.keuUsul || []).map(u => Object.assign({ _col:"keu_usul" }, u)), ...(S.keuGtk || []).map(u => Object.assign({ _col:"keu_gtk" }, u))];
-const GTK_URL = () => location.origin + location.pathname.replace(/[^/]*$/, "") + "gtk.html";
-function gtkPanel() {
-  if (!isMaster() && !canKeu("keu_rkas")) return "";
-  const kode = ((S.gtkCfg || []).find(d => d._id === "kode") || {}).kode || "", nW = (S.keuGtk || []).filter(u => u.st === "Diajukan").length;
-  return `<details class="panel" id="gtk-det" style="margin-bottom:14px" ${UI.keu.gOpen ? "open" : ""}><summary><b>Portal GTK</b> · usulan dari seluruh GTK tanpa akun ${nW ? `<span class="pill warn">${nW} baru</span>` : ""} ${kode ? '<span class="pill ok">aktif</span>' : '<span class="pill warn">kode belum diatur</span>'}</summary>
-    <p class="sm" style="margin:10px 0 6px">Bagikan tautan ini ke grup GTK. GTK memilih namanya, mengisi kode GTK, lalu mengusulkan kebutuhan dan melihat jadwal Aula & Multimedia. Usulan masuk ke daftar di bawah dengan tanda <span class="pill info">Portal GTK</span>.</p>
-    <div class="toolbar"><label class="f grow">Tautan Portal GTK<input id="gtk-url" readonly value="${esc(GTK_URL())}"></label><button id="gtk-copy" style="align-self:end">Salin tautan</button></div>
-    ${isMaster() ? `<div class="toolbar"><label class="f">Kode GTK<input id="gtk-kode" value="${esc(UI.keu.gk ?? kode)}" placeholder="mis. gtk2027" style="max-width:200px"></label><button class="primary" id="gtk-save" style="align-self:end">Simpan kode & perbarui daftar nama</button></div><p class="hint">Daftar nama di portal diambil dari Daftar pegawai/penerima (${fmt(penerimaList().length)} nama). Ganti kode bila bocor ke luar sekolah; usulan lama tidak terpengaruh.</p>` : '<p class="hint">Kode GTK diatur oleh akun master.</p>'}</details>`;
-}
-async function gtkSave() {
-  const kode = String(UI.keu.gk ?? "").trim() || (((S.gtkCfg || []).find(d => d._id === "kode") || {}).kode || "");
-  if (kode.length < 4) { toast("Kode GTK minimal 4 karakter."); return; }
-  try { await db.doc("gtk_cfg/kode").set({ kode, at:new Date().toISOString() }); await db.doc("gtk_pub/info").set(plain({ pegawai:penerimaList().map(p => ({ nama:p.nama, jab:p.jab || "" })), at:new Date().toISOString() })); UI.keu.gk = undefined; toast("Kode GTK dan daftar nama di portal diperbarui."); render(); }
-  catch (e) { writeErr(e); }
+// semua usulan RKAS (dari tim keuangan maupun akun GTK)
+const allUsul = () => (S.keuUsul || []).map(u => Object.assign({ _col:"keu_usul" }, u));
+// status usulan: Diajukan = menunggu persetujuan, Ditolak = tidak disetujui (dengan alasan)
+const US_LBL = { Diajukan:"Menunggu persetujuan", Disetujui:"Disetujui", Ditolak:"Tidak disetujui", Revisi:"Menunggu persetujuan" };
+const usPill = u => `<span class="pill ${US_ST[u.st] || ""}">${esc(US_LBL[u.st] || u.st)}</span>`;
+function usulForm(kaks) {
+  const K = UI.keu, f = K.uf, th = keuTh();
+  const sim = !f.id && words(f.uraian).length ? allUsul().filter(u => u.th === th && matches(f.uraian, [u.uraian, u.spek])).slice(0, 6) : [];
+  return `<section class="panel" style="margin-bottom:14px"><h3>${f.id ? "Ubah usulan" : "Tambah usulan kebutuhan"}</h3>
+    <label class="f full">Cari di standar harga<input id="ku-cari" type="search" value="${esc(f.cari)}" placeholder="ketik nama barang/jasa, lalu pilih"></label>${words(f.cari).length ? shSuggest(f.cari, "kupick") : ""}
+    <div class="fgrid" style="margin-top:8px"><label class="f full">Uraian<input id="ku-uraian" value="${esc(f.uraian)}"></label><label class="f full">Spesifikasi<input id="ku-spek" value="${esc(f.spek)}"></label>
+      <div class="fgrid" style="grid-template-columns:1fr 1fr 1.4fr;gap:10px"><label class="f">Volume<input id="ku-vol" type="number" min="0" step="any" value="${esc(f.vol)}"></label><label class="f">Satuan<input id="ku-satuan" value="${esc(f.satuan)}"></label><label class="f">Harga satuan (Rp)<input id="ku-harga" type="number" min="0" step="any" value="${esc(f.harga)}"></label></div>
+      <label class="f">Kode rekening<input id="ku-rek" class="mono" value="${esc(f.rek)}" placeholder="5.1.02.01.001.00024"><span class="hint">${esc(rekNama(f.rek))}</span></label>
+      <label class="f">Sumber dana<select id="ku-sd">${KEU_SD.map(([k, l]) => `<option value="${k}" ${f.sd === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="f">Bidang<select id="ku-bidang"><option value="">—</option>${KEU_BIDANG.map(b => `<option ${f.bidang === b ? "selected" : ""}>${b}</option>`).join("")}</select></label>
+      <label class="f">Kegiatan (KAK)<select id="ku-kak"><option value="">—</option>${kaks.map(k => `<option value="${esc(k._id)}" ${f.kak === k._id ? "selected" : ""}>${esc(k.nama)}</option>`).join("")}</select></label>
+      <label class="f full">Keterangan: menunjang kegiatan/aktivitas apa? <span style="color:var(--bad)">*</span><input id="ku-output" value="${esc(f.output)}" placeholder="mis. Praktikum kimia kelas XI semester genap; Ujian sekolah"></label></div>
+    ${sim.length ? `<div class="note warn" style="margin:8px 0"><b>Sudah ada usulan serupa tahun ${th}:</b>${sim.map(u => `<div class="sm">• ${esc(u.uraian)} · ${fmt(u.vol)} ${esc(u.satuan)} · ${esc(u.nama || "-")} · ${esc(US_LBL[u.st] || u.st)}</div>`).join("")}<span class="hint">Periksa dulu agar tidak dobel.</span></div>` : ""}
+    <p style="margin:8px 0"><b>Jumlah: ${rp((+f.vol || 0) * (+f.harga || 0))}</b></p>
+    <div style="display:flex;gap:8px"><button class="primary" id="ku-save" ${K.busy ? "disabled" : ""}>${f.id ? "Simpan perubahan" : "Kirim usulan"}</button>${f.id ? '<button class="ghost" id="ku-reset">Batal</button>' : ""}</div></section>`;
 }
 function vKeuUsul() {
   const K = UI.keu, th = keuTh(), ed = canKeu("keu_usul"), rev = canKeu("keu_rkas");
@@ -2820,24 +2864,15 @@ function vKeuUsul() {
   const f = K.uf;
   const list = allUsul().filter(u => u.th === th && (!K.sd || u.sd === K.sd) && (rev || u.by === S.me || !ed) && (!K.ust || u.st === K.ust) && (!K.ubid || u.bidang === K.ubid) && matches(K.qs[current], [u.uraian, u.spek, u.nama, u.rek, u.bidang]));
   const sel = list.filter(u => K.usel.has(u._id));
-  return `<h2>Usulan & KAK</h2>${keuBar()}${tabs}${gtkPanel()}
-  ${ed ? `<section class="panel" style="margin-bottom:14px"><h3>${f.id ? "Ubah usulan" : "Tambah usulan kebutuhan"}</h3>
-    <label class="f full">Cari di standar harga<input id="ku-cari" type="search" value="${esc(f.cari)}" placeholder="ketik nama barang/jasa, lalu pilih"></label>${words(f.cari).length ? shSuggest(f.cari, "kupick") : ""}
-    <div class="fgrid" style="margin-top:8px"><label class="f full">Uraian<input id="ku-uraian" value="${esc(f.uraian)}"></label><label class="f full">Spesifikasi<input id="ku-spek" value="${esc(f.spek)}"></label>
-      <div class="fgrid" style="grid-template-columns:1fr 1fr 1.4fr;gap:10px"><label class="f">Volume<input id="ku-vol" type="number" min="0" step="any" value="${esc(f.vol)}"></label><label class="f">Satuan<input id="ku-satuan" value="${esc(f.satuan)}"></label><label class="f">Harga satuan (Rp)<input id="ku-harga" type="number" min="0" step="any" value="${esc(f.harga)}"></label></div>
-      <label class="f">Kode rekening<input id="ku-rek" class="mono" value="${esc(f.rek)}" placeholder="5.1.02.01.001.00024"><span class="hint">${esc(rekNama(f.rek))}</span></label>
-      <label class="f">Sumber dana<select id="ku-sd">${KEU_SD.map(([k, l]) => `<option value="${k}" ${f.sd === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-      <label class="f">Bidang<select id="ku-bidang"><option value="">—</option>${KEU_BIDANG.map(b => `<option ${f.bidang === b ? "selected" : ""}>${b}</option>`).join("")}</select></label>
-      <label class="f">Kegiatan (KAK)<select id="ku-kak"><option value="">—</option>${kaks.map(k => `<option value="${esc(k._id)}" ${f.kak === k._id ? "selected" : ""}>${esc(k.nama)}</option>`).join("")}</select></label>
-      <label class="f full">Keterangan: menunjang kegiatan/aktivitas apa? <span style="color:var(--bad)">*</span><input id="ku-output" value="${esc(f.output)}" placeholder="mis. Praktikum kimia kelas XI semester genap; Ujian sekolah"></label></div>
-    <p style="margin:8px 0"><b>Jumlah: ${rp((+f.vol || 0) * (+f.harga || 0))}</b></p>
-    <div style="display:flex;gap:8px"><button class="primary" id="ku-save" ${K.busy ? "disabled" : ""}>${f.id ? "Simpan perubahan" : "Kirim usulan"}</button>${f.id ? '<button class="ghost" id="ku-reset">Batal</button>' : ""}</div></section>` : ""}
-  <div class="toolbar"><div class="chips">${["Diajukan", "Revisi", "Disetujui", "Ditolak", ""].map(s2 => `<button class="chip" data-kust="${s2}" aria-pressed="${K.ust === s2}">${s2 || "Semua"}</button>`).join("")}</div>
+  return `<h2>Usulan & KAK</h2>${keuBar()}${tabs}
+  ${ed ? usulForm(kaks) : ""}
+  ${rev ? usulImportPanel() : ""}
+  <div class="toolbar"><div class="chips">${["Diajukan", "Disetujui", "Ditolak", ""].map(s2 => `<button class="chip" data-kust="${s2}" aria-pressed="${K.ust === s2}">${US_LBL[s2] || "Semua"}</button>`).join("")}</div>
     <label class="f">Bidang<select id="ku-fbid"><option value="">Semua</option>${KEU_BIDANG.map(b => `<option ${K.ubid === b ? "selected" : ""}>${b}</option>`).join("")}</select></label><label class="f grow">Cari<input id="ku-q" type="search" value="${esc(K.qs[current])}" placeholder="uraian, pengusul, rekening"></label>
     <span class="sp"></span><button id="ku-asist" ${list.length ? "" : "disabled"}>Cetak lembar asistensi</button><button id="ku-xlsx" ${list.length ? "" : "disabled"}>Excel</button></div>
-  ${rev && sel.length ? `<div class="selbar" style="flex-wrap:wrap;gap:8px"><b>${fmt(sel.length)} dipilih · ${rp(sel.reduce((t, u) => t + rkasJml(u), 0))}</b><span class="sp"></span><input id="ku-cat" placeholder="catatan asistensi (untuk revisi/tolak)" value="${esc(K.catat)}" style="min-width:220px"><button class="primary" id="ku-ok">Setujui → masuk RKAS</button><button id="ku-rev">Minta revisi</button><button class="danger" id="ku-tolak">Tolak</button></div>` : ""}
+  ${rev && sel.length ? `<div class="selbar" style="flex-wrap:wrap;gap:8px"><b>${fmt(sel.length)} dipilih · ${rp(sel.reduce((t, u) => t + rkasJml(u), 0))}</b><span class="sp"></span><input id="ku-cat" placeholder="alasan (wajib bila tidak disetujui)" value="${esc(K.catat)}" style="min-width:240px"><button class="primary" id="ku-ok">Disetujui → masuk RKAS</button><button class="danger" id="ku-tolak">Tidak disetujui</button><button id="ku-tunggu">Kembalikan ke menunggu</button></div>` : ""}
   <div class="tablebox"><table><thead><tr>${rev ? `<th class="selc"><input type="checkbox" id="ku-all" ${list.length && list.every(u => K.usel.has(u._id)) ? "checked" : ""}></th>` : ""}<th>Uraian</th><th class="num">Vol × harga</th><th class="num">Jumlah</th><th class="hide-sm">Rekening</th><th>Pengusul</th><th>Status</th><th></th></tr></thead><tbody>
-  ${list.map(u => `<tr>${rev ? `<td class="selc"><input type="checkbox" data-kusel="${esc(u._id)}" ${K.usel.has(u._id) ? "checked" : ""}></td>` : ""}<td><b>${esc(u.uraian)}</b><div class="sm">${esc(u.spek || "")}${u.output ? " · " + esc(u.output) : ""}</div>${u.catatan ? `<div class="sm" style="color:var(--info)">Catatan: ${esc(u.catatan)}</div>` : ""}</td><td class="num">${fmt(u.vol)} ${esc(u.satuan)}<div class="sm">@ ${rp(u.harga)}</div></td><td class="num">${rp(rkasJml(u))}</td><td class="hide-sm mono sm">${esc(u.rek || "-")}</td><td>${esc(u.nama || "")}${u._col === "keu_gtk" ? ' <span class="pill info">Portal GTK</span>' : ""}<div class="sm">${esc(u.bidang || "")} · ${esc(u.sd)}</div></td><td><span class="pill ${US_ST[u.st] || ""}">${esc(u.st)}</span></td>
+  ${list.map(u => `<tr>${rev ? `<td class="selc"><input type="checkbox" data-kusel="${esc(u._id)}" ${K.usel.has(u._id) ? "checked" : ""}></td>` : ""}<td><b>${esc(u.uraian)}</b><div class="sm">${esc(u.spek || "")}${u.output ? " · " + esc(u.output) : ""}</div>${u.catatan ? `<div class="sm" style="color:var(--${u.st === "Ditolak" ? "bad" : "info"})">${u.st === "Ditolak" ? "Alasan tidak disetujui" : "Catatan"}: ${esc(u.catatan)}</div>` : ""}</td><td class="num">${fmt(u.vol)} ${esc(u.satuan)}<div class="sm">@ ${rp(u.harga)}</div></td><td class="num">${rp(rkasJml(u))}</td><td class="hide-sm mono sm">${esc(u.rek || "-")}</td><td>${esc(u.nama || "")}${u.gtk ? ' <span class="pill info">GTK</span>' : ""}<div class="sm">${esc(u.bidang || "")} · ${esc(u.sd)}</div></td><td>${usPill(u)}</td>
     <td style="white-space:nowrap">${(u.by === S.me && u.st !== "Disetujui") || (rev && u.st !== "Disetujui") ? `${u._col === "keu_usul" ? `<button class="ghost" data-kuedit="${esc(u._id)}">Ubah</button>` : ""}${K.confirm === u._id ? `<button class="danger" data-kudelok="${esc(u._col + "/" + u._id)}">Ya</button><button data-kcancel="1">Batal</button>` : `<button class="ghost" data-kask="${esc(u._id)}">Hapus</button>`}` : ""}</td></tr>`).join("") || `<tr><td colspan="8"><div class="empty"><b>Tidak ada usulan${K.ust ? " berstatus " + K.ust.toLowerCase() : ""}</b></div></td></tr>`}
   </tbody><tfoot><tr><td colspan="${rev ? 3 : 2}">Jumlah</td><td class="num"><b>${rp(list.reduce((t, u) => t + rkasJml(u), 0))}</b></td><td colspan="4"></td></tr></tfoot></table></div>`;
 }
@@ -2847,22 +2882,26 @@ async function kuSave() {
   if (!(f.output || "").trim()) { toast("Isi keterangan: usulan ini menunjang kegiatan apa."); return; }
   const id = f.id || uid("ku"), old = f.id && (S.keuUsul || []).find(u => u._id === f.id);
   K.busy = true; render();
-  const ok = await keuSet("keu_usul/" + id, { th:old ? old.th : th, sd:f.sd, bidang:f.bidang, kak:f.kak, uraian:f.uraian.trim(), spek:(f.spek || "").trim(), vol:+f.vol, satuan:(f.satuan || "").trim(), harga:+f.harga, rek:(f.rek || "").trim(), output:(f.output || "").trim(), st:old && canKeu("keu_rkas") && old.by !== S.me ? old.st : "Diajukan", catatan:old && canKeu("keu_rkas") && old.by !== S.me ? old.catatan || "" : "", by:old ? old.by : S.me || "", nama:old ? old.nama : myName(), at:old ? old.at : new Date().toISOString() });
+  const ok = await keuSet("keu_usul/" + id, { th:old ? old.th : th, sd:f.sd, bidang:f.bidang, kak:f.kak, uraian:f.uraian.trim(), spek:(f.spek || "").trim(), vol:+f.vol, satuan:(f.satuan || "").trim(), harga:+f.harga, rek:(f.rek || "").trim(), output:(f.output || "").trim(), st:old && canKeu("keu_rkas") && old.by !== S.me ? old.st : "Diajukan", catatan:old && canKeu("keu_rkas") && old.by !== S.me ? old.catatan || "" : "", by:old ? old.by : S.me || "", nama:old ? old.nama : myName(), gtk:old ? !!old.gtk : !canKeu("keu_rkas") && appAccess("gtk") && !canKeu("keu_usul"), at:old ? old.at : new Date().toISOString() });
   K.busy = false; if (ok) { toast(f.id ? "Usulan diperbarui." : "Usulan terkirim."); K.uf = Object.assign(usBlank(), { sd:f.sd, bidang:f.bidang, kak:f.kak }); } render();
 }
 async function kuReview(act) {
   const K = UI.keu, sel = allUsul().filter(u => K.usel.has(u._id)); if (!sel.length) return;
-  if (act !== "ok" && !K.catat.trim()) { toast("Isi catatan asistensi untuk revisi/penolakan."); return; }
-  K.busy = true; render(); let n = 0;
+  if (act === "tolak" && !K.catat.trim()) { toast("Isi alasan mengapa usulan tidak disetujui."); return; }
+  K.busy = true; render(); let n = 0; const now = new Date().toISOString();
   for (const u of sel) {
     if (act === "ok") {
       if (u.st === "Disetujui") continue; const rid = uid("rk");
-      if (!(await keuSet("keu_rkas/" + rid, { th:u.th, sd:u.sd === "LAIN" && K.sd ? K.sd : u.sd, rek:u.rek || "", rekNama:rekNama(u.rek), uraian:u.uraian, spek:u.spek || "", vol:u.vol, satuan:u.satuan, harga:u.harga, bidang:u.bidang || "", pengusul:u.nama || "", kak:u.kak || "", output:u.output || "", usul:u._id, asal:u._col === "keu_gtk" ? "portal GTK" : "usulan", at:new Date().toISOString() }))) break;
-      if (!(await keuSet(u._col + "/" + u._id, Object.assign(noId(u), { st:"Disetujui", rkas:rid, catatan:K.catat.trim(), okBy:S.me || "", okAt:new Date().toISOString() })))) break;
-    } else if (!(await keuSet(u._col + "/" + u._id, Object.assign(noId(u), { st:act === "rev" ? "Revisi" : "Ditolak", catatan:K.catat.trim(), okBy:S.me || "", okAt:new Date().toISOString() })))) break;
+      if (!(await keuSet("keu_rkas/" + rid, { th:u.th, sd:u.sd === "LAIN" && K.sd ? K.sd : u.sd, rek:u.rek || "", rekNama:rekNama(u.rek), uraian:u.uraian, spek:u.spek || "", vol:u.vol, satuan:u.satuan, harga:u.harga, bidang:u.bidang || "", pengusul:u.nama || "", kak:u.kak || "", output:u.output || "", usul:u._id, asal:u.gtk ? "usulan GTK" : "usulan", at:now }))) break;
+      if (!(await keuSet(u._col + "/" + u._id, Object.assign(noId(u), { st:"Disetujui", rkas:rid, catatan:K.catat.trim(), okBy:S.me || "", okNama:myName(), okAt:now })))) break;
+    } else {
+      // dari "disetujui" ke status lain: baris RKAS-nya dikeluarkan lagi
+      if (u.rkas && (S.keuRkas || []).some(r => r._id === u.rkas)) { if (!(await keuDel("keu_rkas/" + u.rkas))) break; }
+      if (!(await keuSet(u._col + "/" + u._id, Object.assign(noId(u), { st:act === "tolak" ? "Ditolak" : "Diajukan", rkas:"", catatan:act === "tolak" ? K.catat.trim() : "", okBy:S.me || "", okNama:myName(), okAt:now })))) break;
+    }
     n++;
   }
-  K.busy = false; K.usel = new Set(); K.catat = ""; toast(`${n} usulan ${act === "ok" ? "disetujui dan masuk RKAS" : act === "rev" ? "dikembalikan untuk revisi" : "ditolak"}.`); render();
+  K.busy = false; K.usel = new Set(); K.catat = ""; toast(`${n} usulan ${act === "ok" ? "disetujui dan masuk RKAS" : act === "tolak" ? "tidak disetujui" : "dikembalikan ke menunggu persetujuan"}.`); render();
 }
 function asistensiPdf(list) {
   const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4", orientation:"landscape" }), K = UI.keu, c = cfg();
@@ -2870,7 +2909,7 @@ function asistensiPdf(list) {
   doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text(`SMA Negeri 1 Berau · ${sdLabel(K.sd) || "semua sumber dana"} · Tahun Anggaran ${keuTh()}`, 148.5, 22, { align:"center" });
   doc.autoTable({ startY:28, margin:{ left:12, right:12 }, theme:"grid", styles:{ fontSize:8, cellPadding:1.2, lineColor:[60,60,60], lineWidth:0.12, textColor:[20,20,20] }, headStyles:{ fillColor:[230,230,230], textColor:[20,20,20], halign:"center" },
     head:[["No", "Kode Rekening", "Uraian", "Spec", "Vol", "Satuan", "Tarif Harga", "Jumlah", "Keterangan (penunjang kegiatan)", "PIC", "Status / Catatan"]],
-    body:[...list.map((u, i) => [i + 1, u.rek || "", u.uraian, u.spek || "", fmt(u.vol), u.satuan, fmR(u.harga), fmR(rkasJml(u)), u.output || "", u.nama || "", u.st + (u.catatan ? " · " + u.catatan : "")]), [{ content:"JUMLAH", colSpan:7, styles:{ halign:"right", fontStyle:"bold" } }, { content:fmR(list.reduce((t, u) => t + rkasJml(u), 0)), styles:{ fontStyle:"bold", halign:"right" } }, { content:"", colSpan:3 }]],
+    body:[...list.map((u, i) => [i + 1, u.rek || "", u.uraian, u.spek || "", fmt(u.vol), u.satuan, fmR(u.harga), fmR(rkasJml(u)), u.output || "", u.nama || "", (US_LBL[u.st] || u.st) + (u.catatan ? " · " + u.catatan : "")]), [{ content:"JUMLAH", colSpan:7, styles:{ halign:"right", fontStyle:"bold" } }, { content:fmR(list.reduce((t, u) => t + rkasJml(u), 0)), styles:{ fontStyle:"bold", halign:"right" } }, { content:"", colSpan:3 }]],
     columnStyles:{ 0:{ cellWidth:8, halign:"center" }, 1:{ cellWidth:28 }, 4:{ cellWidth:11, halign:"right" }, 5:{ cellWidth:14 }, 6:{ cellWidth:20, halign:"right" }, 7:{ cellWidth:22, halign:"right" }, 8:{ cellWidth:40 }, 9:{ cellWidth:28 }, 10:{ cellWidth:30 } } });
   let y = doc.lastAutoTable.finalY + 10; if (y > 165) { doc.addPage(); y = 25; }
   doc.text("Berau, " + tglID(today()), 230, y, { align:"center" }); y += 5;
@@ -2897,6 +2936,32 @@ function kakPdf(k) {
   saveFile(`KAK ${k.nama.slice(0, 50)}.pdf`, pdfFinish(doc).output("blob"));
 }
 
+function usulImportPanel() {
+  const K = UI.keu, I = K.uimp, s2 = I && I.sheets && I.sheets.find(x => x.name === I.sheet);
+  return `<details class="panel" id="ui-det" style="margin-bottom:14px" ${K.uiOpen || I ? "open" : ""}><summary><b>Impor usulan dari Excel</b> · data awal atau rekap usulan dari unit</summary>
+    <div class="toolbar" style="margin-top:10px"><label class="upload" for="ui-file" style="aspect-ratio:auto;min-height:60px;flex:1">${I && I.file ? `<b>${esc(I.file)}</b>klik untuk ganti file` : "<b>+ Pilih file Excel usulan</b>.xlsx"}<input id="ui-file" type="file" accept=".xlsx,.xls,.csv" hidden></label>${tplBtn("usulan")}</div>
+    ${I && I.err ? `<p class="note bad">${esc(I.err)}</p>` : ""}${I && I.sheets ? `<label class="f" style="margin-top:8px">Sheet<select id="ui-sheet">${I.sheets.map(x => `<option value="${esc(x.name)}" ${I.sheet === x.name ? "selected" : ""}>${esc(x.name)} · ${fmt(x.rows.length)} baris · ${rp(x.rows.reduce((t, r) => t + rkasJml(r), 0))}</option>`).join("")}</select></label>` : ""}
+    ${s2 ? `<p class="hint">Tahun kosong → ${esc(keuTh())}; sumber dana kosong → ${esc(sdLabel(K.sd || "BOSNAS"))}; status kosong → Menunggu persetujuan; kode rekening kosong dicocokkan otomatis dengan standar harga. Usulan berstatus Disetujui langsung masuk RKAS.</p><button class="primary" id="ui-go" ${K.busy ? "disabled" : ""}>${K.busy ? "Mengimpor…" : `Impor ${fmt(s2.rows.length)} usulan`}</button>` : `<p class="hint">Kolom: Tahun, Sumber Dana, Bidang, Uraian, Spesifikasi, Volume, Satuan, Harga Satuan, Kode Rekening, Keterangan (penunjang kegiatan), Pengusul, Status, Alasan. Unduh contoh file untuk formatnya.</p>`}</details>`;
+}
+const sdFromText = (t, def) => /bosda|daerah/i.test(t) ? "BOSDA" : /komite/i.test(t) ? "KOMITE" : /bosnas|reguler|bosp/i.test(t) ? "BOSNAS" : /lain/i.test(t) ? "LAIN" : def;
+const stFromText = t => /tidak|tolak/i.test(t) ? "Ditolak" : /menunggu|diajukan|proses/i.test(t) ? "Diajukan" : /^\s*(di)?setujui?\b|^\s*ok\b|^\s*acc/i.test(t) ? "Disetujui" : "Diajukan";
+function shExact(nama) { if (!SH.all) return null; const n = norm(nama); return SH.all.find(x => norm(x.nama) === n) || null; }
+async function usulImport() {
+  const K = UI.keu, I = K.uimp, s2 = I && I.sheets.find(x => x.name === I.sheet); if (!s2) return;
+  K.busy = true; render(); let n = 0, nRk = 0; const now = new Date().toISOString();
+  try {
+    await shLoad();
+    for (const r of s2.rows) {
+      const m = !r.rek || !(r.harga > 0) ? shExact(r.uraian) : null, st = stFromText(r.status), th = /^\d{4}$/.test(r.tahun) ? r.tahun : keuTh(), sd = sdFromText(r.sumber, K.sd || "BOSNAS"), id = uid("ku");
+      const u = { th, sd, bidang:KEU_BIDANG.find(b => norm(b) === norm(r.bidang)) || r.bidang || "", kak:"", uraian:r.uraian, spek:r.spek || (m ? m.spek : ""), vol:r.vol, satuan:r.satuan || (m ? m.sat : ""), harga:r.harga || (m ? m.harga : 0), rek:r.rek || (m ? rek1(m.rek) : ""), output:r.output || "", st, catatan:r.alasan || "", by:S.me || "", nama:r.pengusul || "", impor:I.file, at:now };
+      if (st === "Disetujui") { const rid = uid("rk"); await db.doc("keu_rkas/" + rid).set(plain({ th, sd, rek:u.rek, rekNama:rekNama(u.rek), uraian:u.uraian, spek:u.spek, vol:u.vol, satuan:u.satuan, harga:u.harga, bidang:u.bidang, pengusul:u.nama, output:u.output, usul:id, asal:"usulan", at:now })); u.rkas = rid; nRk++; }
+      await db.doc("keu_usul/" + id).set(plain(u)); n++;
+    }
+    toast(`${n} usulan diimpor${nRk ? `, ${nRk} langsung masuk RKAS` : ""}.`); K.uimp = null;
+  } catch (e) { writeErr(e); }
+  K.busy = false; render();
+}
+
 /* ---- RKAS, pagu, RKBMD, impor, cetak matrik ---- */
 const rfBlank = () => ({ id:"", rek:"", uraian:"", spek:"", vol:"", satuan:"", harga:"", bidang:"", pengusul:"", output:"", cari:"" });
 function vKeuRkas() {
@@ -2917,31 +2982,31 @@ function vKeuRkas() {
     <div><p class="sectionlabel">Impor dari Excel</p><label class="upload" for="kr-file" style="aspect-ratio:auto;min-height:70px">${I && I.file ? `<b>${esc(I.file)}</b>klik untuk ganti file` : "<b>+ Pilih file Excel</b>ekspor ARKAS, SIPD, matrik, atau tabel usulan"}<input id="kr-file" type="file" accept=".xlsx,.xls,.csv" hidden></label>
       ${I && I.err ? `<p class="note bad">${esc(I.err)}</p>` : ""}${I && I.sheets ? `<label class="f" style="margin-top:8px">Sheet<select id="kr-sheet">${I.sheets.map(s2 => `<option ${I.sheet === s2.name ? "selected" : ""} value="${esc(s2.name)}">${esc(s2.name)} · ${fmt(s2.rows.length)} baris · ${rp(s2.rows.reduce((t, r) => t + rkasJml(r), 0))}</option>`).join("")}</select></label>
       ${(() => { const s2 = I.sheets.find(x => x.name === I.sheet); return s2 ? `<p class="hint">Contoh: ${s2.rows.slice(0, 3).map(r => esc(r.uraian) + " (" + fmt(r.vol) + " " + esc(r.satuan) + " × " + rp(r.harga) + ")").join("; ")}</p>
-      <label class="ck"><input type="checkbox" id="kr-ganti" ${I.ganti ? "checked" : ""}> Ganti baris hasil impor sebelumnya untuk ${esc(sd)} ${th}</label><button class="primary" id="kr-impgo" style="margin-top:8px" ${K.busy ? "disabled" : ""}>${K.busy ? "Mengimpor…" : `Impor ${fmt(s2.rows.length)} baris ke RKAS ${esc(sd)} ${th}`}</button>` : ""; })()}` : '<p class="hint">Kolom dikenali otomatis: Kode Rekening, Uraian, Spek, Volume/Koefisien, Satuan, Harga/Tarif, Jumlah, Pengusul. Format matrik berjenjang (kode rekening di kolom pertama) juga bisa.</p>'}</div></div></details>` : ""}
+      <label class="ck"><input type="checkbox" id="kr-ganti" ${I.ganti ? "checked" : ""}> Ganti baris hasil impor sebelumnya untuk ${esc(sd)} ${th}</label><button class="primary" id="kr-impgo" style="margin-top:8px" ${K.busy ? "disabled" : ""}>${K.busy ? "Mengimpor…" : `Impor ${fmt(s2.rows.length)} baris ke RKAS ${esc(sd)} ${th}`}</button>` : ""; })()}` : '<p class="hint">Kolom dikenali otomatis: Kode Rekening, Uraian, Spek, Volume/Koefisien, Satuan, Harga/Tarif, Jumlah, Pengusul, Keterangan. Format matrik berjenjang (kode rekening di kolom pertama) juga bisa. ${tplBtn("rkas")}</p>'}</div></div></details>` : ""}
   <div class="tablebox"><table><thead><tr><th>Uraian</th><th class="num">Vol</th><th class="num">Harga</th><th class="num">Jumlah</th><th class="num hide-sm">Realisasi</th><th class="hide-sm">Keterangan (penunjang kegiatan)</th><th class="hide-sm">Pengusul</th>${ed ? "<th></th>" : ""}</tr></thead><tbody>
   ${Object.entries(groups).map(([rk, rs]) => `<tr style="background:var(--soft)"><td colspan="3"><b class="mono">${esc(rk)}</b> <span class="sm">${esc(rekNama(rk))}</span></td><td class="num"><b>${rp(rs.reduce((t, r) => t + rkasJml(r), 0))}</b></td><td class="num hide-sm">${rp(rs.reduce((t, r) => t + (R.byLine[r._id] || 0), 0))}</td><td class="hide-sm"></td><td class="hide-sm"></td>${ed ? "<td></td>" : ""}</tr>${rs.map(r => { const re = R.byLine[r._id] || 0; return `<tr><td>${esc(r.uraian)}<div class="sm">${esc(r.spek || "")}</div></td><td class="num">${fmt(r.vol)} ${esc(r.satuan)}</td><td class="num">${rp(r.harga)}</td><td class="num">${rp(rkasJml(r))}</td><td class="num hide-sm">${re ? rp(re) : "-"}${re > rkasJml(r) + 1 ? '<div class="sm" style="color:var(--bad)">melebihi</div>' : ""}</td><td class="hide-sm sm">${r.output ? esc(r.output) : '<span class="faint">—</span>'}</td><td class="hide-sm sm">${esc(r.pengusul || "")}<div>${esc(r.bidang || "")}</div></td>${ed ? `<td style="white-space:nowrap"><button class="ghost" data-kredit="${esc(r._id)}">Ubah</button>${K.confirm === r._id ? `<button class="danger" data-krdelok="${esc(r._id)}">Ya</button><button data-kcancel="1">Batal</button>` : `<button class="ghost" data-kask="${esc(r._id)}">Hapus</button>`}</td>` : ""}</tr>`; }).join("")}`).join("") || `<tr><td colspan="8"><div class="empty"><b>Belum ada baris RKAS ${esc(sd)} ${th}</b>Setujui usulan, impor Excel, atau tambah manual.</div></td></tr>`}
   </tbody></table></div>`;
 }
 // baca Excel RKAS: tabel datar (header Uraian + Harga/Tarif) atau matrik berjenjang (kode rekening + koefisien)
-function rkasParse(wb) {
+function rkasParse(wb, opt = {}) {
   const out = [], REK = /\b(5(?:\.\d+){3,6})\b/;
   for (const name of wb.SheetNames) {
     const a = XLSX.utils.sheet_to_json(wb.Sheets[name], { header:1, raw:true, defval:null, blankrows:false }); let h = -1, map = null;
     for (let i = 0; i < Math.min(a.length, 25) && h < 0; i++) {
       const lab = (a[i] || []).map((c, j) => (cellStr(c) + " " + cellStr((a[i + 1] || [])[j])).toLowerCase().replace(/\s+/g, " ").trim());
       const fx = re => lab.findIndex(c => re.test(c.replace(/\s/g, "")));
-      if (fx(/uraian/) >= 0 && (fx(/harga|tarif/) >= 0)) { h = i; map = { kode:fx(/koderek|^kode/), uraian:fx(/uraian/), spek:fx(/^spe[ck]|spesifikasi/), vol:fx(/^vol|koefisien/), satuan:fx(/^satuan/), harga:fx(/tarifharga|^harga|tarif/), jumlah:fx(/^jumlah|^total/), pengusul:fx(/pengusul|pic|penginput/), sumber:fx(/sumberdana/), output:fx(/output|keterangan/) }; }
+      if (fx(/uraian/) >= 0 && (fx(/harga|tarif/) >= 0)) { h = i; map = { kode:fx(/koderek|^kode/), uraian:fx(/uraian/), spek:fx(/^spe[ck]|spesifikasi/), vol:fx(/^vol|koefisien/), satuan:fx(/^satuan/), harga:fx(/tarifharga|^harga|tarif/), jumlah:fx(/^jumlah|^total/), pengusul:fx(/pengusul|pic|penginput/), sumber:fx(/sumberdana/), output:fx(/output|keterangan|penunjang/), bidang:fx(/^bidang/), status:fx(/^status/), alasan:fx(/^alasan|^catatan/), tahun:fx(/^tahun/) }; }
     }
     if (h < 0) continue; const rows = []; let lastRek = "";
     for (const r of a.slice(h + 1)) {
       const g = k => map[k] >= 0 ? r[map[k]] : null, kodeS = cellStr(g("kode")), m = REK.exec(kodeS.replace(/\s/g, "")); if (m) lastRek = m[1];
       let uraian = cellStr(g("uraian")); if (!uraian) for (let j = Math.max(0, map.kode) + 1; j < (map.vol > 0 ? map.vol : r.length); j++) { const t = cellStr(r[j]); if (t && !/^[\d.,]+$/.test(t)) { uraian = t; break; } }
       const vol = keuNum(g("vol")), harga = keuNum(g("harga")); let jml = keuNum(g("jumlah"));
-      if (!uraian || !(harga > 0) || /^(jumlah|total|pagu)/i.test(uraian) || /^[\d.,\s=x]+$/i.test(uraian)) continue;
+      if (!uraian || (!(harga > 0) && !(opt.allowZero && vol > 0)) || /^(jumlah|total|pagu)/i.test(uraian) || /^[\d.,\s=x]+$/i.test(uraian)) continue;
       if (map.vol >= 0 && !(vol > 0) && !(jml > 0)) continue;
       const v = vol > 0 ? vol : jml && harga ? jml / harga : 1;
       let sp = cellStr(g("spek")); if (!sp && / - |-/.test(uraian) && map.spek < 0) { const p = uraian.split(/\s*-\s*/); if (p.length > 1 && p[0].length > 3) { uraian = p[0]; sp = p.slice(1).join(" - "); } }
-      rows.push({ rek:m ? m[1] : (map.kode >= 0 ? lastRek : ""), uraian, spek:sp, vol:Math.round(v * 100) / 100, satuan:cellStr(g("satuan")), harga, pengusul:cellStr(g("pengusul")), output:cellStr(g("output")).slice(0, 200), sumber:cellStr(g("sumber")) });
+      rows.push({ rek:m ? m[1] : (map.kode >= 0 ? lastRek : ""), uraian, spek:sp, vol:Math.round(v * 100) / 100, satuan:cellStr(g("satuan")), harga, pengusul:cellStr(g("pengusul")), output:cellStr(g("output")).slice(0, 300), sumber:cellStr(g("sumber")), bidang:cellStr(g("bidang")), status:cellStr(g("status")), alasan:cellStr(g("alasan")), tahun:cellStr(g("tahun")) });
     }
     if (rows.length) out.push({ name, rows });
   }
@@ -3224,17 +3289,46 @@ function pjPdf(p, what) {
   saveFile(`${{ all:"Berkas Perjalanan Dinas", rincian:"Rincian Biaya Perjadin", laporan:"Laporan Perjadin", kw:"Kuitansi Perjadin" }[what]} ${p.nama} ${p.tglBerangkat}.pdf`.replace(/[\\/:*?"<>|]/g, "-"), doc.output("blob"));
 }
 
+/* ---- aplikasi Usulan RKAS untuk seluruh GTK ---- */
+const gtkOnly = () => S.role === "operator" && appAccess("gtk") && !["sarpras", "jadwal", "waka", "minta", "keuangan"].some(appAccess);
+function vGtk() {
+  const K = UI.keu, th = keuTh(), tab = K.gtab || "usul"; if (!K.uf) K.uf = usBlank(); shLoad();
+  const me = norm(myName()), mine = allUsul().filter(u => u.by === S.me || (me && norm(u.nama) === me)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const tabs = `<div class="chips" style="margin-bottom:12px">${[["usul", "Usulkan & usulan saya"], ["semua", "Semua usulan RKAS"], ["jadwal", "Jadwal Aula & Multimedia"]].map(([k, l]) => `<button class="chip" data-gtab="${k}" aria-pressed="${tab === k}">${l}</button>`).join("")}</div>`;
+  const thSel = `<div class="toolbar"><label class="f">Tahun anggaran<select id="keu-th">${thOptions().map(y => `<option ${th === y ? "selected" : ""}>${y}</option>`).join("")}</select></label></div>`;
+  const row = (u, own) => `<tr><td><b>${esc(u.uraian)}</b><div class="sm">${esc(u.spek || "")}</div>${u.output ? `<div class="sm">Untuk: ${esc(u.output)}</div>` : ""}${u.st === "Ditolak" && u.catatan ? `<div class="sm" style="color:var(--bad)">Alasan tidak disetujui: ${esc(u.catatan)}</div>` : ""}</td><td class="num">${fmt(u.vol)} ${esc(u.satuan)}<div class="sm">@ ${rp(u.harga)}</div></td><td class="num">${rp(rkasJml(u))}</td><td class="hide-sm">${esc(u.nama || "-")}<div class="sm">${esc(u.bidang || "")}</div></td><td>${usPill(u)}</td>${own ? `<td style="white-space:nowrap">${u.st !== "Disetujui" && u.by === S.me ? `<button class="ghost" data-kuedit="${esc(u._id)}">Ubah</button>${K.confirm === u._id ? `<button class="danger" data-kudelok="${esc(u._col + "/" + u._id)}">Ya</button><button data-kcancel="1">Batal</button>` : `<button class="ghost" data-kask="${esc(u._id)}">Hapus</button>`}` : ""}</td>` : ""}</tr>`;
+  const head = own => `<thead><tr><th>Uraian</th><th class="num">Vol × harga</th><th class="num">Jumlah</th><th class="hide-sm">Pengusul</th><th>Status</th>${own ? "<th></th>" : ""}</tr></thead>`;
+  let body = "";
+  if (tab === "jadwal") body = gtkJadwal();
+  else if (tab === "semua") {
+    const list = allUsul().filter(u => u.th === th && (!K.ust || u.st === K.ust) && (!K.ubid || u.bidang === K.ubid) && matches(K.qs[current], [u.uraian, u.spek, u.nama, u.output, u.bidang])).sort((a, b) => String(a.uraian).localeCompare(String(b.uraian)));
+    body = `${thSel}<div class="toolbar"><div class="chips">${["", "Diajukan", "Disetujui", "Ditolak"].map(s2 => `<button class="chip" data-kust="${s2}" aria-pressed="${(K.ust || "") === s2}">${US_LBL[s2] || "Semua"}</button>`).join("")}</div><label class="f">Bidang<select id="ku-fbid"><option value="">Semua</option>${KEU_BIDANG.map(b => `<option ${K.ubid === b ? "selected" : ""}>${b}</option>`).join("")}</select></label><label class="f grow">Cari<input id="ks-q" type="search" value="${esc(K.qs[current] || "")}" placeholder="cari barang, pengusul, kegiatan…"></label></div>
+      <p class="hint">${fmt(list.length)} usulan · ${rp(list.reduce((t, u) => t + rkasJml(u), 0))}. Periksa daftar ini sebelum mengusulkan agar tidak dobel.</p>
+      <div class="tablebox"><table>${head(false)}<tbody>${list.map(u => row(u, false)).join("") || '<tr><td colspan="5"><div class="empty"><b>Belum ada usulan</b></div></td></tr>'}</tbody></table></div>`;
+  } else body = `${thSel}${usulForm((S.keuKak || []).filter(k => k.th === th))}
+    <section class="panel"><h3>Usulan saya</h3><div class="tablebox"><table>${head(true)}<tbody>${mine.map(u => row(u, true)).join("") || '<tr><td colspan="6" class="muted">Belum ada usulan.</td></tr>'}</tbody></table></div>${mine.length ? `<p style="text-align:right"><b>Total ${rp(mine.reduce((t, u) => t + rkasJml(u), 0))}</b></p>` : ""}</section>`;
+  return `<h2>Usulan RKAS</h2><p class="lead">Usulkan kebutuhan barang/jasa untuk RKAS sekolah. Usulan diperiksa Bendahara/tim keuangan dengan status <span class="pill warn">Menunggu persetujuan</span>, <span class="pill ok">Disetujui</span>, atau <span class="pill bad">Tidak disetujui</span> beserta alasannya.</p>${tabs}${body}`;
+}
+function gtkJadwal() {
+  const K = UI.keu, base = new Date(); base.setHours(12, 0, 0, 0); const mon = new Date(base); mon.setDate(base.getDate() - ((base.getDay() + 6) % 7) + (K.gwk || 0) * 7);
+  const days = [...Array(7)].map((_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return d; }), td = ymd(new Date());
+  const cell = (r, d) => { const b = (S.pinjam || []).filter(x => x.ruang === r.id && x.tgl === ymd(d) && (x.st === "Disetujui" || x.st === "Diajukan")).sort((a, c) => String(a.mulai).localeCompare(String(c.mulai)));
+    return `<td>${b.map(x => `<div style="border-left:3px solid var(--${x.st === "Disetujui" ? "ok" : "warn"});padding-left:8px;margin-bottom:6px"><b class="mono">${esc(x.mulai)}–${esc(x.selesai)}</b> ${esc(x.kegiatan)}<div class="sm">${esc(x.unit || "")}${x.st !== "Disetujui" ? " · menunggu persetujuan" : ""}</div></div>`).join("") || '<span class="faint sm">kosong</span>'}</td>`; };
+  return `<div class="toolbar" style="align-items:center"><button data-gwk="-1">‹ Sebelumnya</button><b style="min-width:220px;text-align:center">${esc(tglID(ymd(days[0])))} – ${esc(tglID(ymd(days[6])))}</b><button data-gwk="1">Berikutnya ›</button><button class="ghost" data-gwk="0">Minggu ini</button><span class="sp"></span><span class="sm"><span class="pill ok">Disetujui</span> <span class="pill warn">Menunggu persetujuan</span></span></div>
+  <div class="tablebox"><table class="jd-week"><thead><tr><th style="width:120px">Hari</th>${JD_RUANG.map(r => `<th>${r.nama}</th>`).join("")}</tr></thead><tbody>${days.map(d => `<tr class="${ymd(d) === td ? "jd-today" : ""}"><th scope="row" style="text-transform:none;letter-spacing:0"><b>${HARI[d.getDay()]}</b><div class="sm">${d.getDate()} ${BULAN[d.getMonth()].slice(0, 3)}</div></th>${JD_RUANG.map(r => cell(r, d)).join("")}</tr>`).join("")}</tbody></table></div>
+  ${appAccess("jadwal") ? '<p class="hint">Untuk mengajukan pemakaian ruang, buka aplikasi <a href="#jadwal">Jadwal Penggunaan Aula dan Multimedia</a>.</p>' : '<p class="hint">Pengajuan pemakaian ruang dilakukan oleh akun yang berwenang.</p>'}`;
+}
+
 /* ---- event keuangan ---- */
-document.addEventListener("toggle", e => { if (e.target && e.target.id === "kr-det") UI.keu.rOpen = e.target.open; if (e.target && e.target.id === "gtk-det") UI.keu.gOpen = e.target.open; }, true);
-const KEU_VIEWS = ["keu", "keu-harga", "keu-usul", "keu-rkas", "keu-spj", "keu-honor", "keu-perjadin"];
+document.addEventListener("toggle", e => { if (e.target && e.target.id === "kr-det") UI.keu.rOpen = e.target.open; if (e.target && e.target.id === "ui-det") UI.keu.uiOpen = e.target.open; }, true);
+const KEU_VIEWS = ["keu", "keu-harga", "keu-usul", "keu-rkas", "keu-spj", "keu-honor", "keu-perjadin", "gtk"];
 document.addEventListener("input", e => {
   if (!KEU_VIEWS.includes(current)) return; const t = e.target, K = UI.keu, id = t.id || "";
   if (id === "kh-q" || id === "ku-q" || id === "kr-q" || id === "ks-q") { K.qs[current] = t.value; render(); return; }
-  if (id.startsWith("ku-") && K.uf) { const k = id.slice(3); if (k === "cari") { K.uf.cari = t.value; render(); return; } if (k in K.uf) K.uf[k] = t.value; if (k === "vol" || k === "harga" || k === "rek") render(); return; }
+  if (id.startsWith("ku-") && K.uf && id !== "ku-q" && id !== "ku-cat") { const k = id.slice(3); if (k === "cari") { K.uf.cari = t.value; render(); return; } if (k in K.uf) K.uf[k] = t.value; if (k === "vol" || k === "harga" || k === "rek" || k === "uraian") render(); return; }
   if (id.startsWith("kk2-") && K.kf) { K.kf[id.slice(4)] = t.value; return; }
   if (id.startsWith("kr-") && K.rf && id !== "kr-pagu") { const k = id.slice(3); if (k === "cari") { K.rf.cari = t.value; render(); return; } if (k in K.rf) K.rf[k] = t.value; return; }
   if (id === "ku-cat") { K.catat = t.value; return; }
-  if (id === "gtk-kode") { K.gk = t.value; return; }
   if (id.startsWith("ks-") && K.spj) { const k = id.slice(3); if (k in K.spj) { K.spj[k] = t.value; if (k === "bpu") render(); } return; }
   if (t.dataset.ksi && K.spj) { const [n, k] = t.dataset.ksi.split(":"); K.spj.items[+n][k] = t.value; return; }
   if (id.startsWith("kh2-") && K.hon) { const k = id.slice(4); if (k in K.hon) K.hon[k] = t.value; return; }
@@ -3253,6 +3347,13 @@ document.addEventListener("change", async e => {
   if (t.dataset.kusel) { if (t.checked) K.usel.add(t.dataset.kusel); else K.usel.delete(t.dataset.kusel); render(); return; }
   if (id === "ku-all") { for (const c of document.querySelectorAll("[data-kusel]")) { if (t.checked) K.usel.add(c.dataset.kusel); else K.usel.delete(c.dataset.kusel); } render(); return; }
   if (id === "kr-sheet" && K.imp) { K.imp.sheet = t.value; render(); return; }
+  if (id === "ui-sheet" && K.uimp) { K.uimp.sheet = t.value; render(); return; }
+  if (id === "ui-file") {
+    const file = t.files && t.files[0]; t.value = ""; if (!file) return; K.uimp = { file:file.name }; render();
+    try { await shLoad(); const sheets = rkasParse(XLSX.read(await file.arrayBuffer(), { type:"array", cellDates:true }), { allowZero:true }); if (!sheets.length) K.uimp.err = "Tidak menemukan tabel usulan. Pastikan ada kolom Uraian dan Harga."; else { K.uimp.sheets = sheets; K.uimp.sheet = sheets.slice().sort((a, b) => b.rows.length - a.rows.length)[0].name; } }
+    catch (err) { K.uimp.err = "File tidak bisa dibaca: " + (err.message || err); }
+    render(); return;
+  }
   if (id === "kr-ganti" && K.imp) { K.imp.ganti = t.checked; return; }
   if (id === "kr-file") {
     const file = t.files && t.files[0]; t.value = ""; if (!file) return; K.imp = { file:file.name }; render();
@@ -3279,6 +3380,8 @@ document.addEventListener("click", async e => {
   if (d.kupick != null && K.uf) { const x = shPick(K.uf.cari, +d.kupick); if (x) Object.assign(K.uf, { uraian:x.nama, spek:x.spek, satuan:x.sat, harga:x.harga, rek:rek1(x.rek), cari:"" }); render(); }
   if (d.krpick != null && K.rf) { const x = shPick(K.rf.cari, +d.krpick); if (x) Object.assign(K.rf, { uraian:x.nama, spek:x.spek, satuan:x.sat, harga:x.harga, rek:rek1(x.rek), cari:"" }); render(); }
   if (d.kutab) { K.usulTab = d.kutab; render(); }
+  if (d.gtab) { K.gtab = d.gtab; K.ust = ""; render(); }
+  if (d.gwk != null) { K.gwk = d.gwk === "0" ? 0 : (K.gwk || 0) + +d.gwk; render(); }
   if (d.kust != null) { K.ust = d.kust; K.usel = new Set(); render(); }
   if (b.id === "ku-save") kuSave();
   if (b.id === "ku-reset") { K.uf = usBlank(); render(); }
@@ -3286,11 +3389,9 @@ document.addEventListener("click", async e => {
   if (d.kask) { K.confirm = d.kask; render(); }
   if (d.kcancel) { K.confirm = null; render(); }
   if (d.kudelok) { K.confirm = null; if (await keuDel(d.kudelok.includes("/") ? d.kudelok : "keu_usul/" + d.kudelok)) toast("Usulan dihapus."); render(); }
-  if (b.id === "gtk-save") gtkSave();
-  if (b.id === "gtk-copy") { try { await navigator.clipboard.writeText(GTK_URL()); toast("Tautan Portal GTK disalin."); } catch (err) { const el = document.getElementById("gtk-url"); el.select(); toast("Pilih lalu salin tautan."); } }
-  if (b.id === "ku-ok") kuReview("ok"); if (b.id === "ku-rev") kuReview("rev"); if (b.id === "ku-tolak") kuReview("tolak");
+  if (b.id === "ku-ok") kuReview("ok"); if (b.id === "ku-tunggu") kuReview("tunggu"); if (b.id === "ku-tolak") kuReview("tolak");
   if (b.id === "ku-asist") { const th = keuTh(); asistensiPdf(allUsul().filter(u => u.th === th && (!K.sd || u.sd === K.sd) && (!K.ust || u.st === K.ust) && (!K.ubid || u.bidang === K.ubid) && matches(K.qs[current], [u.uraian, u.spek, u.nama, u.rek, u.bidang]))); }
-  if (b.id === "ku-xlsx") { const th = keuTh(); xlsxSave(`Usulan RKAS ${th}.xlsx`, [["Usulan", allUsul().filter(u => u.th === th).map((u, i) => ({ "No":i + 1, "Kode Rekening":u.rek, "Uraian":u.uraian, "Spesifikasi":u.spek, "Volume":u.vol, "Satuan":u.satuan, "Harga":u.harga, "Jumlah":rkasJml(u), "Sumber Dana":u.sd, "Bidang":u.bidang, "Pengusul":u.nama, "Kegiatan (KAK)":((S.keuKak || []).find(k => k._id === u.kak) || {}).nama || "", "Keterangan (penunjang kegiatan)":u.output, "Asal":u._col === "keu_gtk" ? "Portal GTK" : "Aplikasi", "Status":u.st, "Catatan":u.catatan || "" }))]]); }
+  if (b.id === "ku-xlsx") { const th = keuTh(); xlsxSave(`Usulan RKAS ${th}.xlsx`, [["Usulan", allUsul().filter(u => u.th === th).map((u, i) => ({ "No":i + 1, "Kode Rekening":u.rek, "Uraian":u.uraian, "Spesifikasi":u.spek, "Volume":u.vol, "Satuan":u.satuan, "Harga":u.harga, "Jumlah":rkasJml(u), "Sumber Dana":u.sd, "Bidang":u.bidang, "Pengusul":u.nama, "Kegiatan (KAK)":((S.keuKak || []).find(k => k._id === u.kak) || {}).nama || "", "Keterangan (penunjang kegiatan)":u.output, "Status (keterangan)":US_LBL[u.st] || u.st, "Status":US_LBL[u.st] || u.st, "Alasan / catatan":u.catatan || "" }))]]); }
   if (b.id === "kk2-save") { const f = K.kf; if (!f.nama.trim()) { toast("Isi nama kegiatan."); return; } const id = f.id || uid("kk"), old = f.id && S.keuKak.find(k => k._id === f.id); const kd = Object.assign({}, f); delete kd.id; if (await keuSet("keu_kak/" + id, Object.assign(kd, { th:old ? old.th : keuTh(), by:old ? old.by : S.me || "", oleh:old ? old.oleh : myName(), at:old ? old.at : new Date().toISOString() }))) { toast("KAK tersimpan."); K.kf = kakBlank(); render(); } }
   if (b.id === "kk2-reset") { K.kf = kakBlank(); render(); }
   if (d.kkedit) { const k = S.keuKak.find(x => x._id === d.kkedit); if (k) { K.kf = Object.assign(kakBlank(), k, { id:k._id }); render(); } }
@@ -3303,6 +3404,7 @@ document.addEventListener("click", async e => {
   if (d.kredit) { const r = S.keuRkas.find(x => x._id === d.kredit); if (r) { K.rf = Object.assign(rfBlank(), r, { id:r._id, cari:"" }); render(); } }
   if (d.krdelok) { K.confirm = null; if (await keuDel("keu_rkas/" + d.krdelok)) toast("Baris RKAS dihapus."); render(); }
   if (b.id === "kr-impgo") krImport();
+  if (b.id === "ui-go") usulImport();
   if (b.id === "kr-pdf" && window.jspdf) { const all = rkasLines(keuTh(), K.sd); rkasPdf(K.rtab === "rkbmd" ? all.filter(r => /^5\.2/.test(r.rek)) : all, K.rtab === "rkbmd" ? "RENCANA KEBUTUHAN BARANG MILIK DAERAH (RKBMD)" : "RENCANA KEGIATAN DAN ANGGARAN SEKOLAH (RKAS)"); }
   if (b.id === "kr-xlsx") { const th = keuTh(), R = realisasi(th, K.sd); xlsxSave(`RKAS ${K.sd} ${th}.xlsx`, [["RKAS", rkasLines(th, K.sd).sort((a, b) => String(a.rek).localeCompare(String(b.rek))).map((r, i) => ({ "No":i + 1, "Kode Rekening":r.rek, "Nama Rekening":rekNama(r.rek), "Uraian":r.uraian, "Spesifikasi":r.spek, "Volume":r.vol, "Satuan":r.satuan, "Harga":r.harga, "Jumlah":rkasJml(r), "Realisasi":R.byLine[r._id] || 0, "Sisa":rkasJml(r) - (R.byLine[r._id] || 0), "Keterangan (penunjang kegiatan)":r.output || "", "Bidang":r.bidang, "Pengusul":r.pengusul, "Asal":r.asal }))]]); }
   if (b.id === "ks-new") { K.spj = spjBlank(); render(); }
@@ -3516,7 +3618,7 @@ function ruangImportPanel() {
   const I = UI.rg.imp, gs = [...new Set(I.rows.map(r => r.gk))];
   const dupCodes = Object.entries(I.rows.reduce((m, r) => { if (r.kode) m[r.kode] = (m[r.kode] || 0) + 1; return m; }, {})).filter(([, n]) => n > 1);
   return `<section class="panel" style="margin-bottom:14px"><div style="display:flex;gap:10px"><h3 style="flex:1">Impor daftar ruang</h3><button class="ghost" id="rg-imp-close">Tutup</button></div>
-    <label class="upload" for="rg-file" style="aspect-ratio:auto;min-height:90px">${I.file ? `<b>${esc(I.file)}</b>klik untuk ganti file` : "<b>+ Pilih file Excel daftar ruang</b>kolom: Kode Gedung, Kode Ruang, Peruntukan, Kondisi, Keterangan"}<input id="rg-file" type="file" accept=".xlsx,.xls,.csv"></label>
+    <label class="upload" for="rg-file" style="aspect-ratio:auto;min-height:90px">${I.file ? `<b>${esc(I.file)}</b>klik untuk ganti file` : "<b>+ Pilih file Excel daftar ruang</b>kolom: Kode Gedung, Kode Ruang, Peruntukan, Kondisi, Keterangan"}<input id="rg-file" type="file" accept=".xlsx,.xls,.csv"></label><p style="margin:6px 0 0">${tplBtn("ruang")}</p>
     ${I.err ? `<div class="note bad" style="margin-top:10px">${esc(I.err)}</div>` : ""}
     ${I.rows.length ? `<div class="note info" style="margin-top:10px">${fmt(I.rows.length)} ruang di ${fmt(gs.length)} gedung: ${esc(gs.join(", "))}. Gedung yang belum ada akan dibuat otomatis.</div>
       ${dupCodes.length ? `<div class="note" style="margin-top:8px">Kode ruang dipakai lebih dari sekali: ${esc(dupCodes.map(([k, n]) => k + " (" + n + "×)").join(", "))}. Ruangnya tetap diimpor semua; kodenya bisa dibetulkan setelah impor.</div>` : ""}
@@ -3873,7 +3975,7 @@ function kkImportPanel() {
   const nAset = plan.out.reduce((t, k) => t + k.items.filter(l => !l.reklas).reduce((u, l) => u + (l.pecah ? Math.max(1, Math.round(l.jml)) : 1), 0), 0), nRk = plan.out.reduce((t, k) => t + k.items.filter(l => l.reklas).length, 0);
   const swapHint = I.sheets.some(s => s.swapHint);
   return `<section class="panel" style="margin-top:14px"><div style="display:flex;gap:10px;align-items:flex-start"><h3 style="flex:1">Impor kertas kerja lama</h3><button class="ghost" id="kk-imp-close">Tutup</button></div>
-    <label class="upload" for="kk-file" style="aspect-ratio:auto;min-height:90px">${I.file ? `<b>${esc(I.file)}</b>klik untuk ganti file` : "<b>+ Pilih file kertas kerja (.xlsx)</b>boleh berisi banyak sheet per sumber dana"}<input id="kk-file" type="file" accept=".xlsx,.xls"></label>
+    <label class="upload" for="kk-file" style="aspect-ratio:auto;min-height:90px">${I.file ? `<b>${esc(I.file)}</b>klik untuk ganti file` : "<b>+ Pilih file kertas kerja (.xlsx)</b>boleh berisi banyak sheet per sumber dana"}<input id="kk-file" type="file" accept=".xlsx,.xls"></label><p style="margin:6px 0 0">${tplBtn("kk")}</p>
     ${I.err ? `<div class="note bad" style="margin-top:10px">${esc(I.err)}</div>` : ""}
     ${I.sheets.length ? `<div class="tablebox" style="margin-top:12px"><table><thead><tr><th></th><th>Sheet</th><th>Sumber dana · periode</th><th class="num">Pekerjaan</th><th class="num">Nilai barang</th></tr></thead><tbody>
       ${I.sheets.map((s, i) => `<tr><td><input type="checkbox" id="kk-use-${i}" ${s.use ? "checked" : ""} aria-label="Pakai sheet ${esc(s.name)}"></td><td>${esc(s.name)}${s.reklasSheet ? ' <span class="pill warn">daftar reklas</span>' : ""}</td><td>${s.reklasSheet ? '<span class="muted">menandai baris reklas di sheet lain</span>' : `<select id="kk-ssum-${i}">${[...new Set([...SUMBER_DANA, "BOSP Kinerja", s.sumber])].map(o => `<option ${o === s.sumber ? "selected" : ""}>${esc(o)}</option>`).join("")}</select> ${esc(s.tahun)} · smt ${esc(s.smt)}`}</td><td class="num">${fmt(s.list.length)}</td><td class="num">${rp(s.list.reduce((t, k) => t + k.items.reduce((u, l) => u + l.jml * l.harga, 0), 0))}</td></tr>`).join("")}
@@ -4085,7 +4187,7 @@ function vImpor0() {
       <h3>1. Pilih file</h3>
       <label class="upload" for="imp-file" style="aspect-ratio:auto;min-height:120px">${I.file ? `<b>${esc(I.file)}</b>klik untuk ganti file` : "<b>+ Pilih file Excel SIPBMD</b>.xlsx, .xls, atau .csv"}<input id="imp-file" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"></label>
       ${I.err ? `<div class="note bad" style="margin-top:10px">${esc(I.err)}</div>` : ""}
-      <p class="hint" style="margin-top:10px">Satu file boleh berisi beberapa sheet, misalnya KIB B dan KIB E sekaligus. Kolom wajib: Kode Aset, Nama Aset, No. Register.</p>
+      <p class="hint" style="margin-top:10px">Satu file boleh berisi beberapa sheet, misalnya KIB B dan KIB E sekaligus. Kolom wajib: Kode Aset, Nama Aset, No. Register. ${tplBtn("sipbmd")}</p>
     </section>
     <section class="panel"><h3>Data SIPBMD di aplikasi saat ini</h3>
       <div class="grid kpis"><div class="kpi"><span class="l">Aset SIPBMD tersimpan</span><span class="v">${fmt(nAset)}</span><span class="s">${fmt(S.impor.length)} kali impor</span></div></div>
@@ -4410,7 +4512,7 @@ function vPenerima() {
     <label class="f">Jabatan<input id="pr-jab" value="${esc(cur.jab || "")}" placeholder="mis. Guru Fisika, Kepala Laboratorium"></label><label class="f">Peruntukan bawaan<input id="pr-untuk" list="dl-untuk" value="${esc(cur.untuk || "")}"></label>
     <div class="full" style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary" id="pr-save">Simpan penerima</button><button id="pr-cancel">Batal</button>${e !== "new" ? '<button class="danger" id="pr-off">Nonaktifkan (pindah/purna tugas)</button>' : ""}</div>
     <datalist id="dl-st">${["PNS","PPPK","Honorer","Guru Tamu","Outsourcing","Unit/Ruang"].map(x => `<option value="${x}">`).join("")}</datalist>${untukList()}</div>` : ""}
-  <div class="toolbar"><label class="f grow">Cari<input id="pr-q" type="search" value="${esc(UI.pr.q)}" placeholder="nama, jabatan, NIP…"></label><span class="sp"></span>${isMaster() ? '<label class="btn" for="pr-file" style="cursor:pointer" title="Import daftar pegawai dari Excel">Import</label><input id="pr-file" type="file" accept=".xlsx,.xls,.csv" hidden><button id="pr-new">Tambah penerima</button>' : ""}</div>
+  <div class="toolbar"><label class="f grow">Cari<input id="pr-q" type="search" value="${esc(UI.pr.q)}" placeholder="nama, jabatan, NIP…"></label><span class="sp"></span>${isMaster() ? '<label class="btn" for="pr-file" style="cursor:pointer" title="Import daftar pegawai dari Excel">Import</label><input id="pr-file" type="file" accept=".xlsx,.xls,.csv" hidden>${tplBtn("pegawai")}<button id="pr-new">Tambah penerima</button>' : ""}</div>
   ${prImpPanel()}
   <div class="tablebox"><table><thead><tr><th>Nama</th><th>Jabatan</th><th class="hide-sm">NIP</th><th class="hide-sm">Peruntukan bawaan</th><th class="num">Memegang</th><th></th></tr></thead><tbody>
   ${list.map(p => { const n = allItems().visible.filter(x => x.pj === p.nama).length; return `<tr><td>${esc(p.nama)}<div class="sm">${esc([p.st, p.kel].filter(Boolean).join(" · "))}</div></td><td>${esc(p.jab || "")}</td><td class="hide-sm mono">${esc(p.nip || "")}</td><td class="hide-sm">${esc(p.untuk || "")}</td><td class="num">${fmt(n)}</td><td>${isMaster() ? `<button class="ghost" data-predit="${esc(p._id)}">Ubah</button>` : ""}</td></tr>`; }).join("")}
@@ -4934,6 +5036,7 @@ function vAkun() {
       <p class="sectionlabel" style="margin-top:12px">Hak akses</p>${izinChecklist("ak-iz", PRESET.staf.izin)}
       <button class="primary" id="ak-new" style="margin-top:10px">Buat akun</button>
       <p class="hint">Sampaikan nama pengguna (atau email) dan password awal kepada operator. Operator bisa mengganti passwordnya sendiri setelah masuk. Akun dengan nama pengguna tidak bisa memakai "Lupa password"; jika lupa, nonaktifkan akunnya lalu buat akun baru.</p></div>` : ""}
+    ${master ? gtkAkunPanel() : ""}
     <div class="tablebox"><table><thead><tr><th>Nama</th><th>Login</th><th>Peran</th><th>Akses</th><th>Status</th>${master ? "<th></th>" : ""}</tr></thead><tbody>
     ${list.map(a => `<tr><td>${esc(a.nama || "")}<div class="sm">${esc(a.jab || "")}</div></td><td class="sm">${esc(shownLogin(a.email))}${isUsernameAcct(a.email) ? ' <span class="pill">nama pengguna</span>' : ""}</td><td>${a.role === "master" ? '<span class="pill acc">Master</span>' : '<span class="pill info">Operator</span>'}</td><td class="sm">${a.role === "master" ? "semua" : `${esc(appSummary(a.izin))}<br><span class="muted">Aset & Persediaan: ${esc(izinSummary(a.izin))}</span>`}</td><td>${a.aktif === false ? '<span class="pill bad">nonaktif</span>' : '<span class="pill ok">aktif</span>'}</td>
       ${master ? `<td style="white-space:nowrap">${a.role === "master" ? "" : `${isUsernameAcct(a.email) ? "" : `<button class="ghost" data-akreset="${esc(a.email || "")}">Kirim reset password</button>`}<button class="ghost" data-akedit="${esc(a._id)}">Ubah</button><button class="ghost" data-akaktif="${esc(a._id)}">${a.aktif === false ? "Aktifkan" : "Nonaktifkan"}</button>${a.aktif === false ? (UI.akDel === a._id ? `<span class="confirm"><button class="danger" data-akdelyes="${esc(a._id)}">Ya, hapus akun</button><button data-akdelno="1">Batal</button></span>` : `<button class="ghost danger" data-akdel="${esc(a._id)}">Hapus</button>`) : ""}`}</td>` : ""}</tr>
@@ -4964,18 +5067,19 @@ const PRESET = {
   staf:{ nama:"Staf sarpras", izin:allIzin(true) },
   panitia:{ nama:"Panitia penghapusan", izin:Object.assign(allIzin(false), { aset_kondisi:true, hapus:true, catatan:true }) },
   lihat:{ nama:"Hanya lihat", izin:allIzin(false) },
+  gtk:{ nama:"GTK pengusul RKAS", izin:Object.assign(allIzin(false), { app_gtk:true, app_sarpras:false, app_jadwal:false, app_minta:false, app_waka:false, app_keuangan:false, app_outsourcing:false }) },
 };
 // an account created before permissions existed keeps full staff access
 function myIzin() { const me = AK.list.find(a => a._id === S.me); return me && me.izin ? me.izin : PRESET.staf.izin; }
 function can(k) { return isMaster() || (S.role === "operator" && !!myIzin()[k]); }
 // which applications an account may open (accounts without the setting keep Sarpras only)
-const APP_IZIN = [["app_sarpras", "Aset & Persediaan", "Aset, ruang, pemeliharaan, BAST, persediaan"], ["app_jadwal", "Jadwal Penggunaan Aula dan Multimedia", "Melihat jadwal Aula & Multimedia"], ["app_minta", "Permintaan Barang Persediaan", "Mengajukan permintaan ATK / bahan habis pakai"], ["app_keuangan", "Keuangan", "RKAS, usulan & KAK, SPJ belanja, honor, perjalanan dinas"], ["app_waka", "Waka Sarpras", "Akun & hak akses hanya untuk master; menu lain disiapkan"], ["app_outsourcing", "Outsourcing", "Laporan kinerja kebersihan & keamanan (sedang disiapkan)"]];
+const APP_IZIN = [["app_sarpras", "Aset & Persediaan", "Aset, ruang, pemeliharaan, BAST, persediaan"], ["app_jadwal", "Jadwal Penggunaan Aula dan Multimedia", "Melihat jadwal Aula & Multimedia"], ["app_minta", "Permintaan Barang Persediaan", "Mengajukan permintaan ATK / bahan habis pakai"], ["app_gtk", "Usulan RKAS (GTK)", "Mengusulkan kebutuhan RKAS, melihat semua usulan, dan jadwal Aula & Multimedia"], ["app_keuangan", "Keuangan", "RKAS, usulan & KAK, SPJ belanja, honor, perjalanan dinas"], ["app_waka", "Waka Sarpras", "Akun & hak akses hanya untuk master; menu lain disiapkan"], ["app_outsourcing", "Outsourcing", "Laporan kinerja kebersihan & keamanan (sedang disiapkan)"]];
 const MT_IZIN = [["minta_proses", "Memproses permintaan persediaan", "Menyerahkan barang (stok keluar tercatat otomatis di Persediaan) atau menolak permintaan; melihat rekap"]];
 const JD_IZIN = [["jadwal_ajukan", "Mengajukan peminjaman", "Mengisi pengajuan pemakaian Aula / Multimedia"], ["jadwal_setuju", "Menyetujui peminjaman", "Menyetujui, menolak, atau membatalkan pengajuan siapa pun"]];
-const APP_DEFAULT_ON = ["sarpras", "jadwal", "minta"];
+const APP_DEFAULT_ON = ["sarpras", "jadwal", "minta", "gtk"];
 function appAccess(id) { if (isMaster()) return true; if (S.role !== "operator") return false; const v = myIzin()["app_" + id]; return APP_DEFAULT_ON.includes(id) ? v !== false : !!v; }
 const TAB_IZIN = { bantuan:"bast", bast:"bast", pemegang:"bast", laporan:"bast", hapus:"hapus", persediaan:"persediaan", surat:"surat", kertas:"kertas", rekon:"kertas" };
-function canView(v) { if (v === "home" || v === "akun") return true; if (v === "jadwal") return appAccess("jadwal"); if (v === "minta") return appAccess("minta"); if (String(v).startsWith("keu")) return appAccess("keuangan"); if (v === "surat") return appAccess("waka") && can("surat"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
+function canView(v) { if (v === "home" || v === "akun") return true; if (v === "gtk") return appAccess("gtk"); if (v === "jadwal") return appAccess("jadwal"); if (v === "minta") return appAccess("minta"); if (String(v).startsWith("keu")) return appAccess("keuangan"); if (v === "surat") return appAccess("waka") && can("surat"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
 function izinSummary(iz) {
   if (!iz) return PRESET.staf.nama;
   for (const p of Object.values(PRESET)) if (IZIN.every(([k]) => !!iz[k] === !!p.izin[k])) return p.nama;
@@ -5139,6 +5243,48 @@ document.addEventListener("click", async e => {
 });
 
 let secondary = null;
+// ---- akun GTK pengusul RKAS dibuat sekaligus dari daftar pegawai
+UI.ga = { pass:"", off:new Set(), busy:false, log:[] };
+function gtkUserName(p, used) {
+  const nip = String(p.nip || "").replace(/\D/g, "");
+  let u = nip.length >= 9 ? nip : norm(String(p.nama || "").split(",")[0]).replace(/[^a-z0-9 ]/g, "").split(" ").filter(w => w.length > 1).slice(0, 2).join(".");
+  u = (u || "gtk").slice(0, 28); let x = u, i = 2; while (used.has(x)) x = u + i++; used.add(x); return x;
+}
+function gtkCandidates() {
+  const have = new Set(AK.list.filter(a => !a.dihapus).map(a => norm(a.nama))), used = new Set(AK.list.map(a => shownLogin(a.email)));
+  return penerimaList().filter(p => p.nama && !/unit|ruang/i.test(p.st || "") && !have.has(norm(p.nama))).map(p => ({ p, user:gtkUserName(p, used) }));
+}
+function gtkAkunPanel() {
+  const G = UI.ga, cand = gtkCandidates(), pick = cand.filter(c => !G.off.has(c.p.nama)), nGtk = AK.list.filter(a => a.gtk && !a.dihapus).length;
+  return `<details class="panel" id="ga-det" style="margin-bottom:12px;background:var(--sunk)" ${G.open ? "open" : ""}><summary><b>Akun GTK pengusul RKAS</b> · buat sekaligus dari daftar pegawai (${fmt(nGtk)} akun GTK aktif)</summary>
+    <p class="hint" style="margin:8px 0">Akun GTK hanya membuka aplikasi <b>Usulan RKAS</b> (mengusulkan, melihat semua usulan, jadwal Aula & Multimedia). Nama pengguna = NIP (atau nama depan.nama belakang bila tanpa NIP). Pegawai yang sudah punya akun tidak ditampilkan. GTK baru: tambahkan dulu di Daftar pegawai, lalu buat akunnya di sini. GTK pindah/resign: nonaktifkan lalu hapus akunnya di tabel di bawah.</p>
+    <div class="toolbar"><label class="f">Password awal untuk semua akun baru (min. 6)<input id="ga-pass" type="text" autocomplete="off" value="${esc(G.pass)}" placeholder="mis. sman1berau2027"></label><button class="primary" id="ga-go" style="align-self:end" ${pick.length && G.pass.length >= 6 && !G.busy ? "" : "disabled"}>${G.busy ? "Membuat akun… " + fmt(G.log.length) + "/" + fmt(G.total || 0) : `Buat ${fmt(pick.length)} akun GTK`}</button>${G.log.length ? '<button id="ga-xlsx" style="align-self:end">Unduh daftar akun (Excel)</button>' : ""}</div>
+    ${cand.length ? `<div class="tablebox" style="max-height:320px;overflow:auto"><table class="dense"><thead><tr><th class="selc"><input type="checkbox" id="ga-all" ${pick.length === cand.length ? "checked" : ""}></th><th>Nama</th><th>Jabatan</th><th>Nama pengguna</th></tr></thead><tbody>${cand.map(c => `<tr><td class="selc"><input type="checkbox" data-ga="${esc(c.p.nama)}" ${G.off.has(c.p.nama) ? "" : "checked"}></td><td>${esc(c.p.nama)}</td><td class="sm">${esc(c.p.jab || "")}</td><td class="mono">${esc(c.user)}</td></tr>`).join("")}</tbody></table></div>` : '<p class="muted">Semua pegawai di daftar sudah punya akun.</p>'}
+    ${G.log.length ? `<p class="sectionlabel" style="margin-top:10px">Hasil</p><div class="tablebox" style="max-height:240px;overflow:auto"><table class="dense"><tbody>${G.log.map(l => `<tr><td>${esc(l.nama)}</td><td class="mono">${esc(l.user)}</td><td>${l.ok ? '<span class="pill ok">dibuat</span>' : `<span class="pill bad">${esc(l.err)}</span>`}</td></tr>`).join("")}</tbody></table></div>` : ""}</details>`;
+}
+async function gtkAkunGo() {
+  const G = UI.ga, pick = gtkCandidates().filter(c => !G.off.has(c.p.nama)); if (!pick.length || G.pass.length < 6) return;
+  G.busy = true; G.log = []; G.total = pick.length; G.open = true; render();
+  secondary = secondary || firebase.initializeApp(FB_CONFIG, "pembuat-akun");
+  for (const c of pick) {
+    const email = toLoginEmail(c.user);
+    try {
+      const cred = await secondary.auth().createUserWithEmailAndPassword(email, G.pass); const id = cred.user.uid; await secondary.auth().signOut();
+      await W.set("akun/" + id, { nama:c.p.nama, jab:c.p.jab || "", email, role:"operator", aktif:true, gtk:true, izin:PRESET.gtk.izin, dibuat:new Date().toISOString() });
+      G.log.push({ nama:c.p.nama, user:c.user, ok:true });
+    } catch (err) {
+      const code = err && err.code || "";
+      G.log.push({ nama:c.p.nama, user:c.user, ok:false, err:code === "auth/email-already-in-use" ? "nama pengguna sudah dipakai" : code === "auth/too-many-requests" ? "dihentikan: batas Firebase, lanjutkan ±1 jam lagi" : authErr(err) });
+      if (code === "auth/too-many-requests") break;
+    }
+    render();
+  }
+  G.busy = false; toast(`${G.log.filter(l => l.ok).length} akun GTK dibuat.`); render();
+}
+document.addEventListener("input", e => { if (e.target.id === "ga-pass") { UI.ga.pass = e.target.value; const b = document.getElementById("ga-go"); if (b) b.disabled = !(UI.ga.pass.length >= 6 && !UI.ga.busy); } });
+document.addEventListener("change", e => { const t = e.target; if (t.dataset && t.dataset.ga) { if (t.checked) UI.ga.off.delete(t.dataset.ga); else UI.ga.off.add(t.dataset.ga); render(); } if (t.id === "ga-all") { UI.ga.off = t.checked ? new Set() : new Set(gtkCandidates().map(c => c.p.nama)); render(); } });
+document.addEventListener("toggle", e => { if (e.target && e.target.id === "ga-det") UI.ga.open = e.target.open; }, true);
+document.addEventListener("click", e => { const b = e.target.closest("#ga-go, #ga-xlsx"); if (!b || !isMaster()) return; if (b.id === "ga-go") gtkAkunGo(); else xlsxSave(`Akun GTK ${today()}.xlsx`, [["Akun GTK", UI.ga.log.map((l, i) => ({ "No":i + 1, "Nama":l.nama, "Nama pengguna":l.user, "Password awal":l.ok ? UI.ga.pass : "", "Status":l.ok ? "dibuat" : l.err, "Alamat aplikasi":location.origin + location.pathname }))]]); });
 document.addEventListener("click", async e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.id === "ak-new") {
