@@ -268,8 +268,8 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
 <nav class="tabs" id="tabs" aria-label="Menu halaman">
   <div class="navhead"><img src="" id="nav-logo" alt="" width="40" height="40" style="flex:none"><div><b id="nav-appname">Aset & Persediaan</b><span id="nav-appdesc">SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD</span></div><button type="button" class="iconbtn" id="nav-close" aria-label="Tutup menu"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div>
   <a href="#home" data-v="home" class="navhome"><svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 9.5 10 3.5l7 6V17H12.5v-4.5h-5V17H3z"/></svg>Beranda · pilih aplikasi</a>
-  <div id="nav-app-jadwal"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Jadwal Penggunaan Ruang</p>
-  <div class="navsec"><a href="#jadwal" data-v="jadwal">Aula dan Multimedia <span id="jbadge"></span></a><a href="#lab" data-v="lab">Laboratorium <span id="lbadge"></span></a></div></div>
+  <div id="nav-app-jadwal"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Jadwal Penggunaan Aula dan Multimedia</p>
+  <div class="navsec"><a href="#jadwal" data-v="jadwal">Jadwal Penggunaan Aula dan Multimedia <span id="jbadge"></span></a></div></div>
   <div id="nav-app-minta"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Permintaan Barang Persediaan</p>
   <div class="navsec"><a href="#minta" data-v="minta">Permintaan Barang Persediaan <span id="mbadge"></span></a></div></div>
   <div id="nav-app-gtk"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Usulan RKAS (GTK)</p>
@@ -279,7 +279,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
   <p class="navgroup">Perencanaan</p><div class="navsec"><a href="#keu-harga" data-v="keu-harga">Standar harga (SSH/SBU)</a><a href="#keu-usul" data-v="keu-usul">Usulan & KAK</a><a href="#keu-rkas" data-v="keu-rkas">RKAS & RKBMD</a></div>
   <p class="navgroup">Pelaksanaan (SPJ)</p><div class="navsec"><a href="#keu-spj" data-v="keu-spj">Belanja barang/jasa</a><a href="#keu-honor" data-v="keu-honor">Honorarium</a><a href="#keu-perjadin" data-v="keu-perjadin">Perjalanan dinas</a></div></div>
   <div id="nav-app-waka"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Waka Sarpras</p>
-  <div class="navsec"><a href="#surat" data-v="surat">Surat Keluar</a><a href="#akun" data-v="akun">Akun & hak akses</a></div></div>
+  <div class="navsec"><a href="#surat" data-v="surat">Surat Keluar</a><a href="#lab" data-v="lab">Peminjaman Laboratorium <span id="lbadge"></span></a><a href="#akun" data-v="akun">Akun & hak akses</a></div></div>
   <div id="nav-app-sarpras"><p class="navgroup" style="margin-top:14px;color:var(--accent)">Aplikasi Aset & Persediaan</p>
   <div class="navsec"><p class="navgroup">Utama</p>
     <a href="#ringkasan" data-v="ringkasan">Rekap Aset dan Persediaan</a>
@@ -362,7 +362,7 @@ const usulHapus = x => (x.kond === "Rusak Berat" || x.kond === "Hilang") && !x.r
 const BUKU_RE = /\b(buku|novel|bahan ajar|monograf|kamus|ensiklopedi|atlas|majalah|modul|komik|antologi)\b/i;
 
 /* ================= state ================= */
-const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], cetak:[], bantuan:[], minta:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
+const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], pinjamLab:[], cetak:[], bantuan:[], minta:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
 const CFG_DEFAULT = {
   kepsek:"Dr. H. Saleh, S.T., M.Pd.", nipKepsek:"19780708 200604 1 004",
   waka:"Ika Novita Mulia, S.Pd.", nipWaka:"199211102022212025", jabWaka:"Wakil Kepala Sekolah Sarana dan Prasarana",
@@ -482,6 +482,7 @@ async function boot() {
   sub("kk", rows => { S.kk = rows; });
   sub("gdg", rows => { S.gdg = rows; });
   sub("pinjam", rows => { S.pinjam = rows; });
+  sub("pinjam_lab", rows => { S.pinjamLab = rows; });
   sub("bantuan", rows => { S.bantuan = rows.sort((a, b) => String(b.tgl).localeCompare(String(a.tgl))); });
   for (const [c, k] of [["keu_usul", "keuUsul"], ["keu_kak", "keuKak"], ["keu_rkas", "keuRkas"], ["keu_pagu", "keuPagu"], ["keu_spj", "keuSpj"], ["keu_honor", "keuHonor"], ["keu_perjadin", "keuPerjadin"]]) sub(c, rows => { S[k] = rows; });
   sub("minta", rows => { S.minta = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
@@ -675,9 +676,9 @@ function route() {
   const navV = current === "kertas" ? "rekon" : current;
   for (const a of document.querySelectorAll("#tabs a")) { if (a.dataset.v === navV) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); }
   const link = document.querySelector(`#tabs a[data-v="${navV}"]`), nama = current === "home" ? "Beranda" : link ? link.firstChild.textContent.trim() : "";
-  const app = current === "home" ? "home" : current === "jadwal" || current === "lab" ? "jadwal" : current === "minta" ? "minta" : current === "gtk" ? "gtk" : String(current).startsWith("keu") ? "keuangan" : current === "akun" || current === "surat" ? "waka" : "sarpras";
+  const app = current === "home" ? "home" : current === "jadwal" ? "jadwal" : current === "minta" ? "minta" : current === "gtk" ? "gtk" : String(current).startsWith("keu") ? "keuangan" : current === "akun" || current === "surat" || current === "lab" ? "waka" : "sarpras";
   if (app !== "home") window.__lastApp = app;
-  const APPN = { gtk:["Usulan RKAS", "Usulan RKAS · SMAN 1 Berau", "SMAN 1 Berau · usulan kebutuhan RKAS untuk seluruh GTK dan jadwal Aula & Multimedia"], keuangan:["Keuangan", "Keuangan · SMAN 1 Berau", "SMAN 1 Berau · RKAS, usulan, SPJ belanja, honor, perjalanan dinas"], minta:["Permintaan Barang Persediaan", "Permintaan Barang Persediaan · SMAN 1 Berau", "SMAN 1 Berau · permintaan ATK & bahan habis pakai, stok keluar tercatat otomatis"], home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Penggunaan Ruang", "Jadwal Penggunaan Ruang · SMAN 1 Berau", "SMAN 1 Berau · pengajuan dan persetujuan pemakaian Aula, Ruang Multimedia, dan Laboratorium"], waka:["Waka Sarpras", "Waka Sarpras · SMAN 1 Berau", "SMAN 1 Berau · akun, hak akses, dan administrasi Waka Sarpras"] }[app];
+  const APPN = { gtk:["Usulan RKAS", "Usulan RKAS · SMAN 1 Berau", "SMAN 1 Berau · usulan kebutuhan RKAS untuk seluruh GTK dan jadwal Aula & Multimedia"], keuangan:["Keuangan", "Keuangan · SMAN 1 Berau", "SMAN 1 Berau · RKAS, usulan, SPJ belanja, honor, perjalanan dinas"], minta:["Permintaan Barang Persediaan", "Permintaan Barang Persediaan · SMAN 1 Berau", "SMAN 1 Berau · permintaan ATK & bahan habis pakai, stok keluar tercatat otomatis"], home:["Aplikasi SMAN 1 Berau", "SMAN 1 Berau · Ruang aplikasi", "Pilih aplikasi dari Beranda"], sarpras:["Aset & Persediaan", "Aset & Persediaan · SMAN 1 Berau", "SMAN 1 Berau · buku induk aset & persediaan, tersambung ke SIPBMD"], jadwal:["Jadwal Penggunaan Aula dan Multimedia", "Jadwal Penggunaan Aula dan Multimedia · SMAN 1 Berau", "SMAN 1 Berau · pengajuan dan persetujuan pemakaian Aula dan Ruang Multimedia"], waka:["Waka Sarpras", "Waka Sarpras · SMAN 1 Berau", "SMAN 1 Berau · akun, hak akses, dan administrasi Waka Sarpras"] }[app];
   $(".pageid .app").textContent = APPN[1]; $("#nav-appname").textContent = APPN[0]; $("#nav-appdesc").textContent = APPN[2];
   for (const a2 of ["sarpras", "jadwal", "waka", "minta", "keuangan", "gtk"]) $("#nav-app-" + a2).hidden = app !== "home" && app !== a2;
   $("#nav-me").hidden = app === "waka";
@@ -799,7 +800,7 @@ function kibStrip(mode) {
 const APPS = [
   { id:"sarpras", nama:"Aset & Persediaan", desc:"Pendataan aset SIPBMD, kondisi ruangan, pemeliharaan dan perbaikan, BAST, usulan penghapusan, persediaan, dan kertas kerja modal.", href:"#ringkasan", ac:"var(--accent)", acs:"var(--accent-soft)", siap:true,
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="9" y="31" width="25" height="22" rx="2" fill="#d99a4e"/><path d="M9 37h25" stroke="#b97a32" stroke-width="2"/><rect x="18" y="31" width="7" height="8" fill="#f3d6a3"/><rect x="14" y="12" width="21" height="19" rx="2" fill="#e8b46b"/><path d="M14 17h21" stroke="#c98d43" stroke-width="2"/><rect x="21" y="12" width="7" height="7" fill="#f6e0b6"/><rect x="38" y="15" width="19" height="38" rx="3" fill="#fff" stroke="#1e5a4c" stroke-width="2.2"/><rect x="43" y="11" width="9" height="7" rx="2" fill="#1e5a4c"/><path d="m41.5 26 2 2 3.5-4M41.5 35l2 2 3.5-4M41.5 44l2 2 3.5-4" stroke="#2f9a5a" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M49 26h5M49 35h5M49 44h5" stroke="#8aa69c" stroke-width="2" stroke-linecap="round"/></svg>' },
-  { id:"jadwal", nama:"Jadwal Penggunaan Ruang", desc:"Jadwal Aula & Ruang Multimedia serta Laboratorium (Komputer 1–2, Kimia, Fisika, Biologi): pengajuan peminjaman satu atau beberapa hari, dan persetujuan.", href:"#jadwal", ac:"#7e5bb5", acs:"color-mix(in srgb, #7e5bb5 16%, transparent)", siap:true,
+  { id:"jadwal", nama:"Jadwal Penggunaan Aula dan Multimedia", desc:"Jadwal pemakaian Aula dan Ruang Multimedia berdampingan, pengajuan peminjaman satu atau beberapa hari, dan persetujuan.", href:"#jadwal", ac:"#7e5bb5", acs:"color-mix(in srgb, #7e5bb5 16%, transparent)", siap:true,
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="11" width="42" height="41" rx="5" fill="#fff" stroke="#6b4fa0" stroke-width="2.2"/><path d="M6 16a5 5 0 0 1 5-5h32a5 5 0 0 1 5 5v6H6z" fill="#7e5bb5"/><path d="M16 7v8M38 7v8" stroke="#4b3578" stroke-width="3" stroke-linecap="round"/><rect x="11" y="27" width="15" height="7" rx="2" fill="#4caf7a"/><rect x="29" y="27" width="14" height="11" rx="2" fill="#b49be0"/><rect x="11" y="37" width="15" height="9" rx="2" fill="#b49be0"/><rect x="29" y="41" width="14" height="6" rx="2" fill="#4caf7a"/><circle cx="48" cy="46" r="12" fill="#fff" stroke="#6b4fa0" stroke-width="2.2"/><path d="M48 39v7l5 3" stroke="#6b4fa0" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>' },
   { id:"gtk", nama:"Usulan RKAS", desc:"Seluruh GTK mengusulkan kebutuhan RKAS, melihat usulan yang sudah ada agar tidak dobel, dan jadwal Aula & Multimedia.", href:"#gtk", ac:"#7a5a1e", acs:"color-mix(in srgb, #c08a2a 16%, transparent)", siap:true,
     icon:'<svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="6" width="36" height="48" rx="4" fill="#fff" stroke="#7a5a1e" stroke-width="2.4"/><rect x="22" y="2" width="16" height="9" rx="2.5" fill="#e9c27a" stroke="#7a5a1e" stroke-width="2"/><path d="M19 22h22M19 30h22M19 38h14" stroke="#7a5a1e" stroke-width="2.4" stroke-linecap="round"/><circle cx="47" cy="47" r="12" fill="#2f8a5b"/><path d="M41 47h12M47 41v12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>' },
@@ -824,7 +825,7 @@ function vHome() {
     if (a.id === "gtk") { const th = String(new Date().getFullYear() + (new Date().getMonth() >= 6 ? 1 : 0)), mine = allUsul().filter(u => u.by === S.me).length; return (mine ? fmt(mine) + " usulan Anda · " : "") + fmt(allUsul().filter(u => u.th === th).length) + " usulan " + th; }
     if (a.id === "keuangan") { const th = thNow(), w = allUsul().filter(u => u.st === "Diajukan").length, re = realisasi(th, "").total; return (w ? fmt(w) + " usulan menunggu · " : "") + "Realisasi " + th + " " + rp(re); }
     if (a.id === "minta") { const w = S.minta.filter(m => m.st === "Diajukan"), mine = w.filter(m => m.by === S.me).length; return (can("minta_proses") ? (w.length ? fmt(w.length) + " menunggu diproses" : "Tidak ada antrean") : (mine ? fmt(mine) + " permintaan Anda menunggu" : "Ajukan permintaan barang")) + " · " + fmt(S.psdBarang.filter(b => psdLedger(b._id).qty > 0).length) + " jenis tersedia"; }
-    if (a.id === "jadwal") { const h = jdToday().length, w = S.pinjam.filter(b => b.st === "Diajukan").length; return (h ? fmt(h) + " pemakaian hari ini" : "Hari ini kosong") + (w ? " · " + fmt(w) + " menunggu" : ""); }
+    if (a.id === "jadwal") { const h = jdToday().length, w = jdHeads(S.pinjam.filter(b => b.st === "Diajukan")).length; return (h ? fmt(h) + " pemakaian hari ini" : "Hari ini kosong") + (w ? " · " + fmt(w) + " menunggu" : ""); }
     if (a.id === "waka") { const n = AK.list.filter(x => x.aktif !== false).length; return fmt(n) + " akun aktif · " + fmt(typeof onlineList === "function" ? onlineList().length : 0) + " online"; }
     return "";
   };
@@ -936,9 +937,13 @@ document.addEventListener("change", e => { if (e.target.id === "pl-jenis") { UI.
 const JD_RUANG = [{ id:"aula", nama:"Aula", g:"aula" }, { id:"mm", nama:"Ruang Multimedia", g:"aula" },
   { id:"komp1", nama:"Lab Komputer 1", g:"lab" }, { id:"komp2", nama:"Lab Komputer 2", g:"lab" }, { id:"kimia", nama:"Lab Kimia", g:"lab" }, { id:"fisika", nama:"Lab Fisika", g:"lab" }, { id:"biologi", nama:"Lab Biologi", g:"lab" }];
 const JD_GRUP = { aula:{ judul:"Jadwal Penggunaan Aula dan Multimedia", ruang:"Aula dan Ruang Multimedia", ph:"mis. Rapat komite, Sosialisasi PPDB, Pelatihan guru", unit:"mis. Kesiswaan, OSIS, Kurikulum" },
-  lab:{ judul:"Jadwal Penggunaan Laboratorium", ruang:"Lab Komputer 1, Lab Komputer 2, Lab Kimia, Lab Fisika, dan Lab Biologi", ph:"mis. Praktikum titrasi asam basa, Ujian berbasis komputer", unit:"mis. Kelas XI-2 · Kimia, atau panitia ujian" } };
+  lab:{ judul:"Peminjaman Laboratorium", ruang:"Lab Komputer 1, Lab Komputer 2, Lab Kimia, Lab Fisika, dan Lab Biologi", ph:"mis. Praktikum titrasi asam basa, Ujian berbasis komputer", unit:"mis. Kelas XI-2 · Kimia, atau panitia ujian" } };
 const JD_BUTUH_G = { aula:["Proyektor / layar", "Sound system", "Mikrofon", "Kursi tambahan", "Meja tamu", "AC dinyalakan", "Dokumentasi"], lab:["Komputer / PC", "Proyektor / layar", "Alat praktikum", "Bahan praktikum", "Laboran / pendamping", "Jaringan internet", "AC dinyalakan"] };
 const jdG = () => current === "lab" ? "lab" : "aula";
+// peminjaman laboratorium hanya di aplikasi Waka Sarpras, disimpan terpisah (pinjam_lab) dan tidak terbaca akun lain
+const jdData = (g = jdG()) => g === "lab" ? (S.pinjamLab || []) : (S.pinjam || []);
+const jdCol = (g = jdG()) => g === "lab" ? "pinjam_lab" : "pinjam";
+const jdCan = k => jdG() === "lab" ? appAccess("waka") : can(k);
 const jdRooms = (g = jdG()) => JD_RUANG.filter(r => r.g === g);
 const jdGrpOf = ruang => (JD_RUANG.find(r => r.id === ruang) || {}).g || "aula";
 let JD_BUTUH = JD_BUTUH_G.aula;
@@ -946,12 +951,12 @@ const ymd = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const weekStart = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); const w = (x.getDay() + 6) % 7; return addDays(x, -w); };
 const parseYmd = t => { const [y, m, d] = String(t).split("-").map(Number); return new Date(y, m - 1, d); };
-const jdActive = () => S.pinjam.filter(b => b.st === "Diajukan" || b.st === "Disetujui");
-const jdToday = () => jdActive().filter(b => b.tgl === ymd(new Date()));
+const jdActive = (g) => jdData(g).filter(b => b.st === "Diajukan" || b.st === "Disetujui");
+const jdToday = () => jdActive("aula").filter(b => b.tgl === ymd(new Date()));
 // satu pengajuan beberapa hari = beberapa dokumen (satu per hari) dengan "seri" yang sama
-const jdSeri = b => b.seri ? S.pinjam.filter(x => x.seri === b.seri).sort((a, c) => a.tgl.localeCompare(c.tgl)) : [b];
+const jdSeri = b => b.seri ? jdData().filter(x => x.seri === b.seri).sort((a, c) => a.tgl.localeCompare(c.tgl)) : [b];
 const jdHeads = list => { const seen = new Set(); return list.filter(b => { if (!b.seri) return true; if (seen.has(b.seri)) return false; seen.add(b.seri); return true; }); };
-function jdPendingForMe(g) { return S.role && can("jadwal_setuju") ? jdHeads(S.pinjam.filter(b => b.st === "Diajukan" && (!g || jdGrpOf(b.ruang) === g))).length : 0; }
+function jdPendingForMe(g = "aula") { return S.role && (g === "lab" ? appAccess("waka") : can("jadwal_setuju")) ? jdHeads(jdData(g).filter(b => b.st === "Diajukan" && jdGrpOf(b.ruang) === g)).length : 0; }
 const jdRange = b => { const all = jdSeri(b), a = all[0].tgl, z = all[all.length - 1].tgl; return a === z ? `${HARI[parseYmd(a).getDay()]}, ${tglID(a)}` : `${HARI[parseYmd(a).getDay()]}, ${tglID(a)} – ${HARI[parseYmd(z).getDay()]}, ${tglID(z)} (${all.length} hari)`; };
 function jdDates(f) {
   const out = []; if (!f.tgl) return out; const z = f.tgl2 && f.tgl2 >= f.tgl ? f.tgl2 : f.tgl;
@@ -982,7 +987,7 @@ function jdFormHtml() {
       <div class="full"><span class="f" style="display:block;margin-bottom:6px">Kebutuhan</span><div style="display:flex;flex-wrap:wrap;gap:6px 16px">${JD_BUTUH.map((o, i) => `<label class="ck"><input type="checkbox" id="jf-b${i}" ${(f.butuh || []).includes(o) ? "checked" : ""}> ${o}</label>`).join("")}</div></div>
       <label class="f full">Keterangan<textarea id="jf-ket" placeholder="mis. butuh penataan kursi model kelas">${esc(f.ket || "")}</textarea></label>
     </div>
-    <div style="margin-top:10px;display:flex;gap:8px;align-items:center"><button class="primary" id="jf-kirim" ${cf.length || !dates.length ? "disabled" : ""}>Kirim pengajuan${dates.length > 1 ? ` (${dates.length} hari)` : ""}</button><span class="hint">${can("jadwal_setuju") ? "Pengajuan Anda langsung bisa Anda setujui di daftar." : "Pengajuan menunggu persetujuan Waka Sarpras / pengelola."}</span></div></section>`;
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center"><button class="primary" id="jf-kirim" ${cf.length || !dates.length ? "disabled" : ""}>Kirim pengajuan${dates.length > 1 ? ` (${dates.length} hari)` : ""}</button><span class="hint">${jdG() === "lab" ? "Hanya akun aplikasi Waka Sarpras yang bisa melihat dan mencatat jadwal laboratorium." : jdCan("jadwal_setuju") ? "Pengajuan Anda langsung bisa Anda setujui di daftar." : "Pengajuan menunggu persetujuan Waka Sarpras / pengelola."}</span></div></section>`;
 }
 function jdReadForm() {
   const f = UI.jd.form; if (!f) return;
@@ -994,7 +999,7 @@ function jdReadForm() {
   if (document.getElementById("jf-b0")) f.butuh = JD_BUTUH.filter((o, i) => document.getElementById("jf-b" + i).checked);
 }
 function jdDetail(b) {
-  const mine = b.by === S.me, aprv = can("jadwal_setuju"), aktif = b.st === "Diajukan" || b.st === "Disetujui";
+  const mine = b.by === S.me, aprv = jdCan("jadwal_setuju"), aktif = b.st === "Diajukan" || b.st === "Disetujui";
   return `<section class="panel" style="margin-top:14px"><div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><h3 style="margin:0;flex:1">${esc(b.kegiatan)}</h3>${jdPill(b.st)}<button class="ghost" data-jdsel="">Tutup</button></div>
     <dl class="kv" style="margin-top:10px"><dt>Ruang</dt><dd>${esc(jdNamaRuang(b.ruang))}</dd><dt>Waktu</dt><dd>${esc(jdRange(b))} · ${esc(b.mulai)}–${esc(b.selesai)}${b.seri ? `<div class="sm">${jdSeri(b).map(x => `${esc(HARI[parseYmd(x.tgl).getDay()].slice(0, 3))} ${parseYmd(x.tgl).getDate()}/${parseYmd(x.tgl).getMonth() + 1} ${x.st !== b.st ? jdPill(x.st) : ""}`).join(" · ")}</div>` : ""}</dd>
     <dt>Unit</dt><dd>${esc(b.unit || "—")}</dd><dt>Penanggung jawab</dt><dd>${esc(b.pj || "—")}${b.hp ? " · " + esc(b.hp) : ""}</dd><dt>Peserta</dt><dd>${b.peserta ? fmt(+b.peserta) + " orang" : "—"}</dd>
@@ -1007,14 +1012,15 @@ function jdDetail(b) {
     </div></section>`;
 }
 function vJadwal() {
+  if (jdG() === "lab") setTimeout(jdMoveLab, 0);
   const J = UI.jd, ws = parseYmd(J.wk), days = [...Array(7)].map((_, i) => addDays(ws, i)), td = ymd(new Date());
-  const canAju = can("jadwal_ajukan"), aprv = can("jadwal_setuju"), g = jdG(), G = JD_GRUP[g], rooms = jdRooms(), inG = b => jdGrpOf(b.ruang) === g;
+  const canAju = jdCan("jadwal_ajukan"), aprv = jdCan("jadwal_setuju"), g = jdG(), G = JD_GRUP[g], rooms = jdRooms(), inG = b => jdGrpOf(b.ruang) === g;
   if (J.form && jdGrpOf(J.form.ruang) !== g) J.form = null;
   const cell = (r, d) => { const t = ymd(d), list = jdActive().filter(b => b.ruang === r.id && b.tgl === t).sort((a, b) => a.mulai.localeCompare(b.mulai));
-    return `<td class="jd-cell">${list.map(b => `<button class="jd-b ${b.st === "Disetujui" ? "ok" : "wait"} ${J.sel === b._id || (b.seri && S.pinjam.some(x => x._id === J.sel && x.seri === b.seri)) ? "sel" : ""}" data-jdsel="${esc(b._id)}"><span class="mono">${esc(b.mulai)}–${esc(b.selesai)}</span><b>${esc(b.kegiatan)}</b>${b.seri ? `<span class="sm">hari ${jdSeri(b).findIndex(x => x._id === b._id) + 1} dari ${jdSeri(b).length}</span>` : ""}<span class="sm">${esc(b.unit || nameOf(b.by))}${b.st === "Diajukan" ? " · menunggu" : ""}</span></button>`).join("") || '<span class="faint sm">kosong</span>'}${canAju && t >= td ? `<button class="link sm jd-add" data-jdadd="${r.id}|${t}">+ ajukan</button>` : ""}</td>`; };
-  const sel = J.sel && S.pinjam.find(b => b._id === J.sel && inG(b));
-  const list = jdHeads(S.pinjam.filter(b => inG(b) && (!J.fst || b.st === J.fst) && (!J.mine || b.by === S.me)).sort((a, b) => (a.tgl + a.mulai).localeCompare(b.tgl + b.mulai)));
-  const nWait = jdHeads(S.pinjam.filter(b => inG(b) && b.st === "Diajukan")).length;
+    return `<td class="jd-cell">${list.map(b => `<button class="jd-b ${b.st === "Disetujui" ? "ok" : "wait"} ${J.sel === b._id || (b.seri && jdData().some(x => x._id === J.sel && x.seri === b.seri)) ? "sel" : ""}" data-jdsel="${esc(b._id)}"><span class="mono">${esc(b.mulai)}–${esc(b.selesai)}</span><b>${esc(b.kegiatan)}</b>${b.seri ? `<span class="sm">hari ${jdSeri(b).findIndex(x => x._id === b._id) + 1} dari ${jdSeri(b).length}</span>` : ""}<span class="sm">${esc(b.unit || nameOf(b.by))}${b.st === "Diajukan" ? " · menunggu" : ""}</span></button>`).join("") || '<span class="faint sm">kosong</span>'}${canAju && t >= td ? `<button class="link sm jd-add" data-jdadd="${r.id}|${t}">+ ajukan</button>` : ""}</td>`; };
+  const sel = J.sel && jdData().find(b => b._id === J.sel && inG(b));
+  const list = jdHeads(jdData().filter(b => inG(b) && (!J.fst || b.st === J.fst) && (!J.mine || b.by === S.me)).sort((a, b) => (a.tgl + a.mulai).localeCompare(b.tgl + b.mulai)));
+  const nWait = jdHeads(jdData().filter(b => inG(b) && b.st === "Diajukan")).length;
   return `<h2>${G.judul}</h2>
   <p class="lead">Jadwal pemakaian ${G.ruang} ditampilkan berdampingan supaya jam yang bertabrakan langsung terlihat. Satu pengajuan bisa untuk satu hari atau beberapa hari berturut-turut. Semua akun bisa melihat jadwal; pengajuan dan persetujuan mengikuti hak akses akun.</p>
   ${J.form ? jdFormHtml() : ""}
@@ -1028,18 +1034,23 @@ function vJadwal() {
   <div class="tablebox"><table class="jd-week" style="${rooms.length > 3 ? "min-width:" + (120 + rooms.length * 170) + "px" : ""}"><thead><tr><th style="width:120px">Hari</th>${rooms.map(r => `<th>${r.nama}</th>`).join("")}</tr></thead><tbody>
   ${days.map(d => `<tr class="${ymd(d) === td ? "jd-today" : ""}"><th scope="row" style="text-transform:none;letter-spacing:0"><b>${HARI[d.getDay()]}</b><div class="sm">${d.getDate()} ${BULAN[d.getMonth()].slice(0, 3)}</div>${ymd(d) === td ? '<span class="pill acc">hari ini</span>' : ""}</th>${rooms.map(r => cell(r, d)).join("")}</tr>`).join("")}
   </tbody></table></div>` : `
-  <div class="toolbar"><div class="chips">${["Diajukan", "Disetujui", "Ditolak", "Dibatalkan", ""].map(s2 => `<button class="chip" data-jdfst="${s2}" aria-pressed="${J.fst === s2}">${s2 || "Semua"}</button>`).join("")}</div><label class="ck"><input type="checkbox" id="jd-mine" ${J.mine ? "checked" : ""}> Pengajuan saya saja</label><span class="sp"></span><button id="jd-xlsx" ${S.pinjam.length ? "" : "disabled"}>Unduh Excel</button></div>
+  <div class="toolbar"><div class="chips">${["Diajukan", "Disetujui", "Ditolak", "Dibatalkan", ""].map(s2 => `<button class="chip" data-jdfst="${s2}" aria-pressed="${J.fst === s2}">${s2 || "Semua"}</button>`).join("")}</div><label class="ck"><input type="checkbox" id="jd-mine" ${J.mine ? "checked" : ""}> Pengajuan saya saja</label><span class="sp"></span><button id="jd-xlsx" ${jdData().length ? "" : "disabled"}>Unduh Excel</button></div>
   <div class="tablebox"><table><thead><tr><th>Tanggal & jam</th><th>Ruang</th><th>Kegiatan</th><th class="hide-sm">Diajukan oleh</th><th>Status</th>${aprv ? "<th></th>" : ""}</tr></thead><tbody>
   ${list.map(b => `<tr class="rowlink" tabindex="0" data-jdrow="${esc(b._id)}"><td>${esc(jdRange(b))}<div class="sm mono">${esc(b.mulai)}–${esc(b.selesai)}</div></td><td>${esc(jdNamaRuang(b.ruang))}</td><td><div class="nm">${esc(b.kegiatan)}</div><div class="sm">${esc(b.unit || "")}${b.peserta ? " · " + fmt(+b.peserta) + " orang" : ""}</div></td><td class="hide-sm">${esc(nameOf(b.by))}</td><td>${jdPill(b.st)}</td>${aprv ? `<td>${b.st === "Diajukan" ? `<button class="primary" data-jdok="${esc(b._id)}">Setujui</button>` : ""}</td>` : ""}</tr>`).join("") || `<tr><td colspan="6"><div class="empty"><b>Tidak ada pengajuan</b>${J.fst ? "Ubah filter status." : "Pengajuan peminjaman akan muncul di sini."}</div></td></tr>`}
   </tbody></table></div>`}
   ${sel ? jdDetail(sel) : ""}`;
 }
+let jdMoved = false;
+async function jdMoveLab() {
+  if (jdMoved || !isMaster()) return; const old = (S.pinjam || []).filter(b => jdGrpOf(b.ruang) === "lab"); if (!old.length) return; jdMoved = true;
+  try { for (const b of old) { const d = Object.assign({}, b); delete d._id; await db.doc("pinjam_lab/" + b._id).set(d); await db.doc("pinjam/" + b._id).delete(); } toast(`${old.length} jadwal laboratorium dipindahkan ke Waka Sarpras.`); } catch (e) { jdMoved = false; }
+}
 async function jdSetMany(list, patch, msg) {
-  try { const at = new Date().toISOString(); for (const b of list) await db.doc("pinjam/" + b._id).update(Object.assign({}, patch, { okBy:S.me || "", okAt:at })); toast(msg); UI.jd.tolak = null; render(); }
+  try { const at = new Date().toISOString(); for (const b of list) await db.doc(jdCol() + "/" + b._id).update(Object.assign({}, patch, { okBy:S.me || "", okAt:at })); toast(msg); UI.jd.tolak = null; render(); }
   catch (e) { toast(e && e.code === "permission-denied" ? "Ditolak. Akun Anda tidak punya hak untuk ini, atau aturan Firebase belum diperbarui." : "Gagal menyimpan. Periksa koneksi."); }
 }
 async function jdSet(id, patch, msg) {
-  try { await db.doc("pinjam/" + id).update(Object.assign(patch, { okBy:S.me || "", okAt:new Date().toISOString() })); toast(msg); UI.jd.tolak = null; render(); }
+  try { await db.doc(jdCol() + "/" + id).update(Object.assign(patch, { okBy:S.me || "", okAt:new Date().toISOString() })); toast(msg); UI.jd.tolak = null; render(); }
   catch (e) { toast(e && e.code === "permission-denied" ? "Ditolak. Akun Anda tidak punya hak untuk ini, atau aturan Firebase belum diperbarui." : "Gagal menyimpan. Periksa koneksi."); }
 }
 document.addEventListener("click", async e => {
@@ -1064,18 +1075,18 @@ document.addEventListener("click", async e => {
     if (jdConfAll(f, f.ruang).length) { toast("Ada hari yang jamnya sudah terisi. Pilih jam, tanggal, atau ruang lain."); render(); return; }
     t.disabled = true;
     const seri = dates.length > 1 ? uid("s") : "", at = new Date().toISOString(), base = { ruang:f.ruang, mulai:f.mulai, selesai:f.selesai, kegiatan:f.kegiatan, unit:f.unit || "", pj:f.pj || "", hp:f.hp || "", peserta:+f.peserta || 0, butuh:f.butuh || [], ket:f.ket || "", st:"Diajukan", by:S.me || "", at };
-    try { let first = ""; for (const tg of dates) { const id = uid("p"); if (!first) first = id; await db.doc("pinjam/" + id).set(Object.assign({ tgl:tg }, base, seri ? { seri, tgl1:dates[0], tgl2:dates[dates.length - 1], nHari:dates.length } : {})); }
+    try { let first = ""; for (const tg of dates) { const id = uid("p"); if (!first) first = id; await db.doc(jdCol() + "/" + id).set(Object.assign({ tgl:tg }, base, seri ? { seri, tgl1:dates[0], tgl2:dates[dates.length - 1], nHari:dates.length } : {})); }
       J.form = null; J.wk = ymd(weekStart(parseYmd(dates[0]))); J.tab = "kal"; J.sel = first; toast(dates.length > 1 ? `Pengajuan ${dates.length} hari terkirim.` : "Pengajuan terkirim."); render(); }
     catch (err) { t.disabled = false; toast(err && err.code === "permission-denied" ? "Ditolak. Akun Anda belum diberi hak mengajukan peminjaman, atau aturan Firebase belum diperbarui." : "Gagal mengirim. Periksa koneksi."); }
   }
-  if (d.jdok) { const b = S.pinjam.find(x => x._id === d.jdok); if (!b) return; const all = jdSeri(b).filter(x => x.st === "Diajukan");
+  if (d.jdok) { const b = jdData().find(x => x._id === d.jdok); if (!b) return; const all = jdSeri(b).filter(x => x.st === "Diajukan");
     for (const x of all) { const cf = jdConflicts(x.ruang, x.tgl, x.mulai, x.selesai, x._id).filter(y => y.st === "Disetujui" && (!b.seri || y.seri !== b.seri)); if (cf.length) { toast(`Tidak bisa disetujui: ${tglID(x.tgl)} bentrok dengan ${cf[0].kegiatan} yang sudah disetujui.`); return; } }
     jdSetMany(all, { st:"Disetujui", alasan:"" }, all.length > 1 ? `Peminjaman ${all.length} hari disetujui.` : "Peminjaman disetujui."); }
   if (d.jdtolak) { J.tolak = d.jdtolak; render(); setTimeout(() => { const i = document.getElementById("jd-alasan"); if (i) i.focus(); }, 0); }
-  if (d.jdno) { const a = val("jd-alasan"); if (!a) { toast("Tulis alasan penolakan."); return; } const b = S.pinjam.find(x => x._id === d.jdno); if (b) jdSetMany(jdSeri(b).filter(x => x.st === "Diajukan"), { st:"Ditolak", alasan:a }, "Pengajuan ditolak."); }
-  if (d.jdbatal) { const b = S.pinjam.find(x => x._id === d.jdbatal); if (b) jdSetMany(jdSeri(b).filter(x => x.st === "Diajukan" || x.st === "Disetujui"), { st:"Dibatalkan" }, "Peminjaman dibatalkan."); }
+  if (d.jdno) { const a = val("jd-alasan"); if (!a) { toast("Tulis alasan penolakan."); return; } const b = jdData().find(x => x._id === d.jdno); if (b) jdSetMany(jdSeri(b).filter(x => x.st === "Diajukan"), { st:"Ditolak", alasan:a }, "Pengajuan ditolak."); }
+  if (d.jdbatal) { const b = jdData().find(x => x._id === d.jdbatal); if (b) jdSetMany(jdSeri(b).filter(x => x.st === "Diajukan" || x.st === "Disetujui"), { st:"Dibatalkan" }, "Peminjaman dibatalkan."); }
   if (d.jdbatal1) jdSet(d.jdbatal1, { st:"Dibatalkan" }, "Peminjaman hari itu dibatalkan.");
-  if (t.id === "jd-xlsx") xlsxSave(`Peminjaman ${jdG() === "lab" ? "Laboratorium" : "Aula dan Multimedia"} ${today()}.xlsx`, [["Peminjaman", S.pinjam.filter(b => jdGrpOf(b.ruang) === jdG()).slice().sort((a, b) => (a.tgl + a.mulai).localeCompare(b.tgl + b.mulai)).map((b, n) => ({ "No":n + 1, "Hari":HARI[parseYmd(b.tgl).getDay()], "Tanggal":b.tgl, "Mulai":b.mulai, "Selesai":b.selesai, "Ruang":jdNamaRuang(b.ruang), "Kegiatan":b.kegiatan, "Unit":b.unit || "", "Penanggung jawab":b.pj || "", "No. HP":b.hp || "", "Peserta":b.peserta || "", "Kebutuhan":(b.butuh || []).join(", "), "Keterangan":b.ket || "", "Status":b.st, "Diajukan oleh":nameOf(b.by), "Diajukan":tglJam(b.at), "Diputuskan oleh":b.okBy ? nameOf(b.okBy) : "", "Alasan":b.alasan || "" }))]]);
+  if (t.id === "jd-xlsx") xlsxSave(`Peminjaman ${jdG() === "lab" ? "Laboratorium" : "Aula dan Multimedia"} ${today()}.xlsx`, [["Peminjaman", jdData().filter(b => jdGrpOf(b.ruang) === jdG()).slice().sort((a, b) => (a.tgl + a.mulai).localeCompare(b.tgl + b.mulai)).map((b, n) => ({ "No":n + 1, "Hari":HARI[parseYmd(b.tgl).getDay()], "Tanggal":b.tgl, "Mulai":b.mulai, "Selesai":b.selesai, "Ruang":jdNamaRuang(b.ruang), "Kegiatan":b.kegiatan, "Unit":b.unit || "", "Penanggung jawab":b.pj || "", "No. HP":b.hp || "", "Peserta":b.peserta || "", "Kebutuhan":(b.butuh || []).join(", "), "Keterangan":b.ket || "", "Status":b.st, "Diajukan oleh":nameOf(b.by), "Diajukan":tglJam(b.at), "Diputuskan oleh":b.okBy ? nameOf(b.okBy) : "", "Alasan":b.alasan || "" }))]]);
 });
 document.addEventListener("change", e => {
   const t = e.target;
@@ -3327,7 +3338,7 @@ const gtkOnly = () => S.role === "operator" && appAccess("gtk") && !["sarpras", 
 function vGtk() {
   const K = UI.keu, th = keuTh(), tab = K.gtab || "usul"; if (!K.uf) K.uf = usBlank(); shLoad();
   const me = norm(myName()), mine = allUsul().filter(u => u.by === S.me || (me && norm(u.nama) === me)).sort((a, b) => String(b.at).localeCompare(String(a.at)));
-  const tabs = `<div class="chips" style="margin-bottom:12px">${[["usul", "Usulkan & usulan saya"], ["semua", "Semua usulan RKAS"], ["jadwal", "Jadwal Aula, Multimedia & Lab"]].map(([k, l]) => `<button class="chip" data-gtab="${k}" aria-pressed="${tab === k}">${l}</button>`).join("")}</div>`;
+  const tabs = `<div class="chips" style="margin-bottom:12px">${[["usul", "Usulkan & usulan saya"], ["semua", "Semua usulan RKAS"], ["jadwal", "Jadwal Aula & Multimedia"]].map(([k, l]) => `<button class="chip" data-gtab="${k}" aria-pressed="${tab === k}">${l}</button>`).join("")}</div>`;
   const thSel = `<div class="toolbar"><label class="f">Tahun anggaran<select id="keu-th">${thOptions().map(y => `<option ${th === y ? "selected" : ""}>${y}</option>`).join("")}</select></label></div>`;
   const row = (u, own) => `<tr><td><b>${esc(u.uraian)}</b><div class="sm">${esc(u.spek || "")}</div>${u.output ? `<div class="sm">Untuk: ${esc(u.output)}</div>` : ""}${u.st === "Ditolak" && u.catatan ? `<div class="sm" style="color:var(--bad)">Alasan tidak disetujui: ${esc(u.catatan)}</div>` : ""}</td><td class="num">${fmt(u.vol)} ${esc(u.satuan)}<div class="sm">@ ${rp(u.harga)}</div></td><td class="num">${rp(rkasJml(u))}</td><td class="hide-sm">${esc(u.nama || "-")}<div class="sm">${esc(u.bidang || "")}</div></td><td>${usPill(u)}</td>${own ? `<td style="white-space:nowrap">${u.st !== "Disetujui" && u.by === S.me ? `<button class="ghost" data-kuedit="${esc(u._id)}">Ubah</button>${K.confirm === u._id ? `<button class="danger" data-kudelok="${esc(u._col + "/" + u._id)}">Ya</button><button data-kcancel="1">Batal</button>` : `<button class="ghost" data-kask="${esc(u._id)}">Hapus</button>`}` : ""}</td>` : ""}</tr>`;
   const head = own => `<thead><tr><th>Uraian</th><th class="num">Vol × harga</th><th class="num">Jumlah</th><th class="hide-sm">Pengusul</th><th>Status</th>${own ? "<th></th>" : ""}</tr></thead>`;
@@ -3345,12 +3356,12 @@ function vGtk() {
 function gtkJadwal() {
   const K = UI.keu, base = new Date(); base.setHours(12, 0, 0, 0); const mon = new Date(base); mon.setDate(base.getDate() - ((base.getDay() + 6) % 7) + (K.gwk || 0) * 7);
   const days = [...Array(7)].map((_, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); return d; }), td = ymd(new Date());
-  const cell = (r, d) => { const b = (S.pinjam || []).filter(x => x.ruang === r.id && x.tgl === ymd(d) && (x.st === "Disetujui" || x.st === "Diajukan")).sort((a, c) => String(a.mulai).localeCompare(String(c.mulai)));
+  const cell = (r, d) => { const b = (S.pinjam || []).filter(x => jdGrpOf(x.ruang) === "aula" && x.ruang === r.id && x.tgl === ymd(d) && (x.st === "Disetujui" || x.st === "Diajukan")).sort((a, c) => String(a.mulai).localeCompare(String(c.mulai)));
     return `<td>${b.map(x => `<div style="border-left:3px solid var(--${x.st === "Disetujui" ? "ok" : "warn"});padding-left:8px;margin-bottom:6px"><b class="mono">${esc(x.mulai)}–${esc(x.selesai)}</b> ${esc(x.kegiatan)}<div class="sm">${esc(x.unit || "")}${x.st !== "Disetujui" ? " · menunggu persetujuan" : ""}</div></div>`).join("") || '<span class="faint sm">kosong</span>'}</td>`; };
-  const rooms = jdRooms(K.gjg || "aula");
-  return `<div class="chips" style="margin-bottom:10px"><button class="chip" data-gjg="aula" aria-pressed="${(K.gjg || "aula") === "aula"}">Aula & Multimedia</button><button class="chip" data-gjg="lab" aria-pressed="${K.gjg === "lab"}">Laboratorium</button></div><div class="toolbar" style="align-items:center"><button data-gwk="-1">‹ Sebelumnya</button><b style="min-width:220px;text-align:center">${esc(tglID(ymd(days[0])))} – ${esc(tglID(ymd(days[6])))}</b><button data-gwk="1">Berikutnya ›</button><button class="ghost" data-gwk="0">Minggu ini</button><span class="sp"></span><span class="sm"><span class="pill ok">Disetujui</span> <span class="pill warn">Menunggu persetujuan</span></span></div>
+  const rooms = jdRooms("aula");
+  return `<div class="toolbar" style="align-items:center"><button data-gwk="-1">‹ Sebelumnya</button><b style="min-width:220px;text-align:center">${esc(tglID(ymd(days[0])))} – ${esc(tglID(ymd(days[6])))}</b><button data-gwk="1">Berikutnya ›</button><button class="ghost" data-gwk="0">Minggu ini</button><span class="sp"></span><span class="sm"><span class="pill ok">Disetujui</span> <span class="pill warn">Menunggu persetujuan</span></span></div>
   <div class="tablebox"><table class="jd-week" style="${rooms.length > 3 ? "min-width:" + (120 + rooms.length * 170) + "px" : ""}"><thead><tr><th style="width:120px">Hari</th>${rooms.map(r => `<th>${r.nama}</th>`).join("")}</tr></thead><tbody>${days.map(d => `<tr class="${ymd(d) === td ? "jd-today" : ""}"><th scope="row" style="text-transform:none;letter-spacing:0"><b>${HARI[d.getDay()]}</b><div class="sm">${d.getDate()} ${BULAN[d.getMonth()].slice(0, 3)}</div></th>${rooms.map(r => cell(r, d)).join("")}</tr>`).join("")}</tbody></table></div>
-  ${appAccess("jadwal") ? '<p class="hint">Untuk mengajukan pemakaian ruang, buka aplikasi <a href="#${K.gjg === "lab" ? "lab" : "jadwal"}">Jadwal Penggunaan Ruang</a>.</p>' : '<p class="hint">Pengajuan pemakaian ruang dilakukan oleh akun yang berwenang.</p>'}`;
+  ${appAccess("jadwal") ? '<p class="hint">Untuk mengajukan pemakaian ruang, buka aplikasi <a href="#jadwal">Jadwal Penggunaan Aula dan Multimedia</a>.</p>' : '<p class="hint">Pengajuan pemakaian ruang dilakukan oleh akun yang berwenang.</p>'}`;
 }
 
 /* ---- event keuangan ---- */
@@ -5108,13 +5119,13 @@ const PRESET = {
 function myIzin() { const me = AK.list.find(a => a._id === S.me); return me && me.izin ? me.izin : PRESET.staf.izin; }
 function can(k) { return isMaster() || (S.role === "operator" && !!myIzin()[k]); }
 // which applications an account may open (accounts without the setting keep Sarpras only)
-const APP_IZIN = [["app_sarpras", "Aset & Persediaan", "Aset, ruang, pemeliharaan, BAST, persediaan"], ["app_jadwal", "Jadwal Penggunaan Ruang", "Melihat jadwal Aula, Multimedia, dan Laboratorium"], ["app_minta", "Permintaan Barang Persediaan", "Mengajukan permintaan ATK / bahan habis pakai"], ["app_gtk", "Usulan RKAS (GTK)", "Mengusulkan kebutuhan RKAS, melihat semua usulan, dan jadwal Aula & Multimedia"], ["app_keuangan", "Keuangan", "RKAS, usulan & KAK, SPJ belanja, honor, perjalanan dinas"], ["app_waka", "Waka Sarpras", "Akun & hak akses hanya untuk master; menu lain disiapkan"], ["app_outsourcing", "Outsourcing", "Laporan kinerja kebersihan & keamanan (sedang disiapkan)"]];
+const APP_IZIN = [["app_sarpras", "Aset & Persediaan", "Aset, ruang, pemeliharaan, BAST, persediaan"], ["app_jadwal", "Jadwal Penggunaan Aula dan Multimedia", "Melihat jadwal Aula & Multimedia"], ["app_minta", "Permintaan Barang Persediaan", "Mengajukan permintaan ATK / bahan habis pakai"], ["app_gtk", "Usulan RKAS (GTK)", "Mengusulkan kebutuhan RKAS, melihat semua usulan, dan jadwal Aula & Multimedia"], ["app_keuangan", "Keuangan", "RKAS, usulan & KAK, SPJ belanja, honor, perjalanan dinas"], ["app_waka", "Waka Sarpras", "Akun & hak akses hanya untuk master; menu lain disiapkan"], ["app_outsourcing", "Outsourcing", "Laporan kinerja kebersihan & keamanan (sedang disiapkan)"]];
 const MT_IZIN = [["minta_proses", "Memproses permintaan persediaan", "Menyerahkan barang (stok keluar tercatat otomatis di Persediaan) atau menolak permintaan; melihat rekap"]];
 const JD_IZIN = [["jadwal_ajukan", "Mengajukan peminjaman", "Mengisi pengajuan pemakaian Aula / Multimedia"], ["jadwal_setuju", "Menyetujui peminjaman", "Menyetujui, menolak, atau membatalkan pengajuan siapa pun"]];
 const APP_DEFAULT_ON = ["sarpras", "jadwal", "minta", "gtk"];
 function appAccess(id) { if (isMaster()) return true; if (S.role !== "operator") return false; const v = myIzin()["app_" + id]; return APP_DEFAULT_ON.includes(id) ? v !== false : !!v; }
 const TAB_IZIN = { bantuan:"bast", bast:"bast", pemegang:"bast", laporan:"bast", hapus:"hapus", persediaan:"persediaan", surat:"surat", kertas:"kertas", rekon:"kertas" };
-function canView(v) { if (v === "home" || v === "akun") return true; if (v === "gtk") return appAccess("gtk"); if (v === "jadwal" || v === "lab") return appAccess("jadwal"); if (v === "minta") return appAccess("minta"); if (String(v).startsWith("keu")) return appAccess("keuangan"); if (v === "surat") return appAccess("waka") && can("surat"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
+function canView(v) { if (v === "home" || v === "akun") return true; if (v === "gtk") return appAccess("gtk"); if (v === "jadwal") return appAccess("jadwal"); if (v === "lab") return appAccess("waka"); if (v === "minta") return appAccess("minta"); if (String(v).startsWith("keu")) return appAccess("keuangan"); if (v === "surat") return appAccess("waka") && can("surat"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
 function izinSummary(iz) {
   if (!iz) return PRESET.staf.nama;
   for (const p of Object.values(PRESET)) if (IZIN.every(([k]) => !!iz[k] === !!p.izin[k])) return p.nama;

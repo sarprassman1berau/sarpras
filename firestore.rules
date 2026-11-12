@@ -39,7 +39,8 @@ service cloud.firestore {
     // Data keuangan (koleksi berawalan keu_) hanya dibaca akun yang dicentang aplikasi Keuangan.
     match /{col}/{docId=**} {
       allow read: if isMember() && (!col.matches('keu_.*') || izinKhusus('app_keuangan')
-        || ((col == 'keu_usul' || col == 'keu_kak') && appOn('app_gtk')));
+        || ((col == 'keu_usul' || col == 'keu_kak') && appOn('app_gtk')))
+        && (col != 'pinjam_lab' || izinKhusus('app_waka'));
       allow write: if isMaster();
     }
     // daftar akun: dibaca anggota (untuk menampilkan nama), dibaca juga oleh pemilik akunnya
@@ -80,6 +81,10 @@ service cloud.firestore {
         || (resource.data.by == request.auth.uid && isMember()
             && request.resource.data.st == 'Dibatalkan'
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 'okBy', 'okAt']));
+    }
+    // peminjaman laboratorium: hanya akun yang dicentang aplikasi Waka Sarpras (melihat dan mencatat)
+    match /pinjam_lab/{id} {
+      allow write: if izinKhusus('app_waka');
     }
     // permintaan barang persediaan: semua akun aktif mengajukan atas namanya sendiri;
     // yang dicentang "Memproses permintaan persediaan" menyerahkan/menolak; pemohon boleh membatalkan
