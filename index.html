@@ -975,10 +975,10 @@ function jdFormHtml() {
   return `<section class="panel" style="margin-bottom:14px;border-color:#7e5bb5"><div style="display:flex;align-items:baseline;gap:8px"><h3 style="flex:1;margin:0">Ajukan peminjaman ruang</h3><button class="ghost" data-jdclose="1">Tutup</button></div>
     <div class="fgrid" style="margin-top:10px">
       <div class="full"><span class="f" style="display:block;margin-bottom:6px">Ruang</span><div class="seg" style="flex-wrap:wrap">${jdRooms().map(r => `<button type="button" data-jdr="${r.id}" aria-pressed="${f.ruang === r.id}">${r.nama}</button>`).join("")}</div></div>
-      <div class="fgrid full" style="grid-template-columns:1fr 1fr;gap:10px"><label class="f">Dari tanggal<input id="jf-tgl" type="date" value="${esc(f.tgl)}" min="${ymd(new Date())}"></label><label class="f">Sampai tanggal<input id="jf-tgl2" type="date" value="${esc(f.tgl2 || f.tgl)}" min="${esc(f.tgl || ymd(new Date()))}"></label></div>
+      <div class="fgrid full" style="grid-template-columns:1fr 1fr;gap:10px"><label class="f">Dari tanggal<input id="jf-tgl" type="date" value="${esc(f.tgl)}"></label><label class="f">Sampai tanggal<input id="jf-tgl2" type="date" value="${esc(f.tgl2 || f.tgl)}" min="${esc(f.tgl || "")}"></label></div>
       <div class="full" style="display:flex;gap:6px 16px;flex-wrap:wrap;align-items:center">${dates.length > 1 || (f.tgl2 && f.tgl2 > f.tgl) ? `<label class="ck"><input type="checkbox" id="jf-skipwe" ${f.skipWe ? "checked" : ""}> Lewati Sabtu & Minggu</label><label class="ck"><input type="checkbox" id="jf-skipmg" ${f.skipMinggu ? "checked" : ""}> Lewati hari Minggu saja</label>` : ""}<span class="hint">${dates.length > 1 ? `${dates.length} hari: ${dates.map(t => HARI[parseYmd(t).getDay()].slice(0, 3) + " " + parseYmd(t).getDate()).join(", ")}` : "Untuk kegiatan beberapa hari, isi Sampai tanggal."}</span></div>
       <div class="fgrid" style="grid-template-columns:1fr 1fr;gap:10px"><label class="f">Jam mulai (tiap hari)<input id="jf-mulai" type="time" value="${esc(f.mulai)}" step="900"></label><label class="f">Jam selesai (tiap hari)<input id="jf-selesai" type="time" value="${esc(f.selesai)}" step="900"></label></div>
-      <div class="full">${!f.tgl || !f.mulai || !f.selesai ? '<p class="hint" style="margin:0">Isi tanggal dan jam untuk mengecek ketersediaan ruang.</p>' : f.selesai <= f.mulai ? '<div class="note bad">Jam selesai harus setelah jam mulai.</div>' : !dates.length ? '<div class="note bad">Tidak ada hari yang dipilih pada rentang tanggal itu.</div>' : cf.length ? `<div class="note bad"><b>Bentrok</b> dengan ${cf.map(({ t, b }) => `${dates.length > 1 ? esc(HARI[parseYmd(t).getDay()].slice(0, 3) + " " + parseYmd(t).getDate() + ": ") : ""}${esc(b.mulai)}–${esc(b.selesai)} ${esc(b.kegiatan)} (${esc(b.st.toLowerCase())})`).join("; ")}.${otherFree ? ` Kosong di jam yang sama: ${free.map(r => `<button class="link" data-jdr="${r.id}">${esc(r.nama)}</button>`).join(", ")}.` : ""}</div>` : `<div class="note" style="border-color:var(--ok);background:var(--ok-soft)">${esc(jdNamaRuang(f.ruang))} kosong pada ${esc(HARI[parseYmd(f.tgl).getDay()])}, ${esc(tglID(f.tgl))} pukul ${esc(f.mulai)}–${esc(f.selesai)}.</div>`}</div>
+      <div class="full">${!f.tgl || !f.mulai || !f.selesai ? '<p class="hint" style="margin:0">Isi tanggal dan jam untuk mengecek ketersediaan ruang.</p>' : f.selesai <= f.mulai ? '<div class="note bad">Jam selesai harus setelah jam mulai.</div>' : !dates.length ? '<div class="note bad">Tidak ada hari yang dipilih pada rentang tanggal itu.</div>' : cf.length ? `<div class="note bad"><b>Bentrok</b> dengan ${cf.map(({ t, b }) => `${dates.length > 1 ? esc(HARI[parseYmd(t).getDay()].slice(0, 3) + " " + parseYmd(t).getDate() + ": ") : ""}${esc(b.mulai)}–${esc(b.selesai)} ${esc(b.kegiatan)} (${esc(b.st.toLowerCase())})`).join("; ")}.${otherFree ? ` Kosong di jam yang sama: ${free.map(r => `<button class="link" data-jdr="${r.id}">${esc(r.nama)}</button>`).join(", ")}.` : ""}</div>` : `<div class="note" style="border-color:var(--ok);background:var(--ok-soft)">${f.tgl < ymd(new Date()) ? "<b>Tanggal sudah lewat</b>: pengajuan dicatat sebagai riwayat pemakaian. " : ""}${esc(jdNamaRuang(f.ruang))} kosong pada ${esc(HARI[parseYmd(f.tgl).getDay()])}, ${esc(tglID(f.tgl))} pukul ${esc(f.mulai)}–${esc(f.selesai)}.</div>`}</div>
       <label class="f full">Nama kegiatan<input id="jf-keg" value="${esc(f.kegiatan || "")}" placeholder="${esc(G.ph)}"></label>
       <label class="f">${jdG() === "lab" ? "Kelas / mapel / penyelenggara" : "Unit / penyelenggara"}<input id="jf-unit" value="${esc(f.unit || "")}" placeholder="${esc(G.unit)}"></label>
       <label class="f">Penanggung jawab<input id="jf-pj" value="${esc(f.pj || "")}"></label>
@@ -1017,18 +1017,18 @@ function vJadwal() {
   const canAju = jdCan("jadwal_ajukan"), aprv = jdCan("jadwal_setuju"), g = jdG(), G = JD_GRUP[g], rooms = jdRooms(), inG = b => jdGrpOf(b.ruang) === g;
   if (J.form && jdGrpOf(J.form.ruang) !== g) J.form = null;
   const cell = (r, d) => { const t = ymd(d), list = jdActive().filter(b => b.ruang === r.id && b.tgl === t).sort((a, b) => a.mulai.localeCompare(b.mulai));
-    return `<td class="jd-cell">${list.map(b => `<button class="jd-b ${b.st === "Disetujui" ? "ok" : "wait"} ${J.sel === b._id || (b.seri && jdData().some(x => x._id === J.sel && x.seri === b.seri)) ? "sel" : ""}" data-jdsel="${esc(b._id)}"><span class="mono">${esc(b.mulai)}–${esc(b.selesai)}</span><b>${esc(b.kegiatan)}</b>${b.seri ? `<span class="sm">hari ${jdSeri(b).findIndex(x => x._id === b._id) + 1} dari ${jdSeri(b).length}</span>` : ""}<span class="sm">${esc(b.unit || nameOf(b.by))}${b.st === "Diajukan" ? " · menunggu" : ""}</span></button>`).join("") || '<span class="faint sm">kosong</span>'}${canAju && t >= td ? `<button class="link sm jd-add" data-jdadd="${r.id}|${t}">+ ajukan</button>` : ""}</td>`; };
+    return `<td class="jd-cell">${list.map(b => `<button class="jd-b ${b.st === "Disetujui" ? "ok" : "wait"} ${J.sel === b._id || (b.seri && jdData().some(x => x._id === J.sel && x.seri === b.seri)) ? "sel" : ""}" data-jdsel="${esc(b._id)}"><span class="mono">${esc(b.mulai)}–${esc(b.selesai)}</span><b>${esc(b.kegiatan)}</b>${b.seri ? `<span class="sm">hari ${jdSeri(b).findIndex(x => x._id === b._id) + 1} dari ${jdSeri(b).length}</span>` : ""}<span class="sm">${esc(b.unit || nameOf(b.by))}${b.st === "Diajukan" ? " · menunggu" : ""}</span></button>`).join("") || '<span class="faint sm">kosong</span>'}${canAju ? `<button class="link sm jd-add" data-jdadd="${r.id}|${t}">+ ajukan</button>` : ""}</td>`; };
   const sel = J.sel && jdData().find(b => b._id === J.sel && inG(b));
   const list = jdHeads(jdData().filter(b => inG(b) && (!J.fst || b.st === J.fst) && (!J.mine || b.by === S.me)).sort((a, b) => (a.tgl + a.mulai).localeCompare(b.tgl + b.mulai)));
   const nWait = jdHeads(jdData().filter(b => inG(b) && b.st === "Diajukan")).length;
   return `<h2>${G.judul}</h2>
-  <p class="lead">Jadwal pemakaian ${G.ruang} ditampilkan berdampingan supaya jam yang bertabrakan langsung terlihat. Satu pengajuan bisa untuk satu hari atau beberapa hari berturut-turut. Semua akun bisa melihat jadwal; pengajuan dan persetujuan mengikuti hak akses akun.</p>
+  <p class="lead">Jadwal pemakaian ${G.ruang} ditampilkan berdampingan supaya jam yang bertabrakan langsung terlihat. Satu pengajuan bisa untuk satu hari atau beberapa hari berturut-turut, termasuk tanggal yang sudah lewat untuk mencatat pemakaian yang belum terdata. Semua akun bisa melihat jadwal; pengajuan dan persetujuan mengikuti hak akses akun.</p>
   ${J.form ? jdFormHtml() : ""}
   <div class="toolbar" style="align-items:center">
-    <div class="chips"><button class="chip" data-jdtab="kal" aria-pressed="${J.tab === "kal"}">Kalender mingguan</button><button class="chip" data-jdtab="daftar" aria-pressed="${J.tab === "daftar"}">Daftar pengajuan${nWait ? " · " + nWait + " menunggu" : ""}</button></div>
+    <div class="chips"><button class="chip" data-jdtab="kal" aria-pressed="${J.tab === "kal"}">Kalender mingguan</button><button class="chip" data-jdtab="daftar" aria-pressed="${J.tab === "daftar"}">Daftar pengajuan${nWait ? " · " + nWait + " menunggu" : ""}</button><button class="chip" data-jdtab="rekap" aria-pressed="${J.tab === "rekap"}">Rekap & laporan</button></div>
     <span class="sp"></span>${canAju && !J.form ? '<button class="primary" id="jd-new">Ajukan peminjaman</button>' : ""}
   </div>
-  ${J.tab === "kal" ? `
+  ${J.tab === "rekap" ? jdRekapHtml() : J.tab === "kal" ? `
   <div class="toolbar" style="align-items:center"><button data-jdwk="-7" aria-label="Minggu sebelumnya">‹ Sebelumnya</button><b style="min-width:220px;text-align:center">${esc(tglID(ymd(days[0])))} – ${esc(tglID(ymd(days[6])))}</b><button data-jdwk="7" aria-label="Minggu berikutnya">Berikutnya ›</button><button class="ghost" data-jdwk="0">Minggu ini</button>
     <span class="sp"></span><span class="sm"><span class="pill ok">Disetujui</span> <span class="pill warn">Menunggu persetujuan</span></span></div>
   <div class="tablebox"><table class="jd-week" style="${rooms.length > 3 ? "min-width:" + (120 + rooms.length * 170) + "px" : ""}"><thead><tr><th style="width:120px">Hari</th>${rooms.map(r => `<th>${r.nama}</th>`).join("")}</tr></thead><tbody>
@@ -1039,6 +1039,77 @@ function vJadwal() {
   ${list.map(b => `<tr class="rowlink" tabindex="0" data-jdrow="${esc(b._id)}"><td>${esc(jdRange(b))}<div class="sm mono">${esc(b.mulai)}–${esc(b.selesai)}</div></td><td>${esc(jdNamaRuang(b.ruang))}</td><td><div class="nm">${esc(b.kegiatan)}</div><div class="sm">${esc(b.unit || "")}${b.peserta ? " · " + fmt(+b.peserta) + " orang" : ""}</div></td><td class="hide-sm">${esc(nameOf(b.by))}</td><td>${jdPill(b.st)}</td>${aprv ? `<td>${b.st === "Diajukan" ? `<button class="primary" data-jdok="${esc(b._id)}">Setujui</button>` : ""}</td>` : ""}</tr>`).join("") || `<tr><td colspan="6"><div class="empty"><b>Tidak ada pengajuan</b>${J.fst ? "Ubah filter status." : "Pengajuan peminjaman akan muncul di sini."}</div></td></tr>`}
   </tbody></table></div>`}
   ${sel ? jdDetail(sel) : ""}`;
+}
+// ===== rekap & laporan peminjaman (per periode, ruang, status) =====
+const jdMenit = b => { const m = t => { const [h, i] = String(t || "0:0").split(":").map(Number); return h * 60 + (i || 0); }; return Math.max(0, m(b.selesai) - m(b.mulai)); };
+const jdJam = mnt => { const h = Math.floor(mnt / 60), m = mnt % 60; return mnt ? (h ? h + " jam" : "") + (m ? (h ? " " : "") + m + " menit" : "") : "0"; };
+function jdRk() {
+  const g = jdG(); UI.jd.rk = UI.jd.rk || {};
+  if (!UI.jd.rk[g]) { const d = new Date(); UI.jd.rk[g] = { dari:ymd(new Date(d.getFullYear(), d.getMonth(), 1)), sampai:ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0)), ruang:"", st:"Disetujui" }; }
+  return UI.jd.rk[g];
+}
+const JD_RKST = { "Disetujui":"Disetujui saja", "aktif":"Disetujui + menunggu", "":"Semua status" };
+function jdRekap() {
+  const g = jdG(), R = jdRk(), dari = R.dari || "0000", sampai = R.sampai || "9999";
+  const inP = jdData(g).filter(b => jdGrpOf(b.ruang) === g && b.tgl >= dari && b.tgl <= sampai && (!R.ruang || b.ruang === R.ruang));
+  const rows = inP.filter(b => !R.st || (R.st === "aktif" ? b.st === "Disetujui" || b.st === "Diajukan" : b.st === R.st)).sort((a, b) => (a.tgl + a.mulai + a.ruang).localeCompare(b.tgl + b.mulai + b.ruang));
+  const ruang = jdRooms(g).filter(r => !R.ruang || r.id === R.ruang).map(r => { const a = inP.filter(b => b.ruang === r.id), ok = a.filter(b => b.st === "Disetujui");
+    return { r, keg:jdHeads(a).length, hari:a.length, ok:ok.length, tunggu:a.filter(b => b.st === "Diajukan").length, tolak:a.filter(b => b.st === "Ditolak").length, batal:a.filter(b => b.st === "Dibatalkan").length, mnt:ok.reduce((t, b) => t + jdMenit(b), 0) }; });
+  const unit = {}; for (const b of rows) { const k = (b.unit || nameOf(b.by) || "-").trim(); unit[k] = unit[k] || { n:0, mnt:0 }; unit[k].n++; unit[k].mnt += jdMenit(b); }
+  const per = R.dari && R.sampai ? tglID(R.dari) + " s.d. " + tglID(R.sampai) : R.dari ? "sejak " + tglID(R.dari) : R.sampai ? "s.d. " + tglID(R.sampai) : "semua tanggal";
+  return { g, R, rows, ruang, unit:Object.entries(unit).sort((a, b) => b[1].n - a[1].n), per };
+}
+function jdRekapHtml() {
+  const X = jdRekap(), R = X.R, tot = k => X.ruang.reduce((t, x) => t + x[k], 0);
+  return `<section class="panel" style="margin-bottom:14px"><div class="toolbar" style="margin:0;align-items:end;flex-wrap:wrap">
+    <label class="f">Dari tanggal<input id="jr-dari" type="date" value="${esc(R.dari)}"></label><label class="f">Sampai tanggal<input id="jr-sampai" type="date" value="${esc(R.sampai)}"></label>
+    <label class="f">Ruang<select id="jr-ruang"><option value="">Semua ruang</option>${jdRooms().map(r => `<option value="${r.id}" ${R.ruang === r.id ? "selected" : ""}>${esc(r.nama)}</option>`).join("")}</select></label>
+    <label class="f">Status di rincian<select id="jr-st">${Object.entries(JD_RKST).map(([k, l]) => `<option value="${k}" ${R.st === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    <div class="chips" style="align-self:end"><button class="chip" data-jrp="bulan">Bulan ini</button><button class="chip" data-jrp="lalu">Bulan lalu</button><button class="chip" data-jrp="sem">Semester ini</button><button class="chip" data-jrp="tahun">Tahun ini</button></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="primary" id="jr-pdf">Unduh laporan PDF</button><button id="jr-xlsx">Unduh Excel</button><span class="hint" style="align-self:center">Periode ${esc(X.per)} · ${fmt(X.rows.length)} hari pemakaian di rincian</span></div></section>
+  <h3 style="margin:0 0 8px">Ringkasan per ruang</h3>
+  <div class="tablebox"><table><thead><tr><th>Ruang</th><th class="num">Kegiatan</th><th class="num">Hari diajukan</th><th class="num">Disetujui</th><th class="num">Menunggu</th><th class="num">Ditolak</th><th class="num">Dibatalkan</th><th class="num">Jam terpakai</th></tr></thead><tbody>
+  ${X.ruang.map(x => `<tr><td>${esc(x.r.nama)}</td><td class="num">${fmt(x.keg)}</td><td class="num">${fmt(x.hari)}</td><td class="num">${fmt(x.ok)}</td><td class="num">${fmt(x.tunggu)}</td><td class="num">${fmt(x.tolak)}</td><td class="num">${fmt(x.batal)}</td><td class="num">${esc(jdJam(x.mnt))}</td></tr>`).join("")}
+  <tr><th>Jumlah</th><th class="num">${fmt(tot("keg"))}</th><th class="num">${fmt(tot("hari"))}</th><th class="num">${fmt(tot("ok"))}</th><th class="num">${fmt(tot("tunggu"))}</th><th class="num">${fmt(tot("tolak"))}</th><th class="num">${fmt(tot("batal"))}</th><th class="num">${esc(jdJam(tot("mnt")))}</th></tr></tbody></table></div>
+  <p class="hint">Jam terpakai dihitung dari peminjaman yang disetujui.</p>
+  <h3 style="margin:14px 0 8px">Rincian pemakaian (${esc(JD_RKST[R.st].toLowerCase())})</h3>
+  <div class="tablebox"><table><thead><tr><th>Tanggal</th><th>Jam</th><th>Ruang</th><th>Kegiatan</th><th class="hide-sm">Penanggung jawab</th><th>Status</th></tr></thead><tbody>
+  ${X.rows.map(b => `<tr class="rowlink" tabindex="0" data-jdrow="${esc(b._id)}"><td>${esc(HARI[parseYmd(b.tgl).getDay()])}, ${esc(tglID(b.tgl))}</td><td class="mono">${esc(b.mulai)}–${esc(b.selesai)}</td><td>${esc(jdNamaRuang(b.ruang))}</td><td><div class="nm">${esc(b.kegiatan)}</div><div class="sm">${esc(b.unit || "")}${b.peserta ? " · " + fmt(+b.peserta) + " orang" : ""}</div></td><td class="hide-sm">${esc(b.pj || nameOf(b.by))}</td><td>${jdPill(b.st)}</td></tr>`).join("") || `<tr><td colspan="6"><div class="empty"><b>Tidak ada peminjaman pada periode ini</b>Ubah tanggal, ruang, atau status.</div></td></tr>`}
+  </tbody></table></div>`;
+}
+function jdRekapXlsx() {
+  const X = jdRekap(), nm = X.g === "lab" ? "Laboratorium" : "Aula dan Multimedia";
+  xlsxSave(`Rekap Peminjaman ${nm} ${X.R.dari || ""} sd ${X.R.sampai || ""}.xlsx`, [
+    ["Ringkasan", [...X.ruang.map(x => ({ "Ruang":x.r.nama, "Kegiatan":x.keg, "Hari diajukan":x.hari, "Disetujui":x.ok, "Menunggu":x.tunggu, "Ditolak":x.tolak, "Dibatalkan":x.batal, "Jam terpakai (jam)":Math.round(x.mnt / 6) / 10 })),
+      { "Ruang":"JUMLAH", "Kegiatan":X.ruang.reduce((t, x) => t + x.keg, 0), "Hari diajukan":X.ruang.reduce((t, x) => t + x.hari, 0), "Disetujui":X.ruang.reduce((t, x) => t + x.ok, 0), "Menunggu":X.ruang.reduce((t, x) => t + x.tunggu, 0), "Ditolak":X.ruang.reduce((t, x) => t + x.tolak, 0), "Dibatalkan":X.ruang.reduce((t, x) => t + x.batal, 0), "Jam terpakai (jam)":Math.round(X.ruang.reduce((t, x) => t + x.mnt, 0) / 6) / 10 }]],
+    ["Rincian", X.rows.map((b, n) => ({ "No":n + 1, "Hari":HARI[parseYmd(b.tgl).getDay()], "Tanggal":b.tgl, "Mulai":b.mulai, "Selesai":b.selesai, "Durasi (jam)":Math.round(jdMenit(b) / 6) / 10, "Ruang":jdNamaRuang(b.ruang), "Kegiatan":b.kegiatan, [X.g === "lab" ? "Kelas / mapel" : "Unit"]:b.unit || "", "Penanggung jawab":b.pj || "", "No. HP":b.hp || "", "Peserta":b.peserta || "", "Kebutuhan":(b.butuh || []).join(", "), "Keterangan":b.ket || "", "Status":b.st, "Diajukan oleh":nameOf(b.by), "Diputuskan oleh":b.okBy ? nameOf(b.okBy) : "", "Alasan":b.alasan || "" }))],
+    ["Per pengguna", X.unit.map(([k, v]) => ({ [X.g === "lab" ? "Kelas / mapel / penyelenggara" : "Unit / penyelenggara"]:k, "Hari pemakaian":v.n, "Jam (jam)":Math.round(v.mnt / 6) / 10 }))]]);
+}
+function jdRekapPdf() {
+  if (!window.jspdf) { toast("Modul PDF belum termuat. Coba lagi sebentar."); return; }
+  const X = jdRekap(), c = cfg(), { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4", orientation:"landscape" }), W = doc.internal.pageSize.getWidth();
+  const nm = X.g === "lab" ? "LABORATORIUM" : "AULA DAN RUANG MULTIMEDIA";
+  const ts = { theme:"grid", margin:{ left:15, right:15, top:16, bottom:16 }, styles:{ fontSize:8.5, cellPadding:1.3, lineColor:[60,60,60], lineWidth:0.12, textColor:[20,20,20], overflow:"linebreak", valign:"middle" }, headStyles:{ fillColor:[230,230,230], textColor:[20,20,20], fontStyle:"bold", halign:"center" }, showHead:"everyPage" };
+  let y = pdfKop(doc); y = pdfJudul(doc, y, ["LAPORAN REKAPITULASI", "PEMINJAMAN " + nm], "Periode " + X.per + (X.R.ruang ? " · " + jdNamaRuang(X.R.ruang) : ""));
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text("A. Ringkasan per ruang", 15, y); y += 2;
+  const tot = k => X.ruang.reduce((t, x) => t + x[k], 0), B = t => ({ content:t, styles:{ fontStyle:"bold" } });
+  doc.autoTable(Object.assign({}, ts, { startY:y, head:[["No", "Ruang", "Kegiatan", "Hari diajukan", "Disetujui", "Menunggu", "Ditolak", "Dibatalkan", "Jam terpakai"]],
+    body:[...X.ruang.map((x, i) => [i + 1, x.r.nama, fmt(x.keg), fmt(x.hari), fmt(x.ok), fmt(x.tunggu), fmt(x.tolak), fmt(x.batal), jdJam(x.mnt)]), [{ content:"JUMLAH", colSpan:2, styles:{ fontStyle:"bold", halign:"right" } }, B(fmt(tot("keg"))), B(fmt(tot("hari"))), B(fmt(tot("ok"))), B(fmt(tot("tunggu"))), B(fmt(tot("tolak"))), B(fmt(tot("batal"))), B(jdJam(tot("mnt")))]],
+    columnStyles:{ 0:{ cellWidth:10, halign:"center" }, 2:{ halign:"center" }, 3:{ halign:"center" }, 4:{ halign:"center" }, 5:{ halign:"center" }, 6:{ halign:"center" }, 7:{ halign:"center" }, 8:{ halign:"center" } } }));
+  doc.setFont("helvetica", "italic"); doc.setFontSize(8); doc.text("Jam terpakai dihitung dari peminjaman yang disetujui.", 15, doc.lastAutoTable.finalY + 4);
+  y = doc.lastAutoTable.finalY + 11; if (y > 175) { doc.addPage(); y = 20; }
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text("B. Rincian pemakaian (" + JD_RKST[X.R.st].toLowerCase() + ")", 15, y); y += 2;
+  doc.autoTable(Object.assign({}, ts, { startY:y, head:[["No", "Hari, tanggal", "Jam", "Ruang", "Kegiatan", X.g === "lab" ? "Kelas / mapel" : "Unit", "Penanggung jawab", "Peserta", "Status"]],
+    body:X.rows.length ? X.rows.map((b, i) => [i + 1, HARI[parseYmd(b.tgl).getDay()] + ", " + tglID(b.tgl), b.mulai + "–" + b.selesai, jdNamaRuang(b.ruang), b.kegiatan + (b.ket ? "\n" + b.ket : ""), b.unit || "-", b.pj || nameOf(b.by) || "-", b.peserta ? fmt(+b.peserta) : "-", b.st + (b.alasan ? "\n(" + b.alasan + ")" : "")]) : [[{ content:"Tidak ada peminjaman pada periode ini.", colSpan:9, styles:{ halign:"center" } }]],
+    columnStyles:{ 0:{ cellWidth:10, halign:"center" }, 1:{ cellWidth:38 }, 2:{ cellWidth:22, halign:"center" }, 3:{ cellWidth:32 }, 5:{ cellWidth:36 }, 6:{ cellWidth:36 }, 7:{ cellWidth:16, halign:"center" }, 8:{ cellWidth:24 } } }));
+  if (X.unit.length) { y = doc.lastAutoTable.finalY + 9; if (y > 175) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.text("C. Pemakaian per " + (X.g === "lab" ? "kelas / mapel / penyelenggara" : "unit / penyelenggara"), 15, y); y += 2;
+    doc.autoTable(Object.assign({}, ts, { startY:y, margin:{ left:15, right:W - 165 }, head:[["No", X.g === "lab" ? "Kelas / mapel / penyelenggara" : "Unit / penyelenggara", "Hari", "Jam"]], body:X.unit.map(([k, v], i) => [i + 1, k, fmt(v.n), jdJam(v.mnt)]), columnStyles:{ 0:{ cellWidth:10, halign:"center" }, 2:{ cellWidth:16, halign:"center" }, 3:{ cellWidth:30, halign:"center" } } })); }
+  y = doc.lastAutoTable.finalY + 10; if (y + 40 > 200) { doc.addPage(); y = 25; }
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.text("Tanjung Redeb, " + tglID(today()), W - 70, y, { align:"center" }); y += 5;
+  const sb = (x, lab, nama, nip) => { doc.setFont("helvetica", "normal"); doc.text(lab, x, y, { align:"center" }); doc.setFont("helvetica", "bold"); doc.text(nama || "", x, y + 24, { align:"center" }); const w = doc.getTextWidth(nama || ""); doc.setLineWidth(0.25); if (nama) doc.line(x - w / 2, y + 25, x + w / 2, y + 25); doc.setFont("helvetica", "normal"); doc.text("NIP. " + (nip || "-"), x, y + 29.5, { align:"center" }); };
+  sb(70, "Mengetahui,\nKepala Sekolah,", c.kepsek, c.nipKepsek); sb(W - 70, "\nWaka Sarpras,", c.waka, c.nipWaka);
+  saveFile(`Laporan Peminjaman ${X.g === "lab" ? "Laboratorium" : "Aula dan Multimedia"} ${X.R.dari || ""} sd ${X.R.sampai || ""}.pdf`, pdfFinish(doc).output("blob"));
 }
 let jdMoved = false;
 async function jdMoveLab() {
@@ -1086,11 +1157,17 @@ document.addEventListener("click", async e => {
   if (d.jdno) { const a = val("jd-alasan"); if (!a) { toast("Tulis alasan penolakan."); return; } const b = jdData().find(x => x._id === d.jdno); if (b) jdSetMany(jdSeri(b).filter(x => x.st === "Diajukan"), { st:"Ditolak", alasan:a }, "Pengajuan ditolak."); }
   if (d.jdbatal) { const b = jdData().find(x => x._id === d.jdbatal); if (b) jdSetMany(jdSeri(b).filter(x => x.st === "Diajukan" || x.st === "Disetujui"), { st:"Dibatalkan" }, "Peminjaman dibatalkan."); }
   if (d.jdbatal1) jdSet(d.jdbatal1, { st:"Dibatalkan" }, "Peminjaman hari itu dibatalkan.");
+  if (t.id === "jr-pdf") jdRekapPdf();
+  if (t.id === "jr-xlsx") jdRekapXlsx();
+  if (d.jrp) { const R = jdRk(), n = new Date(), Y = n.getFullYear(), M = n.getMonth();
+    const [a, z] = d.jrp === "bulan" ? [new Date(Y, M, 1), new Date(Y, M + 1, 0)] : d.jrp === "lalu" ? [new Date(Y, M - 1, 1), new Date(Y, M, 0)] : d.jrp === "tahun" ? [new Date(Y, 0, 1), new Date(Y, 11, 31)] : M >= 6 ? [new Date(Y, 6, 1), new Date(Y, 11, 31)] : [new Date(Y, 0, 1), new Date(Y, 5, 30)];
+    R.dari = ymd(a); R.sampai = ymd(z); render(); }
   if (t.id === "jd-xlsx") xlsxSave(`Peminjaman ${jdG() === "lab" ? "Laboratorium" : "Aula dan Multimedia"} ${today()}.xlsx`, [["Peminjaman", jdData().filter(b => jdGrpOf(b.ruang) === jdG()).slice().sort((a, b) => (a.tgl + a.mulai).localeCompare(b.tgl + b.mulai)).map((b, n) => ({ "No":n + 1, "Hari":HARI[parseYmd(b.tgl).getDay()], "Tanggal":b.tgl, "Mulai":b.mulai, "Selesai":b.selesai, "Ruang":jdNamaRuang(b.ruang), "Kegiatan":b.kegiatan, "Unit":b.unit || "", "Penanggung jawab":b.pj || "", "No. HP":b.hp || "", "Peserta":b.peserta || "", "Kebutuhan":(b.butuh || []).join(", "), "Keterangan":b.ket || "", "Status":b.st, "Diajukan oleh":nameOf(b.by), "Diajukan":tglJam(b.at), "Diputuskan oleh":b.okBy ? nameOf(b.okBy) : "", "Alasan":b.alasan || "" }))]]);
 });
 document.addEventListener("change", e => {
   const t = e.target;
   if (t.id === "jd-mine") { UI.jd.mine = t.checked; render(); }
+  if (/^jr-(dari|sampai|ruang|st)$/.test(t.id)) { const R = jdRk(); R[t.id.slice(3)] = t.value; render(); }
   if (/^jf-(tgl|tgl2|mulai|selesai|skipwe|skipmg)$/.test(t.id)) { const f = UI.jd.form, old = f && f.tgl; jdReadForm(); if (t.id === "jf-tgl" && f && (!f.tgl2 || f.tgl2 === old || f.tgl2 < f.tgl)) f.tgl2 = f.tgl; render(); }
 });
 
