@@ -289,6 +289,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
     <a href="#unduhkib" data-v="unduhkib">Unduh KIB</a>
     <a href="#ruang" data-v="ruang">Kondisi Ruangan</a>
     <a href="#pelihara" data-v="pelihara">Pemeliharaan & Perbaikan</a>
+    <a href="#sjalan" data-v="sjalan">Surat Jalan Service <span id="sjbadge"></span></a>
     <a href="#hapus" data-v="hapus">Usulan Penghapusan</a></div>
   <div class="navsec"><p class="navgroup">Penyerahan barang</p>
     <a href="#bast" data-v="bast">BAST</a>
@@ -362,7 +363,7 @@ const usulHapus = x => (x.kond === "Rusak Berat" || x.kond === "Hilang") && !x.r
 const BUKU_RE = /\b(buku|novel|bahan ajar|monograf|kamus|ensiklopedi|atlas|majalah|modul|komik|antologi)\b/i;
 
 /* ================= state ================= */
-const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], pinjamLab:[], cetak:[], bantuan:[], minta:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
+const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], pinjamLab:[], cetak:[], bantuan:[], sjalan:[], minta:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
 const CFG_DEFAULT = {
   kepsek:"Dr. H. Saleh, S.T., M.Pd.", nipKepsek:"19780708 200604 1 004",
   waka:"Ika Novita Mulia, S.Pd.", nipWaka:"199211102022212025", jabWaka:"Wakil Kepala Sekolah Sarana dan Prasarana",
@@ -483,6 +484,7 @@ async function boot() {
   sub("gdg", rows => { S.gdg = rows; });
   sub("pinjam", rows => { S.pinjam = rows; });
   sub("pinjam_lab", rows => { S.pinjamLab = rows; });
+  sub("sjalan", rows => { S.sjalan = rows.sort((a, b) => String(b.tgl).localeCompare(String(a.tgl)) || String(b.nomor).localeCompare(String(a.nomor))); });
   sub("bantuan", rows => { S.bantuan = rows.sort((a, b) => String(b.tgl).localeCompare(String(a.tgl))); });
   for (const [c, k] of [["keu_usul", "keuUsul"], ["keu_kak", "keuKak"], ["keu_rkas", "keuRkas"], ["keu_pagu", "keuPagu"], ["keu_spj", "keuSpj"], ["keu_honor", "keuHonor"], ["keu_perjadin", "keuPerjadin"]]) sub(c, rows => { S[k] = rows; });
   sub("minta", rows => { S.minta = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
@@ -554,7 +556,7 @@ const W = {
   merge(path, data) { return W.op({ op:"merge", path, data }); },
   del(path) { return W.op({ op:"del", path }); },
 };
-const COL_LABEL = { bantuan:"BAST bantuan", upd:"aset", aset_baru:"aset", trx:"BAST", surat:"surat", psd_trx:"persediaan", psd_barang:"barang persediaan", kk:"kertas kerja", gdg:"gedung", ruang:"ruang", penerima:"penerima" };
+const COL_LABEL = { sjalan:"surat jalan service", bantuan:"BAST bantuan", upd:"aset", aset_baru:"aset", trx:"BAST", surat:"surat", psd_trx:"persediaan", psd_barang:"barang persediaan", kk:"kertas kerja", gdg:"gedung", ruang:"ruang", penerima:"penerima" };
 const ringOf = o => (o.op === "del" ? "Hapus " : "Simpan ") + (COL_LABEL[o.path.split("/")[0]] || o.path.split("/")[0]);
 async function applyOp(o, by, ok) {
   const ref = db.doc(o.path), stamp = { _by:by || "", _ok:ok || "", _at:new Date().toISOString() };
@@ -657,7 +659,7 @@ function xlsxSave(filename, sheets) {
 }
 
 /* ================= router ================= */
-const VIEWS = ["home","jadwal","lab","minta","gtk","keu","keu-harga","keu-usul","keu-rkas","keu-spj","keu-honor","keu-perjadin","bantuan","masa","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
+const VIEWS = ["home","jadwal","lab","minta","gtk","keu","keu-harga","keu-usul","keu-rkas","keu-spj","keu-honor","keu-perjadin","bantuan","sjalan","masa","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
 let current = "ringkasan", sub = "";
 const UI = {
   aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"", th:"" },
@@ -738,12 +740,13 @@ function render(soft) {
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
     if (current === "home" || current === "jadwal" || current === "lab" || current === "akun" || current === "minta" || current === "gtk" || String(current).startsWith("keu")) { v.innerHTML = pinBar() + (current === "home" ? vHome() : current === "akun" ? vAkunPage() : current === "minta" ? vMinta() : current === "gtk" ? vGtk() : current === "keu" ? vKeu() : current === "keu-harga" ? vKeuHarga() : current === "keu-usul" ? vKeuUsul() : current === "keu-rkas" ? vKeuRkas() : current === "keu-spj" ? vKeuSpj() : current === "keu-honor" ? vKeuHonor() : current === "keu-perjadin" ? vKeuPerjadin() : vJadwal()); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); refocus(); return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
-    v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, bantuan:vBantuan, masa:vMasa, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
+    v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, sjalan:vSjalan, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, bantuan:vBantuan, masa:vMasa, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
     refocus();
     const nb = $("#vbadge"), np = pendingList().length; if (nb) nb.innerHTML = np ? `<span class="pill ${isMaster() ? "bad" : "warn"}">${np}</span>` : "";
     const nd = $("#nav-dot"); if (nd) nd.hidden = !(np && isMaster());
     const jb = $("#jbadge"), jn = jdPendingForMe("aula"); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : "";
     const lb = $("#lbadge"), ln = jdPendingForMe("lab"); if (lb) lb.innerHTML = ln ? `<span class="pill warn">${ln}</span>` : "";
+    const sjb = $("#sjbadge"), sjn = sjTelat().length; if (sjb) sjb.innerHTML = sjn ? `<span class="pill bad" title="lewat estimasi kembali">${sjn}</span>` : "";
     const bb = $("#bbadge"), bn = masaPakai().lewat.length; if (bb) bb.innerHTML = bn ? `<span class="pill bad" title="masa penggunaan lewat">${bn}</span>` : "";
     if (drawer) renderDrawer();
   });
@@ -886,7 +889,8 @@ function vPelihara() {
       <label class="f">Biaya (Rp)<input id="pl-biaya" type="number" min="0" value="${esc(r.pl.biaya || "")}"></label>
       <label class="f">Sumber dana<input id="pl-sumber" list="dl-sumberpl" value="${esc(r.pl.sumber || "")}"><datalist id="dl-sumberpl">${SUMBER_DANA.map(o => `<option value="${esc(o)}">`).join("")}</datalist></label>
       <label class="f full">Tindakan / keterangan<textarea id="pl-ket" placeholder="mis. ganti kompresor AC, servis engsel pintu">${esc(r.pl.ket || "")}</textarea></label></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="primary" data-plsave="${esc(r.t + "|" + r.id)}">Simpan</button><button data-pldone="${esc(r.t + "|" + r.id)}">Selesai diperbaiki, kondisi jadi Baik</button><button class="ghost" data-plcancel="1">Batal</button><span class="sp"></span><button class="link" data-plopen="${esc(r.t + "|" + r.id)}">Buka data ${r.t === "aset" ? "aset" : "ruang"}</button></div></td></tr>`;
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="primary" data-plsave="${esc(r.t + "|" + r.id)}">Simpan</button><button data-pldone="${esc(r.t + "|" + r.id)}">Selesai diperbaiki, kondisi jadi Baik</button><button class="ghost" data-plcancel="1">Batal</button>${r.t === "aset" && can("pelihara") ? (sjAktifOf(r.id) ? `<button class="ghost" data-sjgo="${esc(sjAktifOf(r.id)._id)}">Surat jalan ${esc(sjAktifOf(r.id).nomor)}</button>` : `<button data-sjfrom="${esc(r.id)}">Buat surat jalan service</button>`) : ""}<span class="sp"></span><button class="link" data-plopen="${esc(r.t + "|" + r.id)}">Buka data ${r.t === "aset" ? "aset" : "ruang"}</button></div></td></tr>`;
+  const tanpaSj = aktif.filter(r => r.t === "aset" && r.st === "Sedang diperbaiki" && !sjAktifOf(r.id));
   return `<h2>Pemeliharaan & perbaikan</h2>
   <p class="lead">Aset dan ruang berkondisi <b>Rusak Sedang</b> otomatis masuk ke sini. Ruang Rusak Berat juga tercatat di sini sebagai perlu rehabilitasi, sedangkan aset Rusak Berat atau Hilang masuk <a href="#hapus">Usulan Penghapusan</a>. Setelah diperbaiki, tandai selesai agar kondisinya kembali Baik.</p>
   <div class="grid kpis">
@@ -895,6 +899,7 @@ function vPelihara() {
     <div class="kpi"><span class="l">Sedang dikerjakan</span><span class="v">${fmt(aktif.filter(r => r.st !== "Belum ditangani").length)}</span></div>
     <div class="kpi"><span class="l">Selesai diperbaiki</span><span class="v">${fmt(all.length - aktif.length)}</span><span class="s">${biaya ? rp(biaya) + " biaya tercatat" : ""}</span></div>
   </div>
+  <div class="note ${tanpaSj.length ? "warn" : "info"}" style="margin-top:14px">Barang yang dibawa keluar sekolah untuk diservis wajib dibuatkan <a href="#sjalan">Surat Jalan Service</a> (Surat Izin Pengeluaran Barang). ${tanpaSj.length ? `<b>${fmt(tanpaSj.length)} barang berstatus "Sedang diperbaiki" belum punya surat jalan:</b> ${tanpaSj.slice(0, 5).map(r => esc(r.nama)).join(", ")}${tanpaSj.length > 5 ? ", …" : ""}. Buat surat jalannya bila barang diperbaiki di luar sekolah.` : `${fmt(sjDiLuar().length)} barang sedang berada di penyedia jasa service.`}</div>
   ${ntPerbaikan ? `<div class="note info" style="margin-top:14px">${fmt(ntPerbaikan)} catatan temuan berkategori "Perlu perbaikan / perawatan" belum selesai. <button class="link" id="pl-nt">Lihat catatannya</button></div>` : ""}
   <div class="toolbar" style="margin-top:14px"><div class="chips"><button class="chip" data-plst="aktif" aria-pressed="${f.st === "aktif"}">Belum selesai · ${fmt(aktif.length)}</button>${PL_ST.map(o => `<button class="chip" data-plst="${o}" aria-pressed="${f.st === o}">${o}</button>`).join("")}<button class="chip" data-plst="" aria-pressed="${!f.st}">Semua</button></div></div>
   <div class="toolbar"><label class="f grow">Cari<input id="pl-q" type="search" value="${esc(f.q)}" placeholder="nama barang/ruang, kode, posisi, pelaksana…"></label>
@@ -902,7 +907,7 @@ function vPelihara() {
     <label class="f">Jenis<select id="pl-jenis"><option value="">Aset dan ruang</option><option value="aset" ${f.jenis === "aset" ? "selected" : ""}>Aset</option><option value="ruang" ${f.jenis === "ruang" ? "selected" : ""}>Ruang</option></select></label>
     <span class="sp"></span><button id="pl-xlsx" ${all.length ? "" : "disabled"}>Unduh Excel</button></div>
   <div class="tablebox"><table><thead><tr><th>Jenis</th><th>Aset / ruang</th><th class="hide-sm">Posisi</th><th>Kondisi</th><th>Status perbaikan</th><th class="hide-sm">Pelaksana</th><th class="num hide-sm">Biaya</th></tr></thead><tbody>
-  ${rows.map(r => `<tr class="rowlink" tabindex="0" data-pl="${esc(r.t + "|" + r.id)}"><td><span class="pill">${r.t === "aset" ? "Aset" : "Ruang"}</span></td><td><div class="nm">${esc(r.nama)}${ntBadge(r.t, r.id)}</div><div class="sm mono">${esc(r.kode || "")}</div></td><td class="hide-sm">${esc(r.lokasi)}</td><td>${r.t === "aset" ? kondPill(r.kond) : rkPill(r.kond)}</td><td>${plPill(r.st)}${r.pl.tgl ? `<div class="sm">${esc(tglID(r.pl.tgl))}</div>` : ""}</td><td class="hide-sm">${esc(r.pl.oleh || "")}</td><td class="num hide-sm">${r.pl.biaya ? rp(+r.pl.biaya) : ""}</td></tr>${ed && f.edit === r.t + "|" + r.id ? editor(r) : ""}`).join("") || `<tr><td colspan="7"><div class="empty"><b>${all.length ? "Tidak ada yang cocok" : "Belum ada yang perlu diperbaiki"}</b>${all.length ? "Ubah filter." : "Aset atau ruang yang diisi kondisi Rusak Sedang akan muncul di sini."}</div></td></tr>`}
+  ${rows.map(r => `<tr class="rowlink" tabindex="0" data-pl="${esc(r.t + "|" + r.id)}"><td><span class="pill">${r.t === "aset" ? "Aset" : "Ruang"}</span></td><td><div class="nm">${esc(r.nama)}${ntBadge(r.t, r.id)}</div><div class="sm mono">${esc(r.kode || "")}</div></td><td class="hide-sm">${esc(r.lokasi)}</td><td>${r.t === "aset" ? kondPill(r.kond) : rkPill(r.kond)}</td><td>${plPill(r.st)}${r.t === "aset" && sjAktifOf(r.id) ? ` <span class="pill info" title="${esc(sjAktifOf(r.id).nomor)}">di penyedia</span>` : ""}${r.pl.tgl ? `<div class="sm">${esc(tglID(r.pl.tgl))}</div>` : ""}</td><td class="hide-sm">${esc(r.pl.oleh || "")}</td><td class="num hide-sm">${r.pl.biaya ? rp(+r.pl.biaya) : ""}</td></tr>${ed && f.edit === r.t + "|" + r.id ? editor(r) : ""}`).join("") || `<tr><td colspan="7"><div class="empty"><b>${all.length ? "Tidak ada yang cocok" : "Belum ada yang perlu diperbaiki"}</b>${all.length ? "Ubah filter." : "Aset atau ruang yang diisi kondisi Rusak Sedang akan muncul di sini."}</div></td></tr>`}
   </tbody></table></div>${ed ? "" : '<p class="hint">Akun Anda hanya bisa melihat daftar ini. Klik baris untuk membuka datanya.</p>'}`;
 }
 async function plSave(key, done) {
@@ -1961,11 +1966,206 @@ async function uploadFotos(files) {
   if (ids.length) { const x = allItems().byKey.get(key); if (await saveUpd(key, { fotos:[...((x && x.fotos) || []), ...ids] })) toast(ids.length + " foto tersimpan."); }
 }
 
+/* ================= surat jalan service (surat izin pengeluaran barang) ================= */
+// setiap barang yang dibawa keluar untuk diservis dicatat di sini; status pemeliharaan & kondisi aset ikut diperbarui
+const SJ_HASIL = { baik:"Selesai diperbaiki (Baik)", tunggu:"Belum selesai / menunggu suku cadang", gagal:"Tidak dapat diperbaiki" };
+UI.sj = { f:null, q:"", st:"", back:null, confirm:null, cari:"" };
+const sjItemsOut = s => (s.items || []).filter(i => !i.kembali);
+const sjStatus = s => { const n = (s.items || []).length, k = (s.items || []).filter(i => i.kembali).length; return !k ? "Di penyedia" : k < n ? "Sebagian kembali" : "Kembali"; };
+const sjEstKembali = s => { const e = Math.max(0, ...(s.items || []).map(i => +i.est || 0)); return s.tgl && e ? ymd(addDays(parseYmd(s.tgl), e)) : ""; };
+const sjAktifOf = key => (S.sjalan || []).find(s => (s.items || []).some(i => i.key === key && !i.kembali));
+const sjDiLuar = () => (S.sjalan || []).flatMap(s => sjItemsOut(s).map(i => ({ s, i })));
+const sjTelat = () => (S.sjalan || []).filter(s => sjItemsOut(s).length && sjEstKembali(s) && sjEstKembali(s) < today());
+const sjPill = st => `<span class="pill ${st === "Kembali" ? "ok" : st === "Sebagian kembali" ? "warn" : "info"}">${esc(st)}</span>`;
+const sjLine = (x, o = {}) => ({ key:x ? x.key : "", nama:x ? itemNama(x) : "", kode:x ? idLabel(x) : "", jml:1, satuan:"unit", rusak:o.rusak || "", est:o.est || 7 });
+function sjBlank() { return { id:"", nomor:"", manual:false, tgl:today(), penyedia:"", alamat:"", hp:"", wakil:"", ket:"", items:[] }; }
+function sjFrom(key) {
+  const x = allItems().byKey.get(key); const f = sjBlank();
+  if (x) { f.items.push(sjLine(x, { rusak:(x.pl && x.pl.ket) || x.cat || "" })); f.penyedia = (x.pl && x.pl.oleh) || ""; }
+  UI.sj.f = f; UI.sj.back = null; location.hash = "sjalan"; render(); window.scrollTo(0, 0);
+}
+function sjFormHtml() {
+  const f = UI.sj.f, c = cfg(); if (!f.id && !f.manual) f.nomor = nextNomor("serah", f.tgl);
+  const picked = new Set(f.items.map(i => i.key));
+  const cands = words(UI.sj.cari).length ? allItems().visible.filter(x => !picked.has(x.key) && x.src !== "G").filter(x => matches(UI.sj.cari, [x.nama, x.merek, x.tipe, x.spes, x.reg, x.kode, x.noreg, x.sn, x.pj, x.lokasi])).slice(0, 20) : [];
+  const saran = plRows("aktif").filter(r => r.t === "aset" && !picked.has(r.id) && !sjAktifOf(r.id)).slice(0, 12);
+  const I = (k, ph = "", type = "text") => `<input data-sjf="${k}" type="${type}" value="${esc(f[k] ?? "")}" placeholder="${esc(ph)}">`;
+  return `<section class="panel" style="margin-bottom:14px;border-color:var(--accent)"><div style="display:flex;gap:8px;align-items:baseline"><h3 style="flex:1;margin:0">${f.id ? "Ubah surat jalan" : "Surat jalan service baru"}</h3><button class="ghost" data-sjclose="1">Tutup</button></div>
+    <div class="fgrid" style="margin-top:10px">
+      <label class="f">Tanggal barang keluar${I("tgl", "", "date")}</label>
+      <label class="f">Nomor surat<input data-sjf="nomor" class="mono" value="${esc(f.nomor)}"></label>
+      <label class="f">Toko / penyedia jasa service${I("penyedia", "mis. 7 Computer")}</label>
+      <label class="f">Nama yang menerima di penyedia${I("wakil", "untuk tanda tangan, boleh dikosongkan")}</label>
+      <label class="f">Alamat penyedia${I("alamat", "opsional")}</label>
+      <label class="f">No. HP penyedia${I("hp", "opsional")}</label>
+    </div>
+    <p class="sectionlabel" style="margin-top:14px">A. Identitas barang</p>
+    ${f.items.map((l, i) => `<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;gap:8px;align-items:baseline;margin-bottom:6px"><b style="flex:1">${esc(l.nama || "Barang " + (i + 1))}</b><span class="mono faint">${esc(l.kode || "")}</span><button class="ghost" data-sjdel="${i}">Hapus</button></div>
+      <div class="fgrid" style="grid-template-columns:90px 1.6fr 120px;gap:10px"><label class="f">Jumlah<input data-sji="${i}:jml" type="number" min="1" value="${esc(l.jml)}"></label><label class="f">Jenis kerusakan<input data-sji="${i}:rusak" value="${esc(l.rusak)}" placeholder="mis. Paper jam, tidak menyala"></label><label class="f">Estimasi (hari)<input data-sji="${i}:est" type="number" min="0" value="${esc(l.est)}"></label></div></div>`).join("") || '<p class="muted" style="margin:0 0 8px">Belum ada barang. Cari aset di bawah, atau pilih dari daftar perlu perbaikan.</p>'}
+    <label class="f">Cari aset (nama, kode, no. registrasi, merek, posisi)<input id="sj-cari" type="search" value="${esc(UI.sj.cari)}" placeholder="mis. printer canon"></label>
+    ${cands.length ? `<div class="suggest" style="margin-top:6px">${cands.map(x => `<button data-sjpick="${esc(x.key)}"><span><b>${esc(itemNama(x))}</b> ${x.kond ? kondPill(x.kond) : ""}<br><span class="mono faint">${esc(idLabel(x))}</span>${x.lokasi || x.pj ? '<span class="faint"> · ' + esc(x.lokasi || x.pj) + "</span>" : ""}</span></button>`).join("")}</div>` : ""}
+    ${saran.length ? `<p class="hint" style="margin:8px 0 4px">Perlu perbaikan (dari menu Pemeliharaan):</p><div class="chips">${saran.map(r => `<button class="chip" data-sjpick="${esc(r.id)}">+ ${esc(r.nama)}</button>`).join("")}</div>` : ""}
+    <label class="f" style="margin-top:10px">Keterangan tambahan (opsional)<input data-sjf="ket" value="${esc(f.ket || "")}"></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center"><button class="primary" id="sj-save">Simpan & unduh surat jalan (PDF)</button><button id="sj-prev">Pratinjau PDF</button><span class="hint">Penanda tangan: ${esc(c.pengurus || c.waka)} (Pengurus Barang Pembantu) dan ${esc(c.kepsek)} (Kepala Sekolah). Saat disimpan, status pemeliharaan barang menjadi <b>Sedang diperbaiki</b> dan kondisinya <b>Rusak Sedang</b>.</span></div></section>`;
+}
+function sjBackHtml(s) {
+  const c = cfg(), out = sjItemsOut(s);
+  return `<tr><td colspan="7" style="background:var(--sunk)"><b>Catat barang kembali dari ${esc(s.penyedia)}</b><p class="hint" style="margin:2px 0 8px">Centang barang yang sudah kembali, periksa fisik dan kesesuaian identitasnya, lalu isi hasilnya. Hasil langsung memperbarui kondisi aset dan menu Pemeliharaan.</p>
+    <div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))"><label class="f">Tanggal kembali<input id="sjk-tgl" type="date" value="${today()}"></label><label class="f">Pemeriksa<input id="sjk-oleh" value="${esc(c.pengurus || c.waka)}"></label>${sumberField("sjk-sumber", "")}</div>
+    ${out.map(i => { const n = s.items.indexOf(i); return `<div style="border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-top:8px;background:var(--surface)"><label class="ck"><input type="checkbox" id="sjk-on-${n}" checked> <b>${esc(i.nama)}</b> <span class="mono faint">${esc(i.kode || "")}</span> · ${esc(i.rusak || "")}</label>
+      <div class="fgrid" style="grid-template-columns:1.4fr 1fr 1.6fr;gap:10px;margin-top:6px"><label class="f">Hasil perbaikan<select id="sjk-hasil-${n}">${Object.entries(SJ_HASIL).map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></label><label class="f">Biaya (Rp)<input id="sjk-biaya-${n}" type="number" min="0"></label><label class="f">Catatan hasil / tindakan<input id="sjk-cat-${n}" placeholder="mis. ganti roller penarik kertas"></label></div></div>`; }).join("")}
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="primary" data-sjbacksave="${esc(s._id)}">Simpan & unduh bukti kembali (PDF)</button><button class="ghost" data-sjback="">Batal</button></div></td></tr>`;
+}
+function vSjalan() {
+  const U = UI.sj, ed = can("pelihara"), all = S.sjalan || [], telat = sjTelat(), luar = sjDiLuar();
+  const list = all.filter(s => (!U.st || sjStatus(s) === U.st) && matches(U.q, [s.nomor, s.penyedia, s.wakil, ...(s.items || []).flatMap(i => [i.nama, i.kode, i.rusak])]));
+  const th = new Date().getFullYear() + "", thn = all.filter(s => String(s.tgl).startsWith(th));
+  const biaya = thn.reduce((t, s) => t + (s.items || []).reduce((a, i) => a + (+i.biaya || 0), 0), 0);
+  return `<h2>Surat jalan service</h2>
+  <p class="lead">Setiap barang milik sekolah yang dibawa keluar untuk diservis atau diperbaiki dibuatkan <b>Surat Izin Pengeluaran Barang</b>. Saat barang kembali, catat hasil pemeriksaannya di sini: kondisi aset dan status di menu <a href="#pelihara">Pemeliharaan & Perbaikan</a> ikut diperbarui.</p>
+  <div class="grid kpis"><div class="kpi"><span class="l">Barang di penyedia</span><span class="v">${fmt(luar.length)}</span><span class="s">${fmt(new Set(luar.map(x => x.s._id)).size)} surat jalan</span></div>
+    <div class="kpi"><span class="l">Lewat estimasi kembali</span><span class="v" ${telat.length ? 'style="color:var(--bad)"' : ""}>${fmt(telat.length)}</span><span class="s">surat jalan</span></div>
+    <div class="kpi"><span class="l">Surat jalan ${th}</span><span class="v">${fmt(thn.length)}</span><span class="s">${fmt(thn.reduce((t, s) => t + (s.items || []).length, 0))} barang</span></div>
+    <div class="kpi"><span class="l">Biaya service ${th}</span><span class="v" style="font-size:1.25rem">${rp(biaya)}</span><span class="s">dari barang yang sudah kembali</span></div></div>
+  ${telat.length ? `<div class="note bad" style="margin-top:14px"><b>Belum kembali melewati estimasi:</b> ${telat.map(s => `${esc(s.nomor)} · ${esc(s.penyedia)} (${sjItemsOut(s).map(i => esc(i.nama)).join(", ")}; estimasi ${esc(tglID(sjEstKembali(s)))})`).join("; ")}. Hubungi penyedianya.</div>` : ""}
+  <div style="margin-top:14px">${U.f ? sjFormHtml() : ""}</div>
+  <div class="toolbar"><div class="chips">${["", "Di penyedia", "Sebagian kembali", "Kembali"].map(o => `<button class="chip" data-sjst="${o}" aria-pressed="${U.st === o}">${o || "Semua"}</button>`).join("")}</div>
+    <label class="f grow">Cari<input id="sj-q" type="search" value="${esc(U.q)}" placeholder="nomor, penyedia, nama barang, kode"></label>
+    <span class="sp"></span><button id="sj-xlsx" ${all.length ? "" : "disabled"}>Unduh Excel</button>${ed && !U.f ? '<button class="primary" id="sj-new">Buat surat jalan</button>' : ""}</div>
+  <div class="tablebox"><table><thead><tr><th>Nomor & tanggal</th><th>Penyedia</th><th>Barang</th><th class="hide-sm">Estimasi kembali</th><th>Status</th><th></th></tr></thead><tbody>
+  ${list.map(s => { const st = sjStatus(s), est = sjEstKembali(s), lt = sjItemsOut(s).length && est && est < today();
+    return `<tr><td><div class="mono sm">${esc(s.nomor)}</div>${esc(tglID(s.tgl))}</td><td>${esc(s.penyedia)}${s.hp ? `<div class="sm">${esc(s.hp)}</div>` : ""}</td><td>${(s.items || []).map(i => `<div>${esc(i.nama)}${+i.jml > 1 ? " × " + fmt(+i.jml) : ""} <span class="sm">· ${esc(i.rusak || "")}</span>${i.kembali ? ` <span class="pill ${i.hasil === "baik" ? "ok" : i.hasil === "gagal" ? "bad" : "warn"}">${esc(i.hasil === "baik" ? "kembali, baik" : i.hasil === "gagal" ? "tidak dapat diperbaiki" : "kembali, belum selesai")}</span>` : ""}</div>`).join("")}</td>
+      <td class="hide-sm">${esc(tglID(est) || "-")}${lt ? `<div class="sm" style="color:var(--bad)">lewat ${fmt(-dayDiff(est, today()))} hari</div>` : ""}</td><td>${sjPill(st)}</td>
+      <td style="white-space:nowrap"><button class="ghost" data-sjpdf="${esc(s._id)}">Surat jalan</button>${(s.items || []).some(i => i.kembali) ? `<button class="ghost" data-sjkpdf="${esc(s._id)}">Bukti kembali</button>` : ""}${ed && st !== "Kembali" ? `<button data-sjback="${esc(s._id)}">Catat kembali</button>` : ""}${ed && st === "Di penyedia" ? `<button class="ghost" data-sjedit="${esc(s._id)}">Ubah</button>` : ""}${ed ? (U.confirm === s._id ? `<span class="confirm"><button class="danger" data-sjdelok="${esc(s._id)}">Ya, hapus</button><button data-sjdelno="1">Batal</button></span>` : `<button class="ghost" data-sjask="${esc(s._id)}">Hapus</button>`) : ""}</td></tr>${U.back === s._id ? sjBackHtml(s) : ""}`; }).join("") || `<tr><td colspan="6"><div class="empty"><b>${all.length ? "Tidak ada yang cocok" : "Belum ada surat jalan service"}</b>${all.length ? "Ubah filter." : "Buat surat jalan setiap kali barang dibawa keluar untuk diperbaiki."}</div></td></tr>`}
+  </tbody></table></div>${ed ? "" : '<p class="hint">Akun Anda hanya bisa melihat dan mengunduh surat jalan.</p>'}`;
+}
+function sjDoc() {
+  const f = UI.sj.f;
+  return { nomor:(f.nomor || "").trim(), tgl:f.tgl || today(), penyedia:(f.penyedia || "").trim(), wakil:(f.wakil || "").trim(), alamat:f.alamat || "", hp:f.hp || "", ket:f.ket || "", items:f.items.map(i => ({ key:i.key, nama:i.nama, kode:i.kode || "", jml:+i.jml || 1, rusak:(i.rusak || "").trim(), est:+i.est || 0 })) };
+}
+async function sjSave() {
+  const f = UI.sj.f, d = sjDoc();
+  if (!d.penyedia) { toast("Isi nama toko / penyedia jasa service."); return; }
+  if (!d.items.length) { toast("Pilih minimal satu barang."); return; }
+  if (d.items.some(i => !i.rusak)) { toast("Isi jenis kerusakan setiap barang."); return; }
+  if (!d.nomor) { toast("Isi nomor surat."); return; }
+  const id = f.id || uid("sj"), old = f.id && S.sjalan.find(x => x._id === f.id);
+  try {
+    await W.group(`Surat jalan service ${d.nomor} ke ${d.penyedia}`, async () => {
+      await W.set("sjalan/" + id, Object.assign(d, { dibuat:old ? old.dibuat || "" : new Date().toISOString(), oleh:old ? old.oleh || "" : S.me || "" }));
+      for (const i of d.items) { const x = allItems().byKey.get(i.key); if (!x) continue;
+        await saveUpd(i.key, Object.assign({ pl:Object.assign({}, x.pl || {}, { st:"Sedang diperbaiki", tgl:d.tgl, oleh:d.penyedia, ket:i.rusak, sj:d.nomor }) }, !x.kond || x.kond === "Baik" ? { kond:"Rusak Sedang", tcek:d.tgl } : {})); }
+    });
+    toast(isMaster() ? "Surat jalan tersimpan; status pemeliharaan barang diperbarui." : "Surat jalan dikirim ke akun master untuk divalidasi.");
+    await sjPdf(Object.assign({ _id:id }, d)); UI.sj.f = null; UI.sj.cari = ""; render();
+  } catch (e) { writeErr(e); }
+}
+async function sjBackSave(id) {
+  const s = S.sjalan.find(x => x._id === id); if (!s) return;
+  const tgl = val("sjk-tgl") || today(), oleh = val("sjk-oleh"), sumber = val("sjk-sumber"), items = JSON.parse(JSON.stringify(s.items)), done = [];
+  items.forEach((i, n) => { const on = document.getElementById("sjk-on-" + n); if (i.kembali || !on || !on.checked) return;
+    Object.assign(i, { kembali:tgl, hasil:val("sjk-hasil-" + n), biaya:+val("sjk-biaya-" + n) || 0, cat:val("sjk-cat-" + n), oleh, sumber }); done.push(i); });
+  if (!done.length) { toast("Centang barang yang sudah kembali."); return; }
+  try {
+    await W.group(`Barang kembali dari service ${s.nomor}`, async () => {
+      const doc = Object.assign({}, s, { items }); delete doc._id; delete doc._by; delete doc._ok; delete doc._at;
+      await W.set("sjalan/" + id, doc);
+      for (const i of done) { const x = allItems().byKey.get(i.key); if (!x) continue; const pl0 = Object.assign({}, x.pl || {}, { oleh:s.penyedia, sj:s.nomor, biaya:i.biaya, sumber:sumber || (x.pl || {}).sumber || "", ket:[i.rusak, i.cat].filter(Boolean).join(" · "), tgl });
+        if (i.hasil === "baik") await saveUpd(i.key, { pl:Object.assign(pl0, { st:"Selesai", selesai:tgl }), kond:"Baik", tcek:tgl, cek:oleh });
+        else if (i.hasil === "gagal") await saveUpd(i.key, { pl:Object.assign(pl0, { st:"Belum ditangani" }), kond:"Rusak Berat", tcek:tgl, cek:oleh, cat:"Tidak dapat diperbaiki (service " + s.penyedia + ", " + tglID(tgl) + ")" + (i.cat ? ": " + i.cat : "") });
+        else await saveUpd(i.key, { pl:Object.assign(pl0, { st:"Menunggu dana / suku cadang" }), tcek:tgl, cek:oleh }); }
+    });
+    toast(isMaster() ? "Barang kembali tercatat; kondisi aset diperbarui." : "Pencatatan barang kembali dikirim ke akun master untuk divalidasi.");
+    await sjKembaliPdf(Object.assign({}, s, { items }), done); UI.sj.back = null; render();
+  } catch (e) { writeErr(e); }
+}
+function sjXlsx() {
+  const rows = []; for (const s of S.sjalan || []) for (const i of s.items || []) rows.push({ "Nomor surat":s.nomor, "Tanggal keluar":s.tgl, "Penyedia":s.penyedia, "Penerima di penyedia":s.wakil || "", "Nama barang":i.nama, "Identitas / kode":i.kode || "", "Jumlah":+i.jml || 1, "Jenis kerusakan":i.rusak || "", "Estimasi (hari)":+i.est || "", "Estimasi kembali":i.est ? ymd(addDays(parseYmd(s.tgl), +i.est)) : "", "Status":i.kembali ? "Kembali" : "Di penyedia", "Tanggal kembali":i.kembali || "", "Hasil":i.hasil ? SJ_HASIL[i.hasil] : "", "Biaya":+i.biaya || 0, "Sumber dana":i.sumber || "", "Catatan hasil":i.cat || "", "Pemeriksa":i.oleh || "" });
+  xlsxSave(`Register Surat Jalan Service ${today()}.xlsx`, [["Surat jalan service", rows]]);
+}
+// ---- PDF: Surat Izin Pengeluaran Barang (format sekolah)
+function sjTtd(doc, y, s, lab1, lab2, tgl) {
+  const c = cfg(); if (y > 215) { doc.addPage(); y = 25; }
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10.5); doc.text("Berau, " + tglID(tgl), 155, y, { align:"center" }); y += 6;
+  return signBlock(doc, y, { nama:s.wakil || "(.................................)", nip:null }, { nama:c.pengurus || c.waka, nip:c.pengurus ? c.nipPengurus : c.nipWaka }, { nama:c.kepsek, nip:c.nipKepsek }, lab1 + "\n" + s.penyedia, lab2, { ksLabel:"Mengetahui,\nKepala Sekolah" });
+}
+async function sjPdf(s) {
+  if (!window.jspdf) { toast("Modul PDF belum termuat. Coba lagi sebentar."); return; }
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4" }), d = parseYmd(s.tgl);
+  let y = pdfKop(doc); y = pdfJudul(doc, y, ["SURAT IZIN PENGELUARAN BARANG"], "Nomor: " + (s.nomor || "................................"));
+  doc.setFontSize(10.5);
+  y = pdfPara(doc, y, `Pada hari ${HARI[d.getDay()]} tanggal ${d.getDate()} bulan ${BULAN[d.getMonth()]} tahun ${d.getFullYear()} telah dikeluarkan barang milik SMA Negeri 1 Berau sebagaimana tercantum di bawah ini diizinkan untuk dibawa keluar dari lingkungan sekolah dalam rangka pelaksanaan service/perbaikan.`);
+  doc.setFont("helvetica", "bold"); doc.text("A.   IDENTITAS BARANG", 20, y + 1); doc.setFont("helvetica", "normal");
+  doc.autoTable({ startY:y + 3, margin:{ left:20, right:20 }, theme:"grid", styles:{ fontSize:9, cellPadding:1.5, lineColor:[40,40,40], lineWidth:0.15, textColor:[20,20,20], valign:"top" }, headStyles:{ fillColor:[255,255,255], textColor:[20,20,20], fontStyle:"bold", halign:"center", valign:"middle" },
+    head:[["No", "Nama Barang", "Identitas/Kode barang", "Jumlah", "Jenis Kerusakan", "Penyedia Jasa Service", "Estimasi Service"]],
+    body:s.items.map((i, n) => [n + 1, i.nama, i.kode || "-", fmt(+i.jml || 1), i.rusak || "-", s.penyedia, i.est ? i.est + " hari" : "-"]),
+    columnStyles:{ 0:{ cellWidth:9, halign:"center" }, 1:{ cellWidth:36 }, 2:{ cellWidth:30 }, 3:{ cellWidth:15, halign:"center" }, 5:{ cellWidth:25 }, 6:{ cellWidth:20, halign:"center" } } });
+  y = doc.lastAutoTable.finalY + 7; if (y > 220) { doc.addPage(); y = 25; }
+  doc.setFont("helvetica", "bold"); doc.text("B.   KETENTUAN PENGELUARAN BARANG", 20, y); doc.setFont("helvetica", "normal"); y += 5.5;
+  ["Barang yang dibawa keluar merupakan Barang Milik Daerah/aset sekolah yang digunakan untuk kepentingan perbaikan atau pemeliharaan.", "Barang wajib dijaga dan tidak diperkenankan dialihkan penggunaannya selama proses service.", "Pihak penyedia jasa bertanggung jawab menjaga keamanan barang selama berada dalam proses perbaikan.", "Barang wajib dikembalikan ke sekolah setelah proses service selesai, disertai informasi hasil perbaikan.", "Pengurus Barang melakukan pemeriksaan fisik dan kesesuaian identitas barang pada saat barang dikembalikan."]
+    .forEach((t, n) => { doc.text((n + 1) + ".", 22, y); y = pdfPara(doc, y, t, 28, 162) - 1.2; });
+  if (s.ket) y = pdfPara(doc, y + 1, "Keterangan: " + s.ket);
+  y = pdfPara(doc, y + 2, "Demikian surat jalan ini dibuat sebagai bukti administrasi pengeluaran sementara barang milik sekolah untuk keperluan service/perbaikan.");
+  sjTtd(doc, y + 4, s, "Toko/penyedia", "\nPengurus Barang Pembantu", s.tgl);
+  saveFile(`Surat Jalan Service ${(s.nomor || "").replace(/[\\/:*?"<>|]/g, "-")} ${s.penyedia}.pdf`, pdfFinish(doc).output("blob"));
+}
+// ---- PDF: Berita Acara Pengembalian Barang Service (pemeriksaan saat barang kembali)
+async function sjKembaliPdf(s, only) {
+  if (!window.jspdf) { toast("Modul PDF belum termuat. Coba lagi sebentar."); return; }
+  const list = only || s.items.filter(i => i.kembali); if (!list.length) return;
+  const tgl = list[0].kembali, { jsPDF } = window.jspdf, doc = new jsPDF({ unit:"mm", format:"a4" }), d = parseYmd(tgl);
+  let y = pdfKop(doc); y = pdfJudul(doc, y, ["BERITA ACARA PENGEMBALIAN BARANG SERVICE"], "Nomor surat jalan: " + s.nomor);
+  doc.setFontSize(10.5);
+  y = pdfPara(doc, y, `Pada hari ${HARI[d.getDay()]} tanggal ${d.getDate()} bulan ${BULAN[d.getMonth()]} tahun ${d.getFullYear()} telah diterima kembali barang milik SMA Negeri 1 Berau dari ${s.penyedia} yang sebelumnya dikeluarkan untuk service/perbaikan berdasarkan Surat Izin Pengeluaran Barang Nomor ${s.nomor} tanggal ${tglID(s.tgl)}, dengan hasil pemeriksaan fisik dan kesesuaian identitas barang sebagai berikut:`);
+  const fm = n => Math.round(n || 0).toLocaleString("id-ID"), tot = list.reduce((t, i) => t + (+i.biaya || 0), 0);
+  doc.autoTable({ startY:y + 1, margin:{ left:20, right:20 }, theme:"grid", styles:{ fontSize:9, cellPadding:1.5, lineColor:[40,40,40], lineWidth:0.15, textColor:[20,20,20], valign:"top" }, headStyles:{ fillColor:[255,255,255], textColor:[20,20,20], fontStyle:"bold", halign:"center", valign:"middle" },
+    head:[["No", "Nama Barang", "Identitas/Kode barang", "Jml", "Kerusakan", "Hasil Perbaikan", "Biaya (Rp)"]],
+    body:[...list.map((i, n) => [n + 1, i.nama, i.kode || "-", fmt(+i.jml || 1), i.rusak || "-", SJ_HASIL[i.hasil] + (i.cat ? "\n" + i.cat : ""), i.biaya ? fm(i.biaya) : "-"]), [{ content:"JUMLAH BIAYA", colSpan:6, styles:{ fontStyle:"bold", halign:"right" } }, { content:tot ? fm(tot) : "-", styles:{ fontStyle:"bold", halign:"right" } }]],
+    columnStyles:{ 0:{ cellWidth:9, halign:"center" }, 1:{ cellWidth:36 }, 2:{ cellWidth:30 }, 3:{ cellWidth:10, halign:"center" }, 6:{ cellWidth:24, halign:"right" } } });
+  y = doc.lastAutoTable.finalY + 6;
+  const sisa = s.items.filter(i => !i.kembali);
+  y = pdfPara(doc, y, (list.some(i => i.hasil === "baik") ? "Barang yang selesai diperbaiki kondisinya dicatat kembali menjadi Baik. " : "") + (list.some(i => i.hasil === "gagal") ? "Barang yang tidak dapat diperbaiki dicatat Rusak Berat untuk diproses dalam usulan penghapusan. " : "") + (sisa.length ? `Barang yang masih berada di penyedia: ${sisa.map(i => i.nama).join(", ")}.` : "Seluruh barang pada surat jalan ini telah kembali ke sekolah."));
+  y = pdfPara(doc, y + 1, "Demikian berita acara ini dibuat dengan sebenarnya untuk dipergunakan sebagaimana mestinya.");
+  sjTtd(doc, y + 4, s, "Yang menyerahkan kembali,\nToko/penyedia", "Yang memeriksa dan menerima,\nPengurus Barang Pembantu", tgl);
+  saveFile(`Bukti Kembali Service ${(s.nomor || "").replace(/[\\/:*?"<>|]/g, "-")} ${tgl}.pdf`, pdfFinish(doc).output("blob"));
+}
+document.addEventListener("input", e => {
+  const t = e.target, U = UI.sj; if (current !== "sjalan") return;
+  if (t.id === "sj-q") { U.q = t.value; render(); return; }
+  if (t.id === "sj-cari") { U.cari = t.value; render(); return; }
+  if (!U.f) return;
+  if (t.dataset.sjf) { U.f[t.dataset.sjf] = t.value; if (t.dataset.sjf === "nomor") U.f.manual = true; }
+  if (t.dataset.sji) { const [i, k] = t.dataset.sji.split(":"); if (U.f.items[+i]) U.f.items[+i][k] = t.value; }
+});
+document.addEventListener("change", e => { if (current === "sjalan" && e.target.dataset.sjf === "tgl") render(); });
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return; const d = b.dataset, U = UI.sj;
+  if (d.sjfrom) { sjFrom(d.sjfrom); return; }
+  if (d.sjgo) { U.q = ((S.sjalan || []).find(s => s._id === d.sjgo) || {}).nomor || ""; location.hash = "sjalan"; return; }
+  if (current !== "sjalan") return;
+  if (b.id === "sj-new") { U.f = sjBlank(); U.back = null; render(); }
+  if (d.sjclose) { U.f = null; U.cari = ""; render(); }
+  if (d.sjpick) { const x = allItems().byKey.get(d.sjpick); if (x && U.f) { U.f.items.push(sjLine(x, { rusak:(x.pl && x.pl.ket) || "" })); if (!U.f.penyedia && x.pl && x.pl.oleh) U.f.penyedia = x.pl.oleh; U.cari = ""; render(); } }
+  if (d.sjdel != null) { U.f.items.splice(+d.sjdel, 1); render(); }
+  if (b.id === "sj-save") sjSave();
+  if (b.id === "sj-prev") { const s = sjDoc(); if (!s.items.length) { toast("Pilih minimal satu barang."); return; } sjPdf(s); }
+  if (d.sjst != null) { U.st = d.sjst; render(); }
+  if (b.id === "sj-xlsx") sjXlsx();
+  if (d.sjpdf) { const s = S.sjalan.find(x => x._id === d.sjpdf); if (s) sjPdf(s); }
+  if (d.sjkpdf) { const s = S.sjalan.find(x => x._id === d.sjkpdf); if (s) sjKembaliPdf(s); }
+  if (d.sjback != null) { U.back = d.sjback || null; render(); }
+  if (d.sjbacksave) sjBackSave(d.sjbacksave);
+  if (d.sjedit) { const s = S.sjalan.find(x => x._id === d.sjedit); if (s) { U.f = Object.assign(sjBlank(), JSON.parse(JSON.stringify(s)), { id:s._id, manual:true }); U.back = null; render(); window.scrollTo(0, 0); } }
+  if (d.sjask) { U.confirm = d.sjask; render(); }
+  if (d.sjdelno) { U.confirm = null; render(); }
+  if (d.sjdelok) { const id = d.sjdelok; U.confirm = null; W.group("Hapus surat jalan service", () => W.del("sjalan/" + id)).then(() => { toast(isMaster() ? "Surat jalan dihapus. Status pemeliharaan barang tidak berubah." : "Usulan hapus dikirim."); render(); }).catch(writeErr); }
+});
+
 /* ================= BAST ================= */
 function nextNomor(jenis, tgl) {
   const c = cfg(), d = tgl || today(), y = d.slice(0, 4), m = +d.slice(5, 7);
   let max = 0;
-  for (const s of [...allSurat(), ...S.trx, ...(S.bantuan || [])]) { const mm = /^[\d.\s]+\/(\d+)\/.*?(\d{4})\s*$/.exec(s.nomor || ""); if (mm && mm[2] === y) max = Math.max(max, +mm[1]); }
+  for (const s of [...allSurat(), ...S.trx, ...(S.bantuan || []), ...(S.sjalan || [])]) { const mm = /^[\d.\s]+\/(\d+)\/.*?(\d{4})\s*$/.exec(s.nomor || ""); if (mm && mm[2] === y) max = Math.max(max, +mm[1]); }
   const klas = jenis === "tarik" ? c.klasTarik : c.klasSerah, bag = jenis === "tarik" ? c.bagTarik : c.bagSerah;
   return `${klas}/${max + 1}/SMAN1-Berau-${bag}/${ROMAWI[m - 1]}/${y}`;
 }
@@ -5447,7 +5647,7 @@ document.addEventListener("click", async e => {
 /* ---------- status terkini (siapa yang sedang membuka aplikasi) & chat tim ---------- */
 const LIVE = { on:{}, chat:[], open:false, started:false, t0:new Date().toISOString(), seen:"", lastBeat:0, sending:false };
 const ONLINE_MS = 4 * 60 * 1000, BEAT_MS = 90 * 1000;
-const VIEW_NAMA = { home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset/Modal", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Rekon · Kertas Kerja Modal", rekon:"Rekon · Rekon Aset", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
+const VIEW_NAMA = { sjalan:"Surat Jalan Service", home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset/Modal", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Rekon · Kertas Kerja Modal", rekon:"Rekon · Rekon Aset", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
 function akunNama(id) { const a = AK.list.find(x => x._id === id); return a ? (a.nama || shownLogin(a.email)) : (LIVE.on[id] && LIVE.on[id].nama) || "Akun"; }
 const isOnline = o => !!o && !o.off && Date.now() - new Date(o.at).getTime() < ONLINE_MS;
 function onlineList() { return Object.entries(LIVE.on).filter(([id, o]) => isOnline(o) && !(AK.list.find(a => a._id === id) || {}).dihapus && (AK.list.find(a => a._id === id) || {}).aktif !== false).map(([id, o]) => Object.assign({ id }, o)).sort((a, b) => akunNama(a.id).localeCompare(akunNama(b.id))); }
