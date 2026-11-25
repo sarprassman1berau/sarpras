@@ -91,6 +91,13 @@ Semua tempat unggah foto (detail aset, catatan temuan, foto ruang, BAST, BAST ba
 - **BAST Penarikan** wajib mengisi **kondisi terkini** dan **alasan penarikan** setiap barang (alasan umum dipakai bila alasan per barang kosong); keduanya tercetak di tabel BAST.
 - Saat BAST penarikan disimpan, kondisi terkini langsung menjadi kondisi barang (tanggal cek = tanggal BAST, pemeriksa = Pihak Kedua, catatan = alasan), sehingga ikut ke Rekap, Pemeliharaan & Perbaikan (Rusak Sedang), Usulan Penghapusan (Rusak Berat/Hilang), Unduh KIB, Buku Induk, dan Per Pemegang. Dari akun operator perubahan ini menunggu validasi master seperti biasa.
 
+### Riwayat & Urungkan (undo / redo)
+- Menu `#riwayat` (khusus master, grup Validasi & pengaturan) + tombol **↶ Urungkan / ↷ Ulangi** di bilah atas dan **Ctrl+Z / Ctrl+Y** (di luar kotak isian) untuk perubahan paling akhir.
+- `applyOp` kini mencatat keadaan sebelum (`b`) dan sesudah (`a`) setiap dokumen; `W.group` (master) dan persetujuan Validasi menyimpannya lewat `saveRiwayat`: ringkasan di `riwayat/{id}` (judul, oleh, waktu, jumlah, status `aktif`/`diurungkan`, info impor) dan isi di `riwayat_isi/{id}_{n}` (dipecah < 600 KB). Hanya akun master yang berlangganan `riwayat` (150 terakhir).
+- `rwRun(id, "undo"|"redo")`: urungkan = tulis kembali keadaan sebelum (urutan terbalik; dokumen baru dihapus), ulangi = keadaan sesudah. Sebelum menulis, dicek apakah data sudah diubah lagi oleh perubahan lain; bila ya, muncul peringatan "Tetap urungkan".
+- Impor SIPBMD ikut bisa diurungkan: potongan `seed` yang dilepas (impor diurungkan, mode *Ganti semua*, atau *Hapus* data impor) dipindah ke `seed_arsip` (tidak dimuat aplikasi), bukan dihapus permanen; catatan `impor/` dipulihkan.
+- Koleksi baru `riwayat`, `riwayat_isi`, `seed_arsip` memakai aturan umum (dibaca anggota, ditulis master); firestore.rules tidak perlu diubah. Perubahan sebelum fitur ini dipasang tidak tercatat.
+
 ### Impor SIPBMD mode "Lengkapi data yang masih kosong saja"
 - Pilihan ketiga di menu Impor SIPBMD (`lkPlan`, `lkPanel`, `runLengkapi`). Cocokkan per Kode Aset + No. Register: hanya kolom yang masih kosong (atau "-") yang diisi lewat `upd` (merek, tipe, sumber dana, satuan, keterangan, nomor dokumen, tanggal, kapitalisasi, asal usul, ukuran, bahan; nilai bila masih 0). Isian yang sudah ada tidak ditimpa; menjalankan file yang sama lagi tidak mengubah apa pun.
 - Baris yang belum ada: dicari padanannya di aset tak tercatat / BOSP Daerah (1 unit, belum dipasangkan; tahun sama, nilai sama dan/atau nama mirip). Bila cocok, baris SIPBMD ditambahkan lalu **dipasangkan** (pemegang, posisi, kondisi, foto ikut pindah; catatan lama tersembunyi), jadi tidak ganda. Sisanya ditambahkan sebagai aset SIPBMD (bisa dimatikan dengan centang).

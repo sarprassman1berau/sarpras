@@ -261,7 +261,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
   <div class="wrap brand">
     <button type="button" class="iconbtn" id="nav-btn" aria-label="Buka menu halaman" aria-expanded="false" aria-controls="tabs"><img id="nav-btn-logo" src="" alt="" width="40" height="40"><span class="navdot" id="nav-dot" hidden></span></button>
     <div class="pageid"><span class="app">Aset & Persediaan · SMAN 1 Berau</span><h1 id="pagetitle">Rekap Aset dan Persediaan</h1><span class="pagesub" id="pagesub"></span></div>
-    <span class="sync" id="sync">memuat…</span><span id="online-slot"></span><span id="role"></span>
+    <span class="sync" id="sync">memuat…</span><span id="online-slot"></span><span id="undo-slot"></span><span id="role"></span>
   </div>
 </header>
 <div id="nav-scrim" hidden></div>
@@ -304,6 +304,7 @@ dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;overflow-wrap:anywhere}
     <a href="#impor" data-v="impor">Import SIPBMD</a></div>
   <div class="navsec"><p class="navgroup">Validasi & pengaturan</p>
     <a href="#validasi" data-v="validasi">Validasi <span id="vbadge"></span></a>
+    <a href="#riwayat" data-v="riwayat">Riwayat & Urungkan</a>
     <a href="#atur" data-v="atur">Pengaturan surat & penerima</a></div></div>
   <div class="navsec" id="nav-me"><p class="navgroup">Akun saya</p>
     <a href="#akun" data-v="akun">Akun saya · ganti password</a></div>
@@ -363,7 +364,7 @@ const usulHapus = x => (x.kond === "Rusak Berat" || x.kond === "Hilang") && !x.r
 const BUKU_RE = /\b(buku|novel|bahan ajar|monograf|kamus|ensiklopedi|atlas|majalah|modul|komik|antologi)\b/i;
 
 /* ================= state ================= */
-const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], pinjamLab:[], cetak:[], bantuan:[], sjalan:[], minta:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
+const S = { ready:false, seed:{ aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] }, upd:{}, baru:[], trx:[], suratBaru:[], cfg:{}, psdBarang:[], psdTrx:[], penerima:[], kk:[], gdg:[], ruang:[], catatan:[], pinjam:[], pinjamLab:[], cetak:[], bantuan:[], sjalan:[], riwayat:[], minta:[], keuUsul:[], keuKak:[], keuRkas:[], keuPagu:[], keuSpj:[], keuHonor:[], keuPerjadin:[], pengingat:[], impor:[], usulan:[], keputusan:[], log:[], names:{}, role:null, seedDocs:[], me:null };
 const CFG_DEFAULT = {
   kepsek:"Dr. H. Saleh, S.T., M.Pd.", nipKepsek:"19780708 200604 1 004",
   waka:"Ika Novita Mulia, S.Pd.", nipWaka:"199211102022212025", jabWaka:"Wakil Kepala Sekolah Sarana dan Prasarana",
@@ -492,6 +493,7 @@ async function boot() {
   sub("pengingat", rows => { S.pengingat = rows; });
   sub("catatan", rows => { S.catatan = rows.sort((a, b) => String(b.at).localeCompare(String(a.at))); });
   sub("ruang", rows => { S.ruang = rows; });
+  if (isMaster()) db.collection("riwayat").orderBy("at", "desc").limit(150).onSnapshot(snap => { S.riwayat = snap.docs.map(d => Object.assign({ _id:d.id }, d.data())); render(true); }, () => {});
   sub("impor", rows => { S.impor = rows.sort((a, b) => String(b.tgl).localeCompare(String(a.tgl))); });
   sub("penerima", rows => { S.penerima = rows; penCache = null; });
   db.doc("meta/config").onSnapshot(d => { S.cfg = d.exists ? d.data() : {}; render(true); }, () => {});
@@ -537,35 +539,38 @@ const W = {
   q:null,
   async group(ring, fn) {
     if (W.q) return fn();
-    W.q = { ring, ops:[], paths:[] };
+    W.q = { ring, ops:[], paths:[], snaps:[] };
     let res;
     try { res = await fn(); } catch (e) { W.q = null; throw e; }
     const g = W.q; W.q = null;
     if (!g.ops.length && !g.paths.length) return res;
-    if (isMaster()) await logChange({ ring:g.ring, by:S.me, ok:S.me, paths:g.paths });
+    if (isMaster()) { await logChange({ ring:g.ring, by:S.me, ok:S.me, paths:g.paths }); await saveRiwayat({ ring:g.ring, by:S.me, snaps:g.snaps, imp:W.takeImp() }); }
     else await propose(g);
     return res;
   },
   async op(o) {
     if (!W.q) return W.group(ringOf(o), () => W.op(o));
-    if (isMaster()) { await applyOp(o, S.me, S.me); W.q.paths.push(o.path); }
+    if (isMaster()) { const r = await applyOp(o, S.me, S.me); W.q.paths.push(o.path); if (r) W.q.snaps.push(r); }
     else W.q.ops.push(o);
   },
   set(path, data) { return W.op({ op:"set", path, data }); },
   update(path, data) { return W.op({ op:"update", path, data }); },
   merge(path, data) { return W.op({ op:"merge", path, data }); },
   del(path) { return W.op({ op:"del", path }); },
+  imp:null, takeImp() { const i = W.imp; W.imp = null; return i; },
 };
 const COL_LABEL = { sjalan:"surat jalan service", bantuan:"BAST bantuan", upd:"aset", aset_baru:"aset", trx:"BAST", surat:"surat", psd_trx:"persediaan", psd_barang:"barang persediaan", kk:"kertas kerja", gdg:"gedung", ruang:"ruang", penerima:"penerima" };
 const ringOf = o => (o.op === "del" ? "Hapus " : "Simpan ") + (COL_LABEL[o.path.split("/")[0]] || o.path.split("/")[0]);
+// applies one change and returns its before/after state (for Riwayat & Urungkan)
 async function applyOp(o, by, ok) {
   const ref = db.doc(o.path), stamp = { _by:by || "", _ok:ok || "", _at:new Date().toISOString() };
-  if (o.op === "del") return ref.delete();
-  if (o.op === "set") return ref.set(Object.assign({}, o.data, stamp));
-  const cur = await ref.get();
-  if (o.op === "update" && !cur.exists) return; // the record was removed in the meantime
-  return ref.set(Object.assign({}, cur.exists ? cur.data() : {}, o.data, stamp));
+  let before = null; try { const c = await ref.get(); before = c.exists ? jclone(c.data()) : null; } catch (e) { before = null; }
+  if (o.op === "del") { await ref.delete(); return { p:o.path, b:before, a:null }; }
+  if (o.op === "update" && !before) return null; // the record was removed in the meantime
+  const after = jclone(Object.assign({}, o.op === "set" ? {} : (before || {}), o.data, stamp));
+  await ref.set(after); return { p:o.path, b:before, a:after };
 }
+const jclone = v => v == null ? null : JSON.parse(JSON.stringify(v));
 async function logChange(e) {
   const d = today(), ref = db.doc("log/" + d);
   const cur = S.log.find(x => x._id === d);
@@ -590,7 +595,8 @@ function pendingList() {
 }
 async function decide(p, ok) {
   try {
-    if (ok) for (const o of p.ops) await applyOp(o, p.by, S.me);
+    const snaps = []; if (ok) for (const o of p.ops) { const r = await applyOp(o, p.by, S.me); if (r) snaps.push(r); }
+    if (ok) await saveRiwayat({ ring:p.ring + " (disetujui dari usulan)", by:p.by, snaps });
     await db.doc("keputusan/" + p.id).set({ st:ok ? "disetujui" : "ditolak", by:p.by, ok:S.me, at:new Date().toISOString(), ring:p.ring, n:p.ops.length });
     await logChange({ ring:p.ring, by:p.by, ok:S.me, st:ok ? "disetujui" : "ditolak", paths:p.ops.map(o => o.path) });
     return true;
@@ -659,7 +665,7 @@ function xlsxSave(filename, sheets) {
 }
 
 /* ================= router ================= */
-const VIEWS = ["home","jadwal","lab","minta","gtk","keu","keu-harga","keu-usul","keu-rkas","keu-spj","keu-honor","keu-perjadin","bantuan","sjalan","masa","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
+const VIEWS = ["riwayat","home","jadwal","lab","minta","gtk","keu","keu-harga","keu-usul","keu-rkas","keu-spj","keu-honor","keu-perjadin","bantuan","sjalan","masa","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
 let current = "ringkasan", sub = "";
 const UI = {
   aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"", th:"", sumber:"" },
@@ -740,12 +746,13 @@ function render(soft) {
     if (S.loadErr && !S.ready) { v.innerHTML = `<div class="empty" style="max-width:620px;margin:30px auto;text-align:left"><b>Data belum bisa dimuat</b><p>${esc(S.loadErr)}</p>${S.loadDetail ? `<p class="mono sm" style="background:var(--sunk);padding:8px;border-radius:6px;overflow-wrap:anywhere">Pesan dari server: ${esc(S.loadDetail)}</p>` : ""}<button onclick="location.reload()">Muat ulang</button></div>`; return; }
     if (current === "home" || current === "jadwal" || current === "lab" || current === "akun" || current === "minta" || current === "gtk" || String(current).startsWith("keu")) { v.innerHTML = pinBar() + (current === "home" ? vHome() : current === "akun" ? vAkunPage() : current === "minta" ? vMinta() : current === "gtk" ? vGtk() : current === "keu" ? vKeu() : current === "keu-harga" ? vKeuHarga() : current === "keu-usul" ? vKeuUsul() : current === "keu-rkas" ? vKeuRkas() : current === "keu-spj" ? vKeuSpj() : current === "keu-honor" ? vKeuHonor() : current === "keu-perjadin" ? vKeuPerjadin() : vJadwal()); const jb = $("#jbadge"), jn = jdPendingForMe(); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : ""; const nd0 = $("#nav-dot"); if (nd0) nd0.hidden = !(pendingList().length && isMaster()); if (drawer) renderDrawer(); refocus(); return; }
     if (!S.ready && !S.seed.aset.length) { v.innerHTML = `<div class="empty"><b>Data inventaris sedang dimuat</b>Daftar aset per golongan KIB, catatan internal, BAST, persediaan, dan surat keluar akan tampil di sini.<br><span class="hint">${esc($("#sync").textContent)}</span></div>`; return; }
-    v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, sjalan:vSjalan, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, bantuan:vBantuan, masa:vMasa, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, catatan:vCatatan, atur:vAtur })[current]();
+    v.innerHTML = pinBar() + ({ home:vHome, unduhkib:vUnduhKib, pelihara:vPelihara, sjalan:vSjalan, ringkasan:vRingkasan, ruang:vRuang, aset:vAset, bast:vBast, bantuan:vBantuan, masa:vMasa, hapus:vHapus, persediaan:vPersediaan, pemegang:vPemegang, laporan:vLaporan, surat:vSurat, kertas:() => rekonTabs() + vKertas(), rekon:() => rekonTabs() + vRekon(), impor:vImpor, validasi:vValidasi, riwayat:vRiwayat, catatan:vCatatan, atur:vAtur })[current]();
     refocus();
     const nb = $("#vbadge"), np = pendingList().length; if (nb) nb.innerHTML = np ? `<span class="pill ${isMaster() ? "bad" : "warn"}">${np}</span>` : "";
     const nd = $("#nav-dot"); if (nd) nd.hidden = !(np && isMaster());
     const jb = $("#jbadge"), jn = jdPendingForMe("aula"); if (jb) jb.innerHTML = jn ? `<span class="pill warn">${jn}</span>` : "";
     const lb = $("#lbadge"), ln = jdPendingForMe("lab"); if (lb) lb.innerHTML = ln ? `<span class="pill warn">${ln}</span>` : "";
+    undoSlot();
     const sjb = $("#sjbadge"), sjn = sjTelat().length; if (sjb) sjb.innerHTML = sjn ? `<span class="pill bad" title="lewat estimasi kembali">${sjn}</span>` : "";
     const bb = $("#bbadge"), bn = masaPakai().lewat.length; if (bb) bb.innerHTML = bn ? `<span class="pill bad" title="masa penggunaan lewat">${bn}</span>` : "";
     if (drawer) renderDrawer();
@@ -4620,10 +4627,12 @@ async function runLengkapi() {
     if (baruItems.length) {
       const stamp = Date.now().toString(36), batchId = "imp_" + stamp, ids = [], chunks = chunkItems(baruItems);
       for (let n = 0; n < chunks.length; n++) { const id = batchId + "_" + String(n).padStart(3, "0"); await db.doc("seed/" + id).set({ kind:"aset", part:n, batch:batchId, items:chunks[n] }); ids.push(id); }
-      await db.doc("impor/" + batchId).set({ tgl:new Date().toISOString(), file:I.file + " (barang yang belum ada)", rows:baruItems.length, docs:ids, mode:"lengkapi", oleh:S.me || "" });
+      const rec = { tgl:new Date().toISOString(), file:I.file + " (barang yang belum ada)", rows:baruItems.length, docs:ids, mode:"lengkapi", oleh:S.me || "" };
+      await db.doc("impor/" + batchId).set(rec); W.imp = { docs:ids, arsip:[], rec:Object.assign({ _id:batchId }, rec), recOld:[] };
       I.done++; render();
     }
-    await W.group(`Lengkapi data SIPBMD dari ${I.file}`, async () => {
+    const lkRing = `Lengkapi data SIPBMD dari ${I.file}`;
+    await W.group(lkRing, async () => {
       for (const r of lk) { await saveUpd(r.a.key, r.fill); I.done++; render(); }
       for (const r of ps) {
         const key = "S|" + r.it.k.split("#")[0], x = r.c, carry = {};
@@ -4633,6 +4642,7 @@ async function runLengkapi() {
         await saveUpd(x.key, { pair:key }); await saveUpd(key, Object.assign({ pair:x.key }, carry)); I.done++; render();
       }
     });
+    if (W.imp) await saveRiwayat({ ring:lkRing, by:S.me, snaps:[], imp:W.takeImp() });
     toast(`${fmt(lk.length)} aset dilengkapi${ps.length ? ", " + fmt(ps.length) + " dipasangkan" : ""}${br.length ? ", " + fmt(br.length) + " ditambahkan" : ""}.`);
     UI.imp = { file:"", sheets:[], mode:"merge", busy:false, done:0, total:0, ask:null, err:"" }; location.hash = "aset-pm"; render();
   } catch (e) { I.busy = false; writeErr(e); I.err = "Proses berhenti. Jalankan lagi dengan file yang sama: yang sudah terisi tidak akan diubah lagi."; render(); }
@@ -4642,14 +4652,17 @@ async function runImport() {
   const { items } = importItems(); if (!items.length) return;
   const chunks = chunkItems(items), stamp = Date.now().toString(36), batchId = "imp_" + stamp;
   I.busy = true; I.done = 0; I.total = chunks.length + (I.mode === "replace" ? S.seedDocs.filter(d => d.kind === "aset").length : 0); render();
+  const arsip = [], recOld = [];
   try {
     if (I.mode === "replace") {
-      for (const d of S.seedDocs.filter(d => d.kind === "aset")) { await db.doc("seed/" + d.id).delete(); I.done++; render(); }
-      for (const r of S.impor) await db.doc("impor/" + r._id).delete();
+      for (const d of S.seedDocs.filter(d => d.kind === "aset")) { await mvDoc("seed/" + d.id, "seed_arsip/" + d.id); arsip.push(d.id); I.done++; render(); }
+      for (const r of S.impor) { recOld.push(jclone(r)); await db.doc("impor/" + r._id).delete(); }
     }
     const ids = [];
     for (let n = 0; n < chunks.length; n++) { const id = batchId + "_" + String(n).padStart(3, "0"); await db.doc("seed/" + id).set({ kind:"aset", part:n, batch:batchId, items:chunks[n] }); ids.push(id); I.done++; render(); }
-    await db.doc("impor/" + batchId).set({ tgl:new Date().toISOString(), file:I.file, rows:items.length, docs:ids, mode:I.mode, oleh:S.me || "" });
+    const rec = { tgl:new Date().toISOString(), file:I.file, rows:items.length, docs:ids, mode:I.mode, oleh:S.me || "" };
+    await db.doc("impor/" + batchId).set(rec);
+    await saveRiwayat({ ring:`Impor SIPBMD ${I.file} (${I.mode === "replace" ? "ganti semua" : "tambah & perbarui"}, ${fmt(items.length)} aset)`, by:S.me, snaps:[], imp:{ docs:ids, arsip, rec:Object.assign({ _id:batchId }, rec), recOld } });
     toast(fmt(items.length) + " aset SIPBMD tersimpan.");
     UI.imp = { file:"", sheets:[], mode:"merge", busy:false, done:0, total:0, ask:null, err:"" };
     location.hash = "aset-" + (katFromKode(items[0].kode) || "pm");
@@ -4657,8 +4670,110 @@ async function runImport() {
 }
 async function deleteImport(id) {
   const r = S.impor.find(x => x._id === id); if (!r || !db) return;
-  try { for (const d of r.docs || []) await db.doc("seed/" + d).delete(); await db.doc("impor/" + id).delete(); toast("Data impor dihapus."); } catch (e) { writeErr(e); }
+  try { for (const d of r.docs || []) await mvDoc("seed/" + d, "seed_arsip/" + d); await db.doc("impor/" + id).delete();
+    await saveRiwayat({ ring:"Hapus data impor SIPBMD " + (r.file || ""), by:S.me, snaps:[], imp:{ docs:[], arsip:r.docs || [], rec:null, recOld:[jclone(r)] } });
+    toast("Data impor dihapus. Bisa dikembalikan dari menu Riwayat & Urungkan."); } catch (e) { writeErr(e); }
 }
+
+/* ================= Riwayat & Urungkan (undo / redo) =================
+   Setiap perubahan oleh master (simpan, isi sekaligus, impor, persetujuan validasi) dicatat:
+   riwayat/{id}     : ringkasan (judul, oleh, waktu, jumlah data, status aktif/diurungkan, info impor SIPBMD)
+   riwayat_isi/{id}_{n}: keadaan sebelum (b) dan sesudah (a) tiap dokumen, dipecah agar < 1 MB per dokumen
+   seed_arsip/{id}  : potongan data SIPBMD yang dilepas (impor diurungkan, ganti semua, atau hapus impor) */
+async function mvDoc(from, to) { const s = await db.doc(from).get(); if (!s.exists) return false; await db.doc(to).set(s.data()); await db.doc(from).delete(); return true; }
+async function saveRiwayat(e) {
+  if (!db || !isMaster() || (!(e.snaps || []).length && !e.imp)) return;
+  try {
+    const gid = new Date().toISOString().replace(/\D/g, "").slice(0, 14) + "_" + uid("r").slice(-6), parts = chunkItems(e.snaps || [], 600000);
+    for (let n = 0; n < parts.length; n++) await db.doc(`riwayat_isi/${gid}_${n}`).set({ gid, part:n, ch:parts[n] });
+    await db.doc("riwayat/" + gid).set({ ring:e.ring || "Perubahan", by:e.by || S.me || "", at:new Date().toISOString(), n:(e.snaps || []).length, parts:parts.length, st:"aktif", imp:e.imp || null, paths:[...new Set((e.snaps || []).map(c => c.p))].slice(0, 40) });
+  } catch (err) { console.warn("riwayat", err); }
+}
+const stab = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, kk) => (o[kk] = x[kk], o), {}) : x);
+const rwSame = (a, b) => stab(a == null ? null : a) === stab(b == null ? null : b);
+async function rwLoad(r) { const ch = []; for (let n = 0; n < (r.parts || 0); n++) { const d = await db.doc(`riwayat_isi/${r._id}_${n}`).get(); if (d.exists) ch.push(...((d.data() || {}).ch || [])); } return ch; }
+UI.rw = { q:"", st:"", open:null, isi:{}, conf:null, busy:false };
+// undo = kembalikan keadaan sebelum; redo = terapkan lagi keadaan sesudah
+async function rwRun(id, mode, force) {
+  const r = S.riwayat.find(x => x._id === id), R = UI.rw; if (!r || R.busy) return;
+  if (mode === "undo" && r.st !== "aktif" || mode === "redo" && r.st !== "diurungkan") return;
+  R.busy = true; render();
+  try {
+    const ch = await rwLoad(r), to = c => mode === "undo" ? c.b : c.a, from = c => mode === "undo" ? c.a : c.b;
+    if (!force) { const beda = []; for (const c of ch) { const d = await db.doc(c.p).get(); const cur = d.exists ? d.data() : null; if (!rwSame(cur, from(c))) beda.push(c.p); }
+      if (beda.length) { R.busy = false; R.conf = { id, mode, n:beda.length, tot:ch.length }; location.hash = "riwayat"; render(); return; } }
+    const list = mode === "undo" ? ch.slice().reverse() : ch;
+    for (const c of list) { const v = to(c); if (v == null) await db.doc(c.p).delete(); else await db.doc(c.p).set(v); }
+    const im = r.imp;
+    if (im) {
+      const fwd = mode === "redo";
+      for (const d of im.docs || []) await (fwd ? mvDoc("seed_arsip/" + d, "seed/" + d) : mvDoc("seed/" + d, "seed_arsip/" + d));
+      for (const d of im.arsip || []) await (fwd ? mvDoc("seed/" + d, "seed_arsip/" + d) : mvDoc("seed_arsip/" + d, "seed/" + d));
+      if (im.rec) { if (fwd) { const o = Object.assign({}, im.rec); delete o._id; await db.doc("impor/" + im.rec._id).set(o); } else await db.doc("impor/" + im.rec._id).delete(); }
+      for (const o0 of im.recOld || []) { if (fwd) await db.doc("impor/" + o0._id).delete(); else { const o = Object.assign({}, o0); delete o._id; await db.doc("impor/" + o0._id).set(o); } }
+    }
+    await db.doc("riwayat/" + id).set(Object.assign({}, Object.fromEntries(Object.entries(r).filter(([k]) => k !== "_id")), mode === "undo" ? { st:"diurungkan", unBy:S.me || "", unAt:new Date().toISOString() } : { st:"aktif", reBy:S.me || "", reAt:new Date().toISOString() }));
+    await logChange({ ring:(mode === "undo" ? "Urungkan: " : "Ulangi: ") + r.ring, by:S.me, ok:S.me, paths:ch.map(c => c.p) });
+    R.conf = null; toast((mode === "undo" ? "Diurungkan: " : "Diulangi: ") + r.ring);
+  } catch (e) { writeErr(e); }
+  R.busy = false; render();
+}
+const rwLastUndo = () => S.riwayat.find(r => r.st === "aktif");
+const rwLastRedo = () => { const u = S.riwayat.filter(r => r.st === "diurungkan" && r.unAt).sort((a, b) => String(b.unAt).localeCompare(String(a.unAt)))[0]; return u; };
+function undoSlot() {
+  const el = $("#undo-slot"); if (!el) return;
+  if (!isMaster() || !db) { el.innerHTML = ""; return; }
+  const u = rwLastUndo(), r = rwLastRedo(), bs = "padding:4px 9px;font-size:13px";
+  el.innerHTML = `<button class="ghost" id="rw-undo" style="${bs}" ${u && !UI.rw.busy ? "" : "disabled"} title="${esc(u ? "Urungkan: " + u.ring + " (Ctrl+Z)" : "Tidak ada yang bisa diurungkan")}" aria-label="Urungkan">↶<span class="hide-sm"> Urungkan</span></button><button class="ghost" id="rw-redo" style="${bs}" ${r && !UI.rw.busy ? "" : "disabled"} title="${esc(r ? "Ulangi: " + r.ring + " (Ctrl+Y)" : "Tidak ada yang bisa diulangi")}" aria-label="Ulangi">↷<span class="hide-sm"> Ulangi</span></button>`;
+}
+function rwLabel(p, v) {
+  const [col, ...rest] = p.split("/"), id = rest.join("/");
+  if (col === "upd") { const k = (v && v._key) || id; const x = allItems().byKey.get(k) || allItems().list.find(y => did(y.key) === id); return "Aset · " + (x ? itemNama(x) + (x.kode ? " (" + x.kode + (x.noreg ? " No. " + x.noreg : "") + ")" : "") : k); }
+  return (COL_LABEL[col] ? COL_LABEL[col].charAt(0).toUpperCase() + COL_LABEL[col].slice(1) : col) + " · " + ((v && (v.nama || v.nomor || v.kegiatan || v.judul || v.uraian)) || id);
+}
+const RW_SKIP = new Set(["_by", "_ok", "_at", "_did", "_key"]);
+function rwDiff(c) {
+  const b = c.b || {}, a = c.a || {}, keys = [...new Set([...Object.keys(b), ...Object.keys(a)])].filter(k => !RW_SKIP.has(k) && !rwSame(b[k], a[k]));
+  const sv = v => { if (v == null || v === "") return "—"; const t = typeof v === "object" ? JSON.stringify(v) : String(v); return t.length > 70 ? t.slice(0, 70) + "…" : t; };
+  if (!c.b) return "<i>dibuat baru</i>"; if (!c.a) return "<i>dihapus</i>";
+  return keys.slice(0, 8).map(k => `<b>${esc(FIELD_LABEL[k] || k)}</b>: <span style="text-decoration:line-through;color:var(--muted)">${esc(sv(b[k]))}</span> → ${esc(sv(a[k]))}`).join("<br>") + (keys.length > 8 ? `<br>… ${keys.length - 8} kolom lain` : "") || "<i>tidak ada beda isi</i>";
+}
+function vRiwayat() {
+  const R = UI.rw, list = S.riwayat.filter(r => (!R.st || r.st === R.st) && matches(R.q, [r.ring, nameOf(r.by)]));
+  const day = r => tglID(String(r.at).slice(0, 10)), jam = r => String(new Date(r.at).toTimeString()).slice(0, 5);
+  const conf = R.conf && S.riwayat.find(x => x._id === R.conf.id);
+  return `<h2>Riwayat & urungkan</h2>
+  <p class="lead">Semua perubahan yang disimpan akun master tercatat di sini, termasuk isian, isi sekaligus, impor Excel, impor SIPBMD, dan usulan operator yang disetujui. Jika ada pengisian atau impor yang salah atau terdobel, tekan <b>Urungkan</b> untuk mengembalikan data seperti sebelumnya. Jika ternyata perubahannya benar, tekan <b>Ulangi</b>. Tombol <b>↶ Urungkan</b> dan <b>↷ Ulangi</b> di bagian atas layar (atau Ctrl+Z / Ctrl+Y) bekerja pada perubahan paling akhir.</p>
+  ${conf ? `<div class="note warn" style="margin-bottom:12px"><b>${fmt(R.conf.n)} dari ${fmt(R.conf.tot)} data sudah diubah lagi</b> setelah "${esc(conf.ring)}". Jika tetap ${R.conf.mode === "undo" ? "diurungkan" : "diulangi"}, perubahan yang lebih baru pada data itu ikut tertimpa. Sebaiknya urungkan dulu perubahan yang lebih baru (di atasnya dalam daftar).<div style="display:flex;gap:8px;margin-top:8px"><button class="danger" data-rwforce="${esc(R.conf.id)}" data-mode="${R.conf.mode}">Tetap ${R.conf.mode === "undo" ? "urungkan" : "ulangi"}</button><button data-rwconfx="1">Batal</button></div></div>` : ""}
+  <div class="toolbar"><div class="chips">${[["", "Semua"], ["aktif", "Berlaku"], ["diurungkan", "Diurungkan"]].map(([k, l]) => `<button class="chip" data-rwst="${k}" aria-pressed="${R.st === k}">${l}</button>`).join("")}</div>
+    <label class="f grow">Cari<input id="rw-q" type="search" value="${esc(R.q)}" placeholder="judul perubahan, nama aset, akun"></label></div>
+  ${R.busy ? '<div class="note info" style="margin-bottom:10px">Memproses… jangan tutup halaman ini.</div>' : ""}
+  <div class="tablebox"><table><thead><tr><th>Waktu</th><th>Perubahan</th><th class="hide-sm">Oleh</th><th class="num">Data</th><th>Status</th><th></th></tr></thead><tbody>
+  ${list.map(r => `<tr class="${r.st === "diurungkan" ? "unchecked" : ""}"><td style="white-space:nowrap">${esc(day(r))}<div class="sm">${esc(jam(r))}</div></td><td><div class="nm">${esc(r.ring)}</div>${r.imp ? `<div class="sm">${r.imp.docs && r.imp.docs.length ? "data SIPBMD baru " + fmt((r.imp.rec && r.imp.rec.rows) || 0) + " aset" : ""}${r.imp.arsip && r.imp.arsip.length ? (r.imp.docs && r.imp.docs.length ? " · " : "") + fmt(r.imp.arsip.length) + " bagian data SIPBMD lama dilepas" : ""}</div>` : ""}${r.st === "diurungkan" ? `<div class="sm">diurungkan ${esc(tglID(String(r.unAt || "").slice(0, 10)))} oleh ${esc(nameOf(r.unBy))}</div>` : ""}</td>
+    <td class="hide-sm">${esc(nameOf(r.by))}</td><td class="num">${fmt(r.n || 0)}</td><td>${r.st === "aktif" ? '<span class="pill ok">berlaku</span>' : '<span class="pill warn">diurungkan</span>'}</td>
+    <td style="white-space:nowrap">${r.n ? `<button class="ghost" data-rwopen="${esc(r._id)}" aria-expanded="${R.open === r._id}">${R.open === r._id ? "Tutup" : "Rincian"}</button>` : ""}${r.st === "aktif" ? `<button data-rwundo="${esc(r._id)}" ${R.busy ? "disabled" : ""}>Urungkan</button>` : `<button data-rwredo="${esc(r._id)}" ${R.busy ? "disabled" : ""}>Ulangi</button>`}</td></tr>
+    ${R.open === r._id ? `<tr><td colspan="6" style="background:var(--sunk)">${R.isi[r._id] ? `<div style="max-height:360px;overflow:auto">${R.isi[r._id].slice(0, 300).map(c => `<div style="padding:6px 0;border-bottom:1px solid var(--line)"><div class="sm" style="font-weight:600">${esc(rwLabel(c.p, c.a || c.b))}</div><div class="sm">${rwDiff(c)}</div></div>`).join("")}${R.isi[r._id].length > 300 ? `<p class="hint">… dan ${fmt(R.isi[r._id].length - 300)} data lain</p>` : ""}</div>` : '<p class="hint">Memuat rincian…</p>'}</td></tr>` : ""}`).join("") || `<tr><td colspan="6"><div class="empty"><b>Belum ada riwayat</b>Perubahan berikutnya akan tercatat di sini dan bisa diurungkan.</div></td></tr>`}
+  </tbody></table></div><p class="hint">Menampilkan 150 perubahan terakhir. Riwayat mulai tercatat sejak fitur ini dipasang; perubahan sebelumnya tidak bisa diurungkan dari sini.</p>`;
+}
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return; const d = b.dataset, R = UI.rw;
+  if (b.id === "rw-undo") { const u = rwLastUndo(); if (u) rwRun(u._id, "undo"); return; }
+  if (b.id === "rw-redo") { const r = rwLastRedo(); if (r) rwRun(r._id, "redo"); return; }
+  if (d.rwundo) rwRun(d.rwundo, "undo");
+  if (d.rwredo) rwRun(d.rwredo, "redo");
+  if (d.rwforce) rwRun(d.rwforce, d.mode, true);
+  if (d.rwconfx) { R.conf = null; render(); }
+  if (d.rwst != null) { R.st = d.rwst; render(); }
+  if (d.rwopen) { if (R.open === d.rwopen) { R.open = null; render(); return; } R.open = d.rwopen; render(); const r = S.riwayat.find(x => x._id === d.rwopen); if (r && !R.isi[r._id]) { try { R.isi[r._id] = await rwLoad(r); } catch (err) { R.isi[r._id] = []; } render(); } }
+});
+document.addEventListener("input", e => { if (e.target.id === "rw-q") { UI.rw.q = e.target.value; render(); } });
+document.addEventListener("keydown", e => {
+  if (!(e.ctrlKey || e.metaKey) || !isMaster() || UI.rw.busy) return; const t = e.target, tag = (t.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select" || t.isContentEditable) return;
+  const k = e.key.toLowerCase();
+  if (k === "z" && !e.shiftKey) { const u = rwLastUndo(); if (u) { e.preventDefault(); rwRun(u._id, "undo"); } }
+  else if (k === "y" || (k === "z" && e.shiftKey)) { const r = rwLastRedo(); if (r) { e.preventDefault(); rwRun(r._id, "redo"); } }
+});
 
 /* ================= laporan BAST ================= */
 function parseTgl(v) {
@@ -5499,7 +5614,7 @@ const JD_IZIN = [["jadwal_ajukan", "Mengajukan peminjaman", "Mengisi pengajuan p
 const APP_DEFAULT_ON = ["sarpras", "jadwal", "minta", "gtk"];
 function appAccess(id) { if (isMaster()) return true; if (S.role !== "operator") return false; const v = myIzin()["app_" + id]; return APP_DEFAULT_ON.includes(id) ? v !== false : !!v; }
 const TAB_IZIN = { bantuan:"bast", bast:"bast", pemegang:"bast", laporan:"bast", hapus:"hapus", persediaan:"persediaan", surat:"surat", kertas:"kertas", rekon:"kertas" };
-function canView(v) { if (v === "home" || v === "akun") return true; if (v === "gtk") return appAccess("gtk"); if (v === "jadwal") return appAccess("jadwal"); if (v === "lab") return appAccess("waka"); if (v === "minta") return appAccess("minta"); if (String(v).startsWith("keu")) return appAccess("keuangan"); if (v === "surat") return appAccess("waka") && can("surat"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
+function canView(v) { if (v === "home" || v === "akun") return true; if (v === "riwayat") return isMaster(); if (v === "gtk") return appAccess("gtk"); if (v === "jadwal") return appAccess("jadwal"); if (v === "lab") return appAccess("waka"); if (v === "minta") return appAccess("minta"); if (String(v).startsWith("keu")) return appAccess("keuangan"); if (v === "surat") return appAccess("waka") && can("surat"); if (!appAccess("sarpras")) return false; if (v === "impor") return isMaster(); const k = TAB_IZIN[v]; return !k || can(k); }
 function izinSummary(iz) {
   if (!iz) return PRESET.staf.nama;
   for (const p of Object.values(PRESET)) if (IZIN.every(([k]) => !!iz[k] === !!p.izin[k])) return p.nama;
@@ -5744,7 +5859,7 @@ document.addEventListener("click", async e => {
 /* ---------- status terkini (siapa yang sedang membuka aplikasi) & chat tim ---------- */
 const LIVE = { on:{}, chat:[], open:false, started:false, t0:new Date().toISOString(), seen:"", lastBeat:0, sending:false };
 const ONLINE_MS = 4 * 60 * 1000, BEAT_MS = 90 * 1000;
-const VIEW_NAMA = { sjalan:"Surat Jalan Service", home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset/Modal", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Rekon · Kertas Kerja Modal", rekon:"Rekon · Rekon Aset", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
+const VIEW_NAMA = { riwayat:"Riwayat & Urungkan", sjalan:"Surat Jalan Service", home:"Beranda", jadwal:"Jadwal Aula & Multimedia", akun:"Akun & hak akses", pelihara:"Pemeliharaan", ringkasan:"Rekap", aset:"Aset/Modal", ruang:"Kondisi Ruangan", bast:"BAST", pemegang:"Per Pemegang", laporan:"Laporan BAST", hapus:"Usulan Penghapusan", persediaan:"Persediaan", surat:"Surat Keluar", kertas:"Rekon · Kertas Kerja Modal", rekon:"Rekon · Rekon Aset", impor:"Impor", catatan:"Catatan Temuan", validasi:"Validasi", atur:"Pengaturan" };
 function akunNama(id) { const a = AK.list.find(x => x._id === id); return a ? (a.nama || shownLogin(a.email)) : (LIVE.on[id] && LIVE.on[id].nama) || "Akun"; }
 const isOnline = o => !!o && !o.off && Date.now() - new Date(o.at).getTime() < ONLINE_MS;
 function onlineList() { return Object.entries(LIVE.on).filter(([id, o]) => isOnline(o) && !(AK.list.find(a => a._id === id) || {}).dihapus && (AK.list.find(a => a._id === id) || {}).aktif !== false).map(([id, o]) => Object.assign({ id }, o)).sort((a, b) => akunNama(a.id).localeCompare(akunNama(b.id))); }
