@@ -91,6 +91,10 @@ Semua tempat unggah foto (detail aset, catatan temuan, foto ruang, BAST, BAST ba
 - **BAST Penarikan** wajib mengisi **kondisi terkini** dan **alasan penarikan** setiap barang (alasan umum dipakai bila alasan per barang kosong); keduanya tercetak di tabel BAST.
 - Saat BAST penarikan disimpan, kondisi terkini langsung menjadi kondisi barang (tanggal cek = tanggal BAST, pemeriksa = Pihak Kedua, catatan = alasan), sehingga ikut ke Rekap, Pemeliharaan & Perbaikan (Rusak Sedang), Usulan Penghapusan (Rusak Berat/Hilang), Unduh KIB, Buku Induk, dan Per Pemegang. Dari akun operator perubahan ini menunggu validasi master seperti biasa.
 
+### Daftar aset: sumber dana dan total nominal
+- Setiap baris aset menampilkan penanda **sumber dana** di bawah nama (BOSP Reguler biru, BOSP Daerah hijau tua, Hibah/Bantuan hijau, lainnya bergaris; kosong = "sumber dana belum diisi"). Ada filter **Sumber dana** (termasuk *Belum diisi*); sumber dana diisi di detail aset atau lewat *Isi sekaligus*.
+- Di bawah tabel (`asetTotal`): jumlah halaman ini, **total hasil filter** (dengan keterangan filter yang aktif), rincian nilai per sumber dana, dan **total yang dicentang**. Bilah aset dipilih juga menampilkan nominalnya.
+
 ### Surat Jalan Service (Surat Izin Pengeluaran Barang)
 - Menu `#sjalan` di aplikasi Aset & Persediaan (di bawah Pemeliharaan & Perbaikan), koleksi `sjalan`, ditulis lewat lapisan validasi biasa (master langsung, operator diusulkan). Semua akun Aset & Persediaan bisa melihat dan mengunduh; membuat/mencatat kembali butuh hak *Pemeliharaan & perbaikan*.
 - **Wajib untuk setiap pemeliharaan berbentuk barang yang dibawa keluar sekolah.** Dari baris aset di Pemeliharaan & Perbaikan ada tombol *Buat surat jalan service* (barang, kerusakan, dan penyedia terisi otomatis); menu Pemeliharaan memberi peringatan bila ada barang "Sedang diperbaiki" yang belum punya surat jalan, dan menandai barang yang sedang *di penyedia*.

@@ -662,7 +662,7 @@ function xlsxSave(filename, sheets) {
 const VIEWS = ["home","jadwal","lab","minta","gtk","keu","keu-harga","keu-usul","keu-rkas","keu-spj","keu-honor","keu-perjadin","bantuan","sjalan","masa","akun","unduhkib","ringkasan","aset","ruang","pelihara","bast","pemegang","laporan","hapus","persediaan","surat","kertas","rekon","impor","catatan","validasi","atur"];
 let current = "ringkasan", sub = "";
 const UI = {
-  aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"", th:"" },
+  aset:{ q:"", st:"", kond:"", gol:"", gedung:"", page:0, flag:"", kat:"", th:"", sumber:"" },
   surat:{ q:"" }, val:{ q:"", askAll:false }, rekon:{ dari:"", sampai:"" }, lap:{ jenis:"", q:"", dari:"", sampai:"", st:"" }, pem:{ q:"", sel:"", semua:false, kat:"" }, kk:{ sumber:"BOSP Reguler", tahun:String(new Date().getFullYear()), smt:new Date().getMonth() < 6 ? "1" : "2", q:"", imp:null }, rg:{ g:"", q:"", kond:"", edit:null, imp:null }, imp:{ file:"", sheets:[], mode:"merge", busy:false, done:0, total:0, ask:null, err:"" }, pr:{ edit:null, q:"" },
   bast:{ jenis:"serah", items:[], p:"", q:"", tgl:today(), untuk:"" },
   hapus:{ kat:"", th:"" },
@@ -1249,7 +1249,7 @@ function selBar(rows) {
   const n = UI.sel.size, canU = can("aset_ubah"), canK = can("aset_kondisi");
   if (!canU && !canK) return "";
   if (!n) return `<p class="hint" style="margin:0 0 8px">Centang beberapa aset untuk mengisi kelengkapan data yang sama sekaligus. <button class="link" id="sel-all">Pilih semua hasil filter (${fmt(rows.length)})</button></p>`;
-  return `<div class="selbar"><b>${fmt(n)} aset dipilih</b><button class="link" id="sel-all">Pilih semua hasil filter (${fmt(rows.length)})</button><button class="link" id="sel-none">Batal pilih</button><span class="sp"></span><button class="primary" id="bulk-open">Isi sekaligus untuk ${fmt(n)} aset</button></div>${UI.bulk.open ? bulkPanel() : ""}`;
+  return `<div class="selbar"><b>${fmt(n)} aset dipilih · ${rp(selItems().reduce((t, x) => t + itemNilai(x), 0))}</b><button class="link" id="sel-all">Pilih semua hasil filter (${fmt(rows.length)})</button><button class="link" id="sel-none">Batal pilih</button><span class="sp"></span><button class="primary" id="bulk-open">Isi sekaligus untuk ${fmt(n)} aset</button></div>${UI.bulk.open ? bulkPanel() : ""}`;
 }
 function bulkPanel() {
   const items = selItems(), kats = [...new Set(items.map(x => x.kat))], kat = kats.length === 1 ? kats[0] : null, canU = can("aset_ubah"), canK = can("aset_kondisi");
@@ -1743,6 +1743,7 @@ function filterAset() {
     else if (x.kat !== sub || !x.sip || isBospda(x)) return false;
     if (f.kond === "-" ? x.kond : (f.kond && x.kond !== f.kond)) return false;
     if (!thMatch(x, f.th)) return false;
+    if (f.sumber && (f.sumber === "-" ? x.sumber : norm(x.sumber || "") !== norm(f.sumber))) return false;
     if (f.gol && golOf(x.kode) !== f.gol) return false;
     if (f.gedung && x.gedung !== f.gedung) return false;
     if (f.flag && FLAGS[f.flag] && !FLAGS[f.flag][1](x)) return false;
@@ -1772,6 +1773,7 @@ function vAset() {
   <div class="toolbar">
     <label class="f grow">Cari<input id="a-q" type="search" placeholder="nama, merek, kode, no. registrasi, pemegang, ruang…" value="${esc(f.q)}"></label>
     ${thSelect("a-th", inKat, f.th)}
+    ${(() => { const ada = [...new Set(inKat.map(x => x.sumber).filter(Boolean))], ops = [...new Set([...SUMBER_DANA.filter(o => ada.some(a => norm(a) === norm(o))), ...ada])]; return `<label class="f">Sumber dana<select id="a-sumber"><option value="">Semua</option>${ops.map(o => `<option ${o === f.sumber ? "selected" : ""}>${esc(o)}</option>`).join("")}<option value="-" ${f.sumber === "-" ? "selected" : ""}>Belum diisi · ${fmt(inKat.filter(x => !x.sumber).length)}</option></select></label>`; })()}
     <label class="f">Kondisi<select id="a-kond"><option value="">Semua</option><option value="-" ${f.kond==="-"?"selected":""}>Belum dicek</option>${KOND.map(x => `<option ${x===f.kond?"selected":""}>${x}</option>`).join("")}</select></label>
     ${gols.length > 1 ? `<label class="f">Kelompok<select id="a-gol"><option value="">Semua</option>${gols.map(g => `<option ${g===f.gol?"selected":""}>${esc(g)}</option>`).join("")}</select></label>` : ""}
     ${gedungs.length ? `<label class="f">Gedung<select id="a-gedung"><option value="">Semua</option>${gedungs.map(g => `<option ${g===f.gedung?"selected":""}>${esc(g)}</option>`).join("")}</select></label>` : ""}
@@ -1789,7 +1791,7 @@ function vAset() {
       <td class="selc"><input type="checkbox" data-selkey="${esc(x.key)}" aria-label="Pilih ${esc(itemNama(x))}" ${UI.sel.has(x.key) ? "checked" : ""}></td>
       <td>${(x.fotos || []).length ? `<img class="thumb" src="${fotoSrc(x.fotos[0])}" data-foto="${esc(x.fotos[0])}" alt="" loading="lazy">` : `<span class="thumb" aria-hidden="true"></span>`}</td>
       <td><span class="mono">${esc(x.sip ? x.kode : (x.reg || x.kode || "—"))}</span><div class="sm mono">${x.sip ? "No. " + esc(x.noreg) + (x.reg ? " · " + esc(x.reg) : "") : esc(x.srcSheet ? x.srcSheet.join(", ") : x.gedung || "")}</div></td>
-      <td><div class="nm">${esc(itemNama(x))}${ntBadge("aset", x.key)}</div>${sub === "pm" || sub === "atl" || isSpecialSub(sub) ? `<div class="sm show-sm">${esc(x.pj || "belum diserahkan")} · ${esc(x.lokasi || "tanpa lokasi")}</div>` : ""}<div class="sm">${esc([isSpecialSub(sub) && KATMAP[x.kat] ? KATMAP[x.kat].kib : "", x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div></td>
+      <td><div class="nm">${esc(itemNama(x))}${ntBadge("aset", x.key)}</div>${sub === "pm" || sub === "atl" || isSpecialSub(sub) ? `<div class="sm show-sm">${esc(x.pj || "belum diserahkan")} · ${esc(x.lokasi || "tanpa lokasi")}</div>` : ""}<div class="sm">${esc([isSpecialSub(sub) && KATMAP[x.kat] ? KATMAP[x.kat].kib : "", x.th, x.kap, x.jml > 1 ? fmt(x.jml) + (x.src === "P" ? " eks." : " unit") : ""].filter(Boolean).join(" · "))}</div><div class="sm" style="margin-top:2px">${x.sumber ? `<span class="pill ${sdCls(x.sumber)}" title="Sumber dana">${esc(x.sumber)}</span>` : '<span class="faint">sumber dana belum diisi</span>'}</div></td>
       <td>${statusPill(x)}</td>
       ${sub === "tanah" ? `<td class="num hide-sm">${esc(kibCell(x, /^(luas|jumlah\s*\(luas\))/i, "m²")) || '<span class="faint">—</span>'}</td><td class="hide-sm">${esc([kibCell(x, /^(nama\s*dokumen|hak|jenis\s*dokumen)/i), x.nodok ? "No. " + x.nodok : ""].filter(Boolean).join(" · ")) || '<span class="faint">—</span>'}<div class="sm">${esc(kibCell(x, /^(tanggal|tgl\.?)\s*(dokumen|sertifikat)/i, "tgl"))}</div></td>` :
         sub === "gedung" ? `<td class="num hide-sm">${esc(kibCell(x, /luas/i, "m²")) || '<span class="faint">—</span>'}</td><td class="hide-sm sm">${esc([kibCell(x, /bertingkat/i) === "Ya" ? "Bertingkat" : kibCell(x, /bertingkat/i) ? "Tidak bertingkat" : "", kibCell(x, /^beton/i) === "Ya" ? "Beton" : kibCell(x, /^beton/i) ? "Bukan beton" : ""].filter(Boolean).join(", ")) || "—"}<div>${esc(kibCell(x, /status\s*tanah/i))}</div></td>` :
@@ -1797,8 +1799,21 @@ function vAset() {
       <td class="hide-sm">${esc(x.lokasi) || '<span class="faint">—</span>'}</td>`}
       <td>${kondPill(x.kond)}${usulHapus(x) ? '<div class="sm" style="color:var(--bad)">usul hapus</div>' : ""}</td>
       <td class="num">${itemNilai(x) ? rp(itemNilai(x)) : '<span class="faint">—</span>'}</td></tr>`).join("") || `<tr><td colspan="9"><div class="empty"><b>Tidak ada aset yang cocok</b>Ubah kata kunci atau filter, atau tambah aset baru.</div></td></tr>`}</tbody>
+    ${rows.length ? asetTotal(rows, slice) : ""}
   </table></div>
   <div class="pager"><span>${fmt(rows.length)} catatan · ${rp(rows.reduce((t, x) => t + itemNilai(x), 0))}</span><span><button id="a-prev" ${f.page===0?"disabled":""}>Sebelumnya</button> Hal. ${f.page+1}/${pages} <button id="a-next" ${f.page>=pages-1?"disabled":""}>Berikutnya</button></span></div>`;
+}
+// warna penanda sumber dana di daftar aset
+const sdCls = v => /reguler|bosnas/i.test(v) ? "info" : /daerah|bosda/i.test(v) ? "acc" : /hibah|bantuan/i.test(v) ? "ok" : "line";
+// baris jumlah di bawah daftar aset: halaman ini, seluruh hasil filter, dan aset yang dicentang
+function asetTotal(rows, slice) {
+  const sum = a => a.reduce((t, x) => t + itemNilai(x), 0), jml = a => a.reduce((t, x) => t + (x.jml || 1), 0), sel = selItems();
+  const f = UI.aset, filt = [f.q && "cari “" + f.q + "”", f.th && "tahun " + f.th, f.sumber && (f.sumber === "-" ? "sumber dana belum diisi" : f.sumber), f.kond && (f.kond === "-" ? "belum dicek" : f.kond), f.gol && "kelompok " + f.gol, f.gedung, f.kat && KATMAP[f.kat] && KATMAP[f.kat].nama, f.flag && FLAGS[f.flag] && FLAGS[f.flag][0].toLowerCase()].filter(Boolean);
+  const bySd = {}; for (const x of rows) { const k = x.sumber || "Belum diisi"; bySd[k] = (bySd[k] || 0) + itemNilai(x); }
+  const line = (lab, a, strong) => `<tr><td colspan="8" style="text-align:right">${lab} <span class="sm" style="font-weight:400">· ${fmt(a.length)} catatan${jml(a) !== a.length ? " (" + fmt(jml(a)) + " unit/eks.)" : ""}</span></td><td class="num" style="white-space:nowrap">${strong ? "<b>" + rp(sum(a)) + "</b>" : rp(sum(a))}</td></tr>`;
+  return `<tfoot>${rows.length > slice.length ? line("Jumlah halaman ini", slice) : ""}${line(filt.length ? "Total hasil filter (" + esc(filt.join(", ")) + ")" : "Total seluruh " + esc(subMeta(sub).nama), rows, true)}
+    ${Object.keys(bySd).length > 1 ? `<tr><td colspan="9" style="text-align:right;font-weight:400" class="sm">${Object.entries(bySd).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${esc(k)}: <b>${rp(v)}</b>`).join(" · ")}</td></tr>` : ""}
+    ${sel.length ? line(`<span style="color:var(--accent)">Total yang dicentang</span>`, sel, true) : ""}</tfoot>`;
 }
 function asetRow(x) {
   return Object.assign({ "Golongan":KATMAP[x.kat] ? KATMAP[x.kat].kib + " " + KATMAP[x.kat].nama : "", "Status":x.sip ? "SIPBMD" : "Tak tercatat", "Kode Aset":x.kode || "", "No Register":x.noreg || "", "No Registrasi Internal":x.reg || "", "Nama Aset":x.nama, "Merek/Pencipta":x.merek || "", "Spesifikasi":x.spes || "", "Tahun":x.th || "", "Tanggal Perolehan":x.tgl || "", "Nomor Dokumen":x.nodok || "", "Jumlah":x.jml || 1, "Nilai":itemNilai(x), "Kapitalisasi":x.kap || "", "Sumber Dana":x.sumber || "", "No SPJ":x.spj || "", "Diserahkan ke":x.pj || "", "NIP":x.nip || "", "Jabatan":x.jab || "", "Peruntukan":x.untuk || "", "Posisi":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "", "Kondisi":x.kond || "Belum dicek", "Tgl Cek":x.tcek || "", "Pemeriksa":x.cek || "", "Usul Hapus":usulHapus(x) ? (x.hapusNo || "Ya") : "", "Foto (tautan)":x.foto || "", "Foto diunggah":(x.fotos || []).length, "Catatan":x.cat || x.ket || "" }, x.extra || {});
@@ -4879,6 +4894,7 @@ document.addEventListener("change", e => {
   const t = e.target, id = t.id;
   const A = UI.aset;
   if (id === "a-kond") { A.kond = t.value; A.page = 0; render(); }
+  if (id === "a-sumber") { A.sumber = t.value; A.page = 0; render(); }
   else if (id === "a-gol") { A.gol = t.value; A.page = 0; render(); }
   else if (id === "a-th") { A.th = t.value; A.page = 0; render(); }
   else if (id === "a-kat") { A.kat = t.value; A.page = 0; render(); }
