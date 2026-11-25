@@ -162,7 +162,7 @@ textarea{resize:vertical;min-height:60px}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:500;min-width:0}
 label.ck{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--fg)}
 label.ck input{flex:none;margin-top:3px}
-label.ck input{margin-top:3px}
+label.ck input{margin-top:3px;width:auto}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
 .toolbar>label.f{flex:1 1 150px}
 .toolbar>label.f.grow{flex:3 1 240px}
@@ -380,7 +380,7 @@ let db = null, downloads = null, assets = null, userCap = null, cache = null;
 function buildItems() {
   const out = [];
   const push = (base) => { const o = Object.assign(base, S.upd[did(base.key)] || {}); if (o.fotos && !Array.isArray(o.fotos)) o.fotos = []; out.push(o); };
-  for (const a of S.seed.aset) push({ key:"S|" + a.k, src:"S", kat:katFromKode(a.kode) || "pm", sip:true, kode:a.kode, noreg:a.noreg, nama:a.judul || a.nama, merek:a.merek || a.pencipta, tipe:a.tipe, spes:[a.judul ? a.nama : "", a.tipe, a.bahan, a.ukuran].filter(Boolean).join(" · "), ksip:a.ksip, extra:a.extra, sn:a.sn, th:a.th || yearOf(a.tgl), tgl:isoDate(a.tgl) || a.tgl, nilai:a.nilai || 0, jml:1, nodok:a.nodok, asal:a.asal, kap:a.kap, ket:a.ket, sumber:a.sumber, reg:a.reg, pj:a.pj, stpj:a.stpj, jab:a.jab, nip:a.nip, bast:a.bast, tbast:a.tbast, foto:a.foto, kond:a.kond, cek:a.cek, tcek:a.tcek, cat:a.cat, hapusNo:a.hapus, lokasi:a.alih || "" });
+  for (const a of S.seed.aset) push({ key:"S|" + a.k, src:"S", kat:katFromKode(a.kode) || "pm", sip:true, kode:a.kode, noreg:a.noreg, nama:a.judul || a.nama, merek:a.merek || a.pencipta, tipe:a.tipe, spes:[a.judul ? a.nama : "", a.tipe, a.bahan, a.ukuran].filter(Boolean).join(" · "), ksip:a.ksip, extra:a.extra, sn:a.sn, th:a.th || yearOf(a.tgl), tgl:isoDate(a.tgl) || a.tgl, nilai:a.nilai || 0, jml:1, nodok:a.nodok, asal:a.asal, kap:a.kap, ket:a.ket, sumber:a.sumber, reg:a.reg, pj:a.pj, stpj:a.stpj, jab:a.jab, nip:a.nip, bast:a.bast, tbast:a.tbast, foto:a.foto, kond:a.kond, cek:a.cek, tcek:a.tcek, cat:a.cat, hapusNo:a.hapus, lokasi:a.alih || "", satuan:a.satuan });
   S.seed.pustaka.forEach(p => push({ key:"P|" + hash(p.kode + "|" + p.noreg + "|" + (p.judul || "") + "|" + p.tgl), src:"P", kat:katFromKode(p.kode) || "atl", sip:true, kode:p.kode, noreg:p.noreg, nama:p.judul || p.nama, merek:p.pencipta || "", spes:p.nama, th:yearOf(p.tgl), tgl:p.tgl, nilai:p.total || 0, harga:p.harga, jml:p.n, nodok:p.nodok, kap:p.kap, ket:p.ket, kond:"" }));
   if (false) for (const g of S.seed.gedung) push({ key:"G|" + g.id, src:"G", kat:"gedung", sip:false, kode:"", noreg:"", reg:g.kr, nama:g.nama, spes:"Gedung " + g.g.replace(/^G\./, "") , gedung:g.g, lokasi:(g.kr || "") + " · " + g.nama, kond:g.kond, ket:g.ket, jml:1, nilai:0 });
   for (const a of S.seed.internal) {
@@ -4417,7 +4417,7 @@ const IMP_FIELDS = [
   ["noreg", "No. register", /^no\.?\s*reg(ister)?\.?$|^nomor\s*register$/i, true],
   ["tgl", "Tanggal perolehan", /^(tanggal|tgl\.?)\s*perolehan$/i],
   ["th", "Tahun perolehan", /^tahun(\s*perolehan)?$/i],
-  ["nilai", "Nilai perolehan", /^(nilai\s*perolehan|harga|nilai)$/i],
+  ["nilai", "Nilai perolehan", /^(nilai\s*perolehan|harga(\s*perolehan)?|nilai)(\s*\(rp\.?\))?$/i],
   ["nodok", "Nomor dokumen", /^no(mor|\.)?\s*dokumen$/i],
   ["merek", "Merek", /^mer[ek]k?$/i],
   ["tipe", "Tipe", /^(tipe|type)$/i],
@@ -4429,7 +4429,18 @@ const IMP_FIELDS = [
   ["ksip", "Kondisi di SIPBMD", /^kondisi$/i],
   ["ket", "Keterangan", /^keterangan$/i],
   ["kap", "Jenis kapitalisasi", /kapitalisasi/i],
+  ["sumber", "Sumber dana", /^sumber(\s*dana)?$/i],
+  ["satuan", "Satuan", /^satuan$/i],
 ];
+// nama sumber dana dari file SIPBMD/ARKAS disamakan dengan pilihan aplikasi
+function sdNorm(v) {
+  const t = String(v || "").trim(); if (!t || t === "-") return "";
+  if (/bosda|bosp\s*daerah|bos\s*daerah/i.test(t)) return "BOSP Daerah";
+  if (/bosnas|reguler|^bosp?$/i.test(t)) return "BOSP Reguler";
+  if (/kinerja/i.test(t)) return "BOSP Kinerja";
+  if (/^bantuan/i.test(t)) return "Bantuan"; if (/^hibah/i.test(t)) return "Hibah"; if (/komite/i.test(t)) return "Komite";
+  return t.length > 3 && t === t.toUpperCase() ? t.charAt(0) + t.slice(1).toLowerCase() : t;
+}
 const SN_RE = /^no\.?\s*(pabrik|rangka|mesin|polisi|bpkb)$/i;
 const SKIP_RE = /^(no\.?|unit\s*kerja|kode\s*pemilik)$/i;
 function cellStr(v) {
@@ -4496,10 +4507,10 @@ function parseSheet(sh) {
     let k = kkey(kode, noreg);
     if (seen.has(k)) { dup++; seen.set(k, seen.get(k) + 1); k = k + "#" + seen.get(k); } else seen.set(k, 1);
     const tgl = parseTgl(cellStr(g(r, "tgl")));
-    const it = { k, kode, noreg, nama:cellStr(g(r, "nama")), tgl, th:cellStr(g(r, "th")) || yearOf(tgl), nilai:numVal(g(r, "nilai")), nodok:cellStr(g(r, "nodok")), merek:cellStr(g(r, "merek")), tipe:cellStr(g(r, "tipe")), ukuran:cellStr(g(r, "ukuran")), bahan:cellStr(g(r, "bahan")), judul:cellStr(g(r, "judul")), pencipta:cellStr(g(r, "pencipta")), asal:cellStr(g(r, "asal")), ksip:kondSip(g(r, "ksip")), ket:cellStr(g(r, "ket")), kap:cellStr(g(r, "kap")) };
+    const it = { k, kode, noreg, nama:cellStr(g(r, "nama")), tgl, th:cellStr(g(r, "th")) || yearOf(tgl), nilai:numVal(g(r, "nilai")), nodok:cellStr(g(r, "nodok")), merek:cellStr(g(r, "merek")), tipe:cellStr(g(r, "tipe")), ukuran:cellStr(g(r, "ukuran")), bahan:cellStr(g(r, "bahan")), judul:cellStr(g(r, "judul")), pencipta:cellStr(g(r, "pencipta")), asal:cellStr(g(r, "asal")), ksip:kondSip(g(r, "ksip")), ket:cellStr(g(r, "ket")), kap:cellStr(g(r, "kap")), sumber:sdNorm(g(r, "sumber")), satuan:cellStr(g(r, "satuan")) };
     const sn = snCols.map(j => cellStr(r[j])).filter(v => v && v !== "-"); if (sn.length) it.sn = sn.join(" / ");
     const ex = {}; for (const j of extraCols) { const v = cellStr(r[j]); if (v && v !== "-") ex[sh.head[j]] = v; } if (Object.keys(ex).length) it.extra = ex;
-    for (const f of Object.keys(it)) if (it[f] === "" || it[f] == null) delete it[f];
+    for (const f of Object.keys(it)) if (it[f] === "" || it[f] == null || it[f] === "-") delete it[f];
     items.push(it);
   }
   sh.items = items; sh.dup = dup; sh.bad = bad; sh.extraCols = extraCols.map(j => sh.head[j]);
@@ -4544,10 +4555,12 @@ function vImpor0() {
   <section class="panel" style="margin-top:14px"><h3>3. Simpan</h3>
     ${cross ? `<div class="note" style="margin-bottom:12px">${fmt(cross)} baris muncul di lebih dari satu sheet dengan kode + no. register yang sama, jadi hanya disimpan sekali. Hilangkan centang sheet salinan jika tidak diperlukan.</div>` : ""}
     <div class="tablebox" style="margin-bottom:12px"><table><thead><tr><th>Golongan</th><th class="num">Aset</th><th class="num">Nilai</th></tr></thead><tbody>${Object.entries(byKat).map(([k, v]) => `<tr><td>${esc(KATMAP[k] ? KATMAP[k].kib + " · " + KATMAP[k].nama : "Kode tidak dikenal (masuk KIB B)")}</td><td class="num">${fmt(v.n)}</td><td class="num">${rp(v.v)}</td></tr>`).join("")}</tbody><tfoot><tr><td>Jumlah</td><td class="num">${fmt(items.length)}</td><td class="num">${rp(items.reduce((t, i) => t + (i.nilai || 0), 0))}</td></tr></tfoot></table></div>
-    <div class="fgrid">
+    <div style="display:flex;flex-direction:column;gap:8px">
       <label class="ck full"><input type="radio" name="imp-mode" id="imp-mode-merge" value="merge" ${I.mode === "merge" ? "checked" : ""}> <span><b>Tambah & perbarui</b>: aset baru ditambahkan; ${fmt(upd)} aset dengan kode + no. register yang sama diperbarui datanya. Aset lama yang tidak ada di file tetap disimpan.</span></label>
+      <label class="ck full"><input type="radio" name="imp-mode" id="imp-mode-lengkapi" value="lengkapi" ${I.mode === "lengkapi" ? "checked" : ""}> <span><b>Lengkapi data yang masih kosong saja</b>: tidak menimpa isian yang sudah ada dan tidak menggandakan aset. Merek, tipe, sumber dana, satuan, keterangan, nomor dokumen, dan lainnya hanya diisi pada aset yang kolomnya masih kosong. Barang yang belum ada di aplikasi bisa ditambahkan.</span></label>
       <label class="ck full"><input type="radio" name="imp-mode" id="imp-mode-replace" value="replace" ${I.mode === "replace" ? "checked" : ""}> <span><b>Ganti semua data SIPBMD</b>: ${fmt(nAset)} aset SIPBMD yang tersimpan sekarang diganti isi file ini. Catatan pemegang, kondisi, dan foto tetap tersimpan untuk aset yang kode + register-nya sama.</span></label>
     </div>
+    ${I.mode === "lengkapi" ? lkPanel(items) : ""}
     ${I.busy ? `<div style="margin-top:12px"><div class="bar"><i style="width:${I.total ? Math.round(I.done / I.total * 100) : 0}%"></i></div><p class="hint">Menyimpan bagian ${I.done} dari ${I.total}… jangan tutup halaman ini.</p></div>` : ""}
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="primary" id="imp-go" ${I.busy || !items.length || sheets.some(s => s.map.kode < 0 || s.map.nama < 0) ? "disabled" : ""}>Impor ${fmt(items.length)} aset</button><button class="ghost" id="imp-reset" ${I.busy ? "disabled" : ""}>Batal</button></div>
   </section>` : ""}`;
@@ -4556,6 +4569,73 @@ function chunkItems(items, limit = 220000) {
   const enc = new TextEncoder(), out = []; let cur = [], size = 0;
   for (const it of items) { const n = enc.encode(JSON.stringify(it)).length + 1; if (cur.length && size + n > limit) { out.push(cur); cur = []; size = 0; } cur.push(it); size += n; }
   if (cur.length) out.push(cur); return out;
+}
+/* ===== impor mode "lengkapi": isi kolom kosong saja, tanpa menimpa, tanpa menggandakan ===== */
+const LK_F = [["merek", "Merek"], ["tipe", "Tipe"], ["sumber", "Sumber dana"], ["satuan", "Satuan"], ["ket", "Keterangan"], ["nodok", "Nomor dokumen"], ["tgl", "Tanggal perolehan"], ["kap", "Kapitalisasi"], ["asal", "Asal usul"], ["ukuran", "Ukuran"], ["bahan", "Bahan"]];
+const lkKosong = v => v == null || String(v).trim() === "" || String(v).trim() === "-";
+const lkTok = t => norm(String(t || "")).replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(w => w.length >= 3);
+function lkPlan(items) {
+  const all = allItems().list, bySip = new Map();
+  for (const x of all) if (x.sip && x.kode && !x.hidden) bySip.set(kkey(x.kode, x.noreg), x);
+  // kandidat padanan: aset tak tercatat / BOSP Daerah (satu unit, belum dipasangkan)
+  const pool = all.filter(x => !x.sip && !x.hidden && !x.pair && (x.src === "I" || x.src === "N") && (x.jml || 1) === 1), used = new Set();
+  const out = [];
+  for (const it of items) {
+    const a = bySip.get(it.k.split("#")[0]);
+    if (a) {
+      const fill = {}; for (const [f] of LK_F) if (!lkKosong(it[f]) && lkKosong(a[f])) fill[f] = it[f];
+      if (fill.tipe && lkKosong(a.spes)) fill.spes = fill.tipe;
+      if (!a.nilai && it.nilai && a.src === "S") fill.nilai = it.nilai;
+      out.push({ it, a, st:Object.keys(fill).length ? "lengkapi" : "lengkap", fill }); continue;
+    }
+    const th = +(String(it.th || it.tgl || "").slice(0, 4)) || 0, tw = new Set([...lkTok(it.nama), ...lkTok(it.merek), ...lkTok(it.tipe)]), nmJoin = norm(it.nama || "").replace(/[^a-z0-9]/g, "");
+    let best = null, bs = 0;
+    for (const c of pool) {
+      if (used.has(c.key) || (th && tahunOf(c) && tahunOf(c) !== th)) continue;
+      const cw = [...lkTok(c.nama), ...lkTok(c.merek), ...lkTok(c.tipe)], same = cw.filter(w => tw.has(w)).length + (nmJoin && norm(c.nama || "").replace(/[^a-z0-9]/g, "").includes(nmJoin) ? 2 : 0);
+      const harga = Math.abs(itemNilai(c) - (it.nilai || 0)) <= Math.max(1, (it.nilai || 0) * 0.005);
+      const sc = (harga ? 3 : 0) + Math.min(same, 3) + (c.kat === katFromKode(it.kode) ? 1 : 0);
+      if ((harga && same) || same >= 2) if (sc > bs) { bs = sc; best = c; }
+    }
+    if (best) { used.add(best.key); out.push({ it, c:best, st:"pasang" }); } else out.push({ it, st:"baru" });
+  }
+  return out;
+}
+function lkPanel(items) {
+  const I = UI.imp, P = lkPlan(items), n = k => P.filter(r => r.st === k).length, nm = r => esc(r.it.nama) + ' <span class="mono sm">' + esc(r.it.kode) + " No. " + esc(r.it.noreg || "-") + "</span>";
+  const lab = { lengkapi:'<span class="pill info">dilengkapi</span>', lengkap:'<span class="pill ok">sudah lengkap</span>', pasang:'<span class="pill acc">dipasangkan</span>', baru:'<span class="pill warn">belum ada</span>' };
+  return `<div class="note info" style="margin-top:12px"><b>Rencana:</b> ${fmt(n("lengkapi"))} aset dilengkapi · ${fmt(n("lengkap"))} sudah lengkap (tidak diubah) · ${fmt(n("pasang"))} cocok dengan aset tak tercatat/BOSP Daerah di aplikasi (dipasangkan ke data SIPBMD, tidak digandakan) · ${fmt(n("baru"))} belum ada di aplikasi.</div>
+    ${n("baru") ? `<label class="ck" style="margin-top:8px"><input type="checkbox" id="imp-lk-baru" ${I.lkBaru !== false ? "checked" : ""}> Tambahkan ${fmt(n("baru"))} barang yang belum ada sebagai aset SIPBMD</label>` : ""}
+    <div class="tablebox" style="max-height:340px;overflow:auto;margin-top:8px"><table><thead><tr><th>Aset di file</th><th>Hasil</th><th>Yang diisi / keterangan</th></tr></thead><tbody>
+    ${P.map(r => `<tr><td>${nm(r)}</td><td>${lab[r.st]}</td><td class="sm">${r.st === "lengkapi" ? Object.entries(r.fill).filter(([f]) => f !== "spes").map(([f, v]) => `<b>${esc(f === "nilai" ? "Nilai" : (LK_F.find(x => x[0] === f) || [, f])[1])}</b>: ${esc(f === "tgl" ? tglID(v) : f === "nilai" ? rp(v) : v)}`).join(" · ") : r.st === "pasang" ? `dengan ${esc(itemNama(r.c))} (${esc(r.c.reg || (r.c.src === "N" ? "isian sekolah" : "catatan internal"))}${isBospda(r.c) ? ", BOSP Daerah" : ""}, ${rp(itemNilai(r.c))}); data pemegang, posisi, kondisi, foto ikut pindah` : r.st === "baru" ? (I.lkBaru !== false ? "ditambahkan dengan data dari file" : "dilewati") : "—"}</td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+async function runLengkapi() {
+  const I = UI.imp; if (!db) { toast("Data belum terhubung. Periksa koneksi lalu muat ulang."); return; }
+  const { items } = importItems(), P = lkPlan(items), lk = P.filter(r => r.st === "lengkapi"), ps = P.filter(r => r.st === "pasang"), br = I.lkBaru !== false ? P.filter(r => r.st === "baru") : [];
+  const baruItems = [...ps, ...br].map(r => Object.assign({}, r.it, { k:r.it.k.split("#")[0] }));
+  if (!lk.length && !baruItems.length) { toast("Tidak ada yang perlu dilengkapi."); return; }
+  I.busy = true; I.done = 0; I.total = lk.length + ps.length + (baruItems.length ? 1 : 0); render();
+  try {
+    if (baruItems.length) {
+      const stamp = Date.now().toString(36), batchId = "imp_" + stamp, ids = [], chunks = chunkItems(baruItems);
+      for (let n = 0; n < chunks.length; n++) { const id = batchId + "_" + String(n).padStart(3, "0"); await db.doc("seed/" + id).set({ kind:"aset", part:n, batch:batchId, items:chunks[n] }); ids.push(id); }
+      await db.doc("impor/" + batchId).set({ tgl:new Date().toISOString(), file:I.file + " (barang yang belum ada)", rows:baruItems.length, docs:ids, mode:"lengkapi", oleh:S.me || "" });
+      I.done++; render();
+    }
+    await W.group(`Lengkapi data SIPBMD dari ${I.file}`, async () => {
+      for (const r of lk) { await saveUpd(r.a.key, r.fill); I.done++; render(); }
+      for (const r of ps) {
+        const key = "S|" + r.it.k.split("#")[0], x = r.c, carry = {};
+        for (const f of ["reg", "pj", "nip", "jab", "untuk", "lokasi", "bast", "tbast", "spj", "kond", "tcek", "cek", "cat", "batas", "pl"]) if (x[f]) carry[f] = x[f];
+        if (lkKosong(r.it.sumber) && x.sumber) carry.sumber = x.sumber;
+        if (x.fotos && x.fotos.length) carry.fotos = x.fotos;
+        await saveUpd(x.key, { pair:key }); await saveUpd(key, Object.assign({ pair:x.key }, carry)); I.done++; render();
+      }
+    });
+    toast(`${fmt(lk.length)} aset dilengkapi${ps.length ? ", " + fmt(ps.length) + " dipasangkan" : ""}${br.length ? ", " + fmt(br.length) + " ditambahkan" : ""}.`);
+    UI.imp = { file:"", sheets:[], mode:"merge", busy:false, done:0, total:0, ask:null, err:"" }; location.hash = "aset-pm"; render();
+  } catch (e) { I.busy = false; writeErr(e); I.err = "Proses berhenti. Jalankan lagi dengan file yang sama: yang sudah terisi tidak akan diubah lagi."; render(); }
 }
 async function runImport() {
   const I = UI.imp; if (!db) { toast("Data belum terhubung. Periksa koneksi lalu muat ulang."); return; }
@@ -4926,6 +5006,7 @@ document.addEventListener("change", e => {
   else if (id.startsWith("imp-map-")) { const [, , si, field] = id.split("-"); const sh = UI.imp.sheets[+si]; if (sh) { sh.map[field] = t.value === "" ? -1 : +t.value; parseSheet(sh); render(); } }
   else if (id.startsWith("imp-use-")) { const sh = UI.imp.sheets[+id.slice(8)]; if (sh) { sh.use = t.checked; render(); } }
   else if (id.startsWith("imp-mode-")) { UI.imp.mode = t.value; render(); }
+  else if (id === "imp-lk-baru") { UI.imp.lkBaru = t.checked; render(); }
   else if (id === "d-file") { const files = [...t.files]; t.value = ""; if (files.length) uploadFotos(files); }
 });
 document.addEventListener("keydown", e => {
@@ -5066,7 +5147,7 @@ document.addEventListener("click", async e => {
       try { await W.set("surat/" + uid("s"), { tgl:val("sn-tgl"), nomor:val("sn-nomor"), hal:val("sn-hal"), ke:val("sn-ke"), ket:val("sn-ket"), reg:"", dibuat:new Date().toISOString() }); toast("Surat dicatat."); } catch (err) { writeErr(err); }
       break;
     }
-    case "imp-go": runImport(); break;
+    case "imp-go": if (UI.imp.mode === "lengkapi") runLengkapi(); else runImport(); break;
     case "kk-new": openKK(null); break;
     case "v-all": UI.val.askAll = true; render(); break;
     case "v-all-no": UI.val.askAll = false; render(); break;

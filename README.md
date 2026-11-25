@@ -91,6 +91,11 @@ Semua tempat unggah foto (detail aset, catatan temuan, foto ruang, BAST, BAST ba
 - **BAST Penarikan** wajib mengisi **kondisi terkini** dan **alasan penarikan** setiap barang (alasan umum dipakai bila alasan per barang kosong); keduanya tercetak di tabel BAST.
 - Saat BAST penarikan disimpan, kondisi terkini langsung menjadi kondisi barang (tanggal cek = tanggal BAST, pemeriksa = Pihak Kedua, catatan = alasan), sehingga ikut ke Rekap, Pemeliharaan & Perbaikan (Rusak Sedang), Usulan Penghapusan (Rusak Berat/Hilang), Unduh KIB, Buku Induk, dan Per Pemegang. Dari akun operator perubahan ini menunggu validasi master seperti biasa.
 
+### Impor SIPBMD mode "Lengkapi data yang masih kosong saja"
+- Pilihan ketiga di menu Impor SIPBMD (`lkPlan`, `lkPanel`, `runLengkapi`). Cocokkan per Kode Aset + No. Register: hanya kolom yang masih kosong (atau "-") yang diisi lewat `upd` (merek, tipe, sumber dana, satuan, keterangan, nomor dokumen, tanggal, kapitalisasi, asal usul, ukuran, bahan; nilai bila masih 0). Isian yang sudah ada tidak ditimpa; menjalankan file yang sama lagi tidak mengubah apa pun.
+- Baris yang belum ada: dicari padanannya di aset tak tercatat / BOSP Daerah (1 unit, belum dipasangkan; tahun sama, nilai sama dan/atau nama mirip). Bila cocok, baris SIPBMD ditambahkan lalu **dipasangkan** (pemegang, posisi, kondisi, foto ikut pindah; catatan lama tersembunyi), jadi tidak ganda. Sisanya ditambahkan sebagai aset SIPBMD (bisa dimatikan dengan centang).
+- Impor kini mengenali kolom **Sumber dana** (dinormalkan: BOSDA → BOSP Daerah, BOSNAS/Reguler → BOSP Reguler, BANTUAN → Bantuan) dan **Satuan**, judul "Nilai Perolehan (Rp)", dan menganggap isian "-" kosong.
+
 ### Daftar aset: sumber dana dan total nominal
 - Setiap baris aset menampilkan penanda **sumber dana** di bawah nama (BOSP Reguler biru, BOSP Daerah hijau tua, Hibah/Bantuan hijau, lainnya bergaris; kosong = "sumber dana belum diisi"). Ada filter **Sumber dana** (termasuk *Belum diisi*); sumber dana diisi di detail aset atau lewat *Isi sekaligus*.
 - Di bawah tabel (`asetTotal`): jumlah halaman ini, **total hasil filter** (dengan keterangan filter yang aktif), rincian nilai per sumber dana, dan **total yang dicentang**. Bilah aset dipilih juga menampilkan nominalnya.
