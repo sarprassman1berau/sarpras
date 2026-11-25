@@ -91,6 +91,15 @@ Semua tempat unggah foto (detail aset, catatan temuan, foto ruang, BAST, BAST ba
 - **BAST Penarikan** wajib mengisi **kondisi terkini** dan **alasan penarikan** setiap barang (alasan umum dipakai bila alasan per barang kosong); keduanya tercetak di tabel BAST.
 - Saat BAST penarikan disimpan, kondisi terkini langsung menjadi kondisi barang (tanggal cek = tanggal BAST, pemeriksa = Pihak Kedua, catatan = alasan), sehingga ikut ke Rekap, Pemeliharaan & Perbaikan (Rusak Sedang), Usulan Penghapusan (Rusak Berat/Hilang), Unduh KIB, Buku Induk, dan Per Pemegang. Dari akun operator perubahan ini menunggu validasi master seperti biasa.
 
+### Nomor SP2D (aset & persediaan)
+- Field `sp2d` pada aset: detail aset (bagian Pencatatan, di samping No. SPJ), form Tambah aset, Isi sekaligus, import Excel aset (kolom berjudul "SP2D"/"No SP2D"; kolom "No SPJ/kuitansi/bukti" juga kini terbaca), templat import aset, unduh Excel aset ("No SP2D"), riwayat aset, dan otomatis dari Kertas Kerja Modal (`k.sp2d`). Ikut pindah saat aset dipasangkan ke SIPBMD.
+- Persediaan masuk: kolom *No. SP2D* (`psd_trx.sp2d`), tampil di daftar transaksi dan kartu stok, bisa dicari, dan ikut di unduhan Excel persediaan masuk.
+
+### Satu tombol Simpan di semua panel edit
+- `notesPending(t, id)` + `notesSave()` menyimpan catatan temuan (baru maupun ubah status/tindak lanjut) bersama tombol Simpan panelnya: panel aset (`d-save`), panel ruang (`rd-save`, Simpan ruang), dan kartu stok persediaan (`psd-dsave`). Tombol "Simpan catatan" / "Simpan" per catatan disembunyikan di panel-panel itu (`catatanSection(target, true)`); di menu Catatan Temuan tetap seperti biasa.
+- Pemeliharaan & Perbaikan: tombol "Selesai diperbaiki, kondisi jadi Baik" dihapus; cukup pilih status **Selesai** lalu Simpan (kondisi otomatis Baik).
+- Semua panel/editor tertutup otomatis setelah berhasil disimpan (aset, ruang, gedung, kertas kerja, kartu stok, pemeliharaan, jadwal, usulan, BAST).
+
 ### Panel edit aset: satu tombol Simpan
 - Panel detail aset hanya punya satu tombol **Simpan** (`d-save`) yang menyimpan sekaligus: pencatatan & penempatan, kondisi, harga & nilai (`hargaPatch`), kelengkapan data KIB bila kartunya dibuka (`kibPatch`), serta catatan temuan baru dan perubahan status/tindak lanjut catatan (`catatanSection(target, true)` menyembunyikan tombol simpan masing-masing). Semua isian aset masuk satu `saveUpd` → satu baris di Riwayat & Urungkan.
 - Setelah berhasil tersimpan, panel tertutup otomatis. Membuka/menutup kartu KIB tidak lagi menghapus isian yang belum disimpan. "Kembalikan" harga hanya mengisi harga semula ke kolom.

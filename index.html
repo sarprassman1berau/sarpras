@@ -430,7 +430,7 @@ function riwayat(x) {
   const ev = [];
   if (x.src === "S" && x.tgl) ev.push({ d:x.tgl, t:`Diperoleh (${x.asal || "Pembelian"})`, s:[x.nodok, x.ket].filter(Boolean).join(" · ") });
   if (x.src === "P" && x.tgl) ev.push({ d:x.tgl, t:`Diperoleh ${fmt(x.jml)} eksemplar`, s:x.nodok || "" });
-  if ((x.src === "I" || x.src === "N") && (x.tgl || x.th)) ev.push({ d:x.tgl || x.th, t:"Diterima sekolah", s:[x.sumber, x.spj ? "SPJ " + x.spj : ""].filter(Boolean).join(" · ") });
+  if ((x.src === "I" || x.src === "N") && (x.tgl || x.th)) ev.push({ d:x.tgl || x.th, t:"Diterima sekolah", s:[x.sumber, x.spj ? "SPJ " + x.spj : "", x.sp2d ? "SP2D " + x.sp2d : ""].filter(Boolean).join(" · ") });
   if (x.bast && !S.trx.some(t => t.nomor === x.bast)) ev.push({ d:x.tbast || "", t:"Diserahkan ke " + (x.pj || x.lokasi || "pemegang"), s:"BAST " + x.bast });
   if (x.reg) for (const s of S.seed.surat) if (s.reg && s.reg.includes(x.reg)) ev.push({ d:s.tgl, t:s.hal, s:s.nomor + (s.ke ? " · " + s.ke : "") });
   for (const t of S.trx) if ((t.items || []).some(i => i.key === x.key)) ev.push({ d:t.tgl, t:(t.jenis === "tarik" ? "Ditarik dari " + t.p1.nama : "Diserahkan ke " + t.p2.nama), s:"BAST " + t.nomor });
@@ -532,7 +532,7 @@ async function saveUpd(key, patch) {
     return true;
   } catch (e) { writeErr(e); return false; }
 }
-const FIELD_LABEL = { kat:"golongan", batas:"batas penggunaan", grp:"kelompok BOSP Daerah", kib:"kelengkapan data KIB", pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
+const FIELD_LABEL = { sp2d:"no. SP2D", kat:"golongan", batas:"batas penggunaan", grp:"kelompok BOSP Daerah", kib:"kelengkapan data KIB", pl:"pemeliharaan", pj:"diserahkan ke", nip:"NIP", jab:"jabatan", untuk:"peruntukan", lokasi:"posisi", kond:"kondisi", tcek:"tgl cek", cek:"pemeriksa", cat:"catatan", reg:"no. registrasi", spj:"SPJ", sumber:"sumber dana", fotos:"foto", hapusNo:"no. usulan hapus", rehab:"pengecualian hapus", sip:"status SIPBMD", kode:"kode aset", noreg:"no. register", pair:"padanan SIPBMD", bast:"BAST", tbast:"tgl BAST", stpj:"status pemakai" };
 
 /* ================= change layer: master writes directly, operators propose ================= */
 const isMaster = () => S.role === "master";
@@ -634,9 +634,9 @@ const TPL = () => ({
     ["5.1.02.01.001.00024", "Kertas HVS A4", "70 gram", 20, "Rim", 55000, 1100000, "Ika Novita Mulia, S.Pd.", "Administrasi pembelajaran"],
     ["5.1.02.02.001.00003", "Honorarium Narasumber", "Profesional", 16, "OJ", 400000, 6400000, "Panitia", "Bulan bahasa"],
     ["5.2.02.05.01.0001", "Laptop", "Core i5, 8 GB", 2, "Unit", 9000000, 18000000, "Sarpras", "Laboratorium komputer"]]]]],
-  aset:["Contoh impor aset", [["Aset", [["Nama Barang", "Merek", "Spesifikasi", "Serial Number", "Golongan", "Sumber Dana", "Tahun Pengadaan", "Tanggal Penerimaan", "Nomor Registrasi", "Jumlah", "Harga per Unit", "Lokasi", "Pemegang", "Keterangan"],
-    ["Laptop", "Asus Vivobook", "Core i5, 8 GB", "SN12345", "KIB B", "BOSP Daerah", 2025, "2025-08-15", "", 2, 9000000, "Ruang Guru", "", "Pengadaan BOSDA 2025"],
-    ["Buku Matematika Kelas X", "Kemendikbud", "Kurikulum Merdeka", "", "KIB E", "BOSP Reguler", 2025, "2025-07-10", "", 30, 85000, "Perpustakaan", "", ""]]]]],
+  aset:["Contoh impor aset", [["Aset", [["Nama Barang", "Merek", "Spesifikasi", "Serial Number", "Golongan", "Sumber Dana", "Tahun Pengadaan", "Tanggal Penerimaan", "Nomor Registrasi", "Jumlah", "Harga per Unit", "No SPJ", "No SP2D", "Lokasi", "Pemegang", "Keterangan"],
+    ["Laptop", "Asus Vivobook", "Core i5, 8 GB", "SN12345", "KIB B", "BOSP Daerah", 2025, "2025-08-15", "", 2, 9000000, "BPU-012/2025", "00123/SP2D/LS/2025", "Ruang Guru", "", "Pengadaan BOSDA 2025"],
+    ["Buku Matematika Kelas X", "Kemendikbud", "Kurikulum Merdeka", "", "KIB E", "BOSP Reguler", 2025, "2025-07-10", "", 30, 85000, "BPU-020/2025", "", "Perpustakaan", "", ""]]]]],
   sipbmd:["Contoh impor SIPBMD", [["KIB B", [["Kode Aset", "Nama Aset", "No. Register", "Tanggal Perolehan", "Tahun Perolehan", "Nilai Perolehan", "Nomor Dokumen", "Merek", "Tipe", "Ukuran", "Bahan", "Asal Usul", "Kondisi", "Keterangan"],
     ["1.3.2.10.01.02.001", "Laptop", "000001", "2024-03-12", 2024, 9500000, "BAST/12/2024", "Lenovo", "ThinkPad E14", "", "", "Pembelian", "Baik", ""]]], ["KIB E", [["Kode Aset", "Nama Aset", "No. Register", "Tahun Perolehan", "Nilai Perolehan", "Judul", "Pencipta", "Asal Usul", "Kondisi"],
     ["1.3.5.01.01.01.001", "Buku Matematika Kelas X", "000001", 2023, 85000, "Matematika X", "Kemendikbud", "Pembelian", "Baik"]]]]],
@@ -897,7 +897,7 @@ function vPelihara() {
       <label class="f">Biaya (Rp)<input id="pl-biaya" type="number" min="0" value="${esc(r.pl.biaya || "")}"></label>
       <label class="f">Sumber dana<input id="pl-sumber" list="dl-sumberpl" value="${esc(r.pl.sumber || "")}"><datalist id="dl-sumberpl">${SUMBER_DANA.map(o => `<option value="${esc(o)}">`).join("")}</datalist></label>
       <label class="f full">Tindakan / keterangan<textarea id="pl-ket" placeholder="mis. ganti kompresor AC, servis engsel pintu">${esc(r.pl.ket || "")}</textarea></label></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="primary" data-plsave="${esc(r.t + "|" + r.id)}">Simpan</button><button data-pldone="${esc(r.t + "|" + r.id)}">Selesai diperbaiki, kondisi jadi Baik</button><button class="ghost" data-plcancel="1">Batal</button>${r.t === "aset" && can("pelihara") ? (sjAktifOf(r.id) ? `<button class="ghost" data-sjgo="${esc(sjAktifOf(r.id)._id)}">Surat jalan ${esc(sjAktifOf(r.id).nomor)}</button>` : `<button data-sjfrom="${esc(r.id)}">Buat surat jalan service</button>`) : ""}<span class="sp"></span><button class="link" data-plopen="${esc(r.t + "|" + r.id)}">Buka data ${r.t === "aset" ? "aset" : "ruang"}</button></div></td></tr>`;
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="primary" data-plsave="${esc(r.t + "|" + r.id)}">Simpan</button><button class="ghost" data-plcancel="1">Batal</button><span class="hint" style="align-self:center">Pilih status <b>Selesai</b> bila sudah diperbaiki: kondisi otomatis menjadi Baik.</span>${r.t === "aset" && can("pelihara") ? (sjAktifOf(r.id) ? `<button class="ghost" data-sjgo="${esc(sjAktifOf(r.id)._id)}">Surat jalan ${esc(sjAktifOf(r.id).nomor)}</button>` : `<button data-sjfrom="${esc(r.id)}">Buat surat jalan service</button>`) : ""}<span class="sp"></span><button class="link" data-plopen="${esc(r.t + "|" + r.id)}">Buka data ${r.t === "aset" ? "aset" : "ruang"}</button></div></td></tr>`;
   const tanpaSj = aktif.filter(r => r.t === "aset" && r.st === "Sedang diperbaiki" && !sjAktifOf(r.id));
   return `<h2>Pemeliharaan & perbaikan</h2>
   <p class="lead">Aset dan ruang berkondisi <b>Rusak Sedang</b> otomatis masuk ke sini. Ruang Rusak Berat juga tercatat di sini sebagai perlu rehabilitasi, sedangkan aset Rusak Berat atau Hilang masuk <a href="#hapus">Usulan Penghapusan</a>. Setelah diperbaiki, tandai selesai agar kondisinya kembali Baik.</p>
@@ -1362,7 +1362,7 @@ function bulkPanel() {
       ${inp("bk-lok", "Posisi / lokasi", "text", 'list="dl-ruangbk"')}<datalist id="dl-ruangbk">${ruangList().map(r => `<option value="${esc(r)}">`).join("")}</datalist>
       ${inp("bk-untuk", "Peruntukan", "text", 'list="dl-untuk"')}${untukList()}
       <label class="f">Sumber dana<input id="bk-sumber" data-bk="1" list="dl-sumberbk" value="${bkv("bk-sumber")}" placeholder="kosong = tidak diubah"><datalist id="dl-sumberbk">${SUMBER_DANA.map(o => `<option value="${esc(o)}">`).join("")}</datalist></label>
-      ${inp("bk-spj", "No. SPJ / kuitansi")}
+      ${inp("bk-spj", "No. SPJ / kuitansi")}${inp("bk-sp2d", "No. SP2D")}
       ${inp("bk-harga", "Harga satuan (Rp)", "number", 'min="0" step="any"')}</div>${(UI.bulk.v || {})["bk-harga"] ? `<p class="hint" style="margin:4px 0 0">Harga satuan ${rp(+(UI.bulk.v || {})["bk-harga"])} diterapkan ke semua aset terpilih; nilai perolehan = harga satuan × jumlah tiap aset.</p>` : ""}` : ""}
     ${canU && items.every(x => x.src !== "S" && x.src !== "P") ? `<p class="sectionlabel" style="margin-top:12px">Migrasi / pindahkan aset</p><div class="fgrid">
       <label class="f">Pindahkan ke<select id="bk-mig" data-bk="1"><option value="">— tidak dipindah —</option><option value="tak" ${(UI.bulk.v || {})["bk-mig"] === "tak" ? "selected" : ""}>Aset tidak tercatat di SIPBMD</option><option value="bospda" ${(UI.bulk.v || {})["bk-mig"] === "bospda" ? "selected" : ""}>Aset BOSP Daerah (menunggu SIPBMD)</option><option value="sip" ${(UI.bulk.v || {})["bk-mig"] === "sip" ? "selected" : ""}>Sudah tercatat di SIPBMD (menu golongan KIB)</option></select></label>
@@ -1379,7 +1379,7 @@ async function bulkApply() {
   const canU = can("aset_ubah"), canK = can("aset_kondisi");
   const kib = {}; for (const el of document.querySelectorAll("[data-bkl]")) { const v = el.value.trim(); if (v) kib[el.dataset.bkl] = v; }
   const common = {};
-  if (canU) { const pjN = val("bk-pj"); if (pjN) { const pg = findPeg(pjN); Object.assign(common, { pj:pjN, nip:(pg && pg.nip) || "", jab:(pg && pg.jab) || "" }); } for (const [id, f] of [["bk-lok", "lokasi"], ["bk-untuk", "untuk"], ["bk-sumber", "sumber"], ["bk-spj", "spj"]]) { const v = val(id); if (v) common[f] = v; } }
+  if (canU) { const pjN = val("bk-pj"); if (pjN) { const pg = findPeg(pjN); Object.assign(common, { pj:pjN, nip:(pg && pg.nip) || "", jab:(pg && pg.jab) || "" }); } for (const [id, f] of [["bk-lok", "lokasi"], ["bk-untuk", "untuk"], ["bk-sumber", "sumber"], ["bk-spj", "spj"], ["bk-sp2d", "sp2d"]]) { const v = val(id); if (v) common[f] = v; } }
   if (canK) { for (const [id, f] of [["bk-kond", "kond"], ["bk-tcek", "tcek"], ["bk-cek", "cek"]]) { const v = val(id); if (v) common[f] = v; } if (common.kond && !common.tcek) common.tcek = today(); }
   const mig = canU ? val("bk-mig") || "" : "", katN = canU ? val("bk-kat") || "" : "";
   let migKode = "", migNo = 0;
@@ -1470,7 +1470,7 @@ const AI_COLS = [
   ["nama", /^nama\s*(barang|aset)?$/i], ["merek", /^mer[ek]k?(\s*\/\s*tipe)?$/i], ["spes", /^spesifikasi|^tipe$|^ukuran$/i], ["sn", /serial|no\.?\s*pabrik|nomor\s*seri/i], ["bahan", /^bahan$/i],
   ["sumber", /^sumber(\s*dana)?$/i], ["th", /^tahun\s*(pengadaan|perolehan|pembelian)|^tahun$/i], ["thterima", /^tahun\s*penerimaan/i], ["tgl", /^tanggal\s*(penerimaan|perolehan|pembelian)|^tgl/i],
   ["reg", /^(nomor|no\.?)\s*regist(rasi|er)/i], ["simda", /kode\s*(simda|aset|barang)/i], ["jml", /^jumlah$|^jml$|^volume$/i], ["harga", /^harga|nilai\s*satuan/i], ["total", /^(nilai|total|jumlah\s*harga)/i],
-  ["ket", /^keterangan/i], ["cat", /^catatan/i], ["lokasi", /^(lokasi|posisi|ruang)/i], ["pj", /^(pemegang|diserahkan|penanggung)/i], ["kat", /^golongan|^kib$/i],
+  ["sp2d", /sp2d/i], ["spj", /^(no\.?|nomor)\s*(spj|kuitansi|bukti)/i], ["ket", /^keterangan/i], ["cat", /^catatan/i], ["lokasi", /^(lokasi|posisi|ruang)/i], ["pj", /^(pemegang|diserahkan|penanggung)/i], ["kat", /^golongan|^kib$/i],
 ];
 function aiKat(v, def) { const t = norm(String(v || "")); if (!t) return def; const k = KAT.find(k => t.includes(norm(k.kib)) || t.includes(norm(k.nama)) || t === k.id || t.startsWith(k.kode)); return k ? k.id : def; }
 function aiSumber(v) { const t = String(v || "").trim(); const m = SUMBER_DANA.find(o => norm(o) === norm(t)); return m || t; }
@@ -1489,7 +1489,7 @@ async function aiRead(file) {
         const g = f => map[f] >= 0 ? r[map[f]] : null, nama = cellStr(g("nama")); if (!nama || /^\d+$/.test(nama)) continue;
         const jml = Math.max(1, Math.round(numVal(g("jml")) || 1)); let harga = numVal(g("harga")); const total = numVal(g("total")); if (!harga && total) harga = total / jml;
         const tgl = parseTgl(cellStr(g("tgl")));
-        out.push({ nama, merek:cellStr(g("merek")), spes:cellStr(g("spes")), sn:cellStr(g("sn")), bahan:cellStr(g("bahan")), sumber:aiSumber(g("sumber")), th:cellStr(g("th")) || cellStr(g("thterima")) || yearOf(tgl), tgl, reg:cellStr(g("reg")), simda:cellStr(g("simda")), jml, harga, ket:[cellStr(g("ket")), cellStr(g("cat"))].filter(v => v && v !== "-").join(" · "), lokasi:cellStr(g("lokasi")), pj:cellStr(g("pj")), katv:cellStr(g("kat")) });
+        out.push({ sp2d:cellStr(g("sp2d")), spj:cellStr(g("spj")), nama, merek:cellStr(g("merek")), spes:cellStr(g("spes")), sn:cellStr(g("sn")), bahan:cellStr(g("bahan")), sumber:aiSumber(g("sumber")), th:cellStr(g("th")) || cellStr(g("thterima")) || yearOf(tgl), tgl, reg:cellStr(g("reg")), simda:cellStr(g("simda")), jml, harga, ket:[cellStr(g("ket")), cellStr(g("cat"))].filter(v => v && v !== "-").join(" · "), lokasi:cellStr(g("lokasi")), pj:cellStr(g("pj")), katv:cellStr(g("kat")) });
       }
     }
     if (!out.length) A.err = "Tidak menemukan daftar barang. Pastikan ada kolom berjudul \"Nama Barang\" (dan sebaiknya Jumlah, Harga, Tahun, Spesifikasi, Keterangan).";
@@ -1501,7 +1501,7 @@ function aiDocs() {
   const A = UI.ai, bos = sub === "bospda", batch = "imp" + Date.now().toString(36), docs = [];
   for (const r of A.rows || []) {
     const n = A.pecah ? r.jml : 1, kat = aiKat(r.katv, A.kat);
-    for (let i = 0; i < n; i++) docs.push(clean({ kat, nama:r.nama, merek:r.merek, spes:[r.spes, r.bahan].filter(Boolean).join(" · "), sn:r.sn, sumber:r.sumber || (bos ? "BOSP Daerah" : ""), th:r.th, tgl:r.tgl || "", reg:r.reg, jml:A.pecah ? 1 : r.jml, harga:Math.round(r.harga || 0), sip:false, grp:bos ? "bospda" : "", lokasi:r.lokasi, pj:r.pj, ket:[r.simda ? "Kode SIMDA: " + r.simda : "", r.ket, A.pecah && n > 1 ? `unit ${i + 1} dari ${n}` : ""].filter(Boolean).join(" · "), impBatch:batch, dibuat:new Date().toISOString(), oleh:S.me || "" }));
+    for (let i = 0; i < n; i++) docs.push(clean({ kat, nama:r.nama, merek:r.merek, spes:[r.spes, r.bahan].filter(Boolean).join(" · "), sn:r.sn, sumber:r.sumber || (bos ? "BOSP Daerah" : ""), spj:r.spj, sp2d:r.sp2d, th:r.th, tgl:r.tgl || "", reg:r.reg, jml:A.pecah ? 1 : r.jml, harga:Math.round(r.harga || 0), sip:false, grp:bos ? "bospda" : "", lokasi:r.lokasi, pj:r.pj, ket:[r.simda ? "Kode SIMDA: " + r.simda : "", r.ket, A.pecah && n > 1 ? `unit ${i + 1} dari ${n}` : ""].filter(Boolean).join(" · "), impBatch:batch, dibuat:new Date().toISOString(), oleh:S.me || "" }));
   }
   return docs;
 }
@@ -1919,7 +1919,7 @@ function asetTotal(rows, slice) {
     ${sel.length ? line(`<span style="color:var(--accent)">Total yang dicentang</span>`, sel, true) : ""}</tfoot>`;
 }
 function asetRow(x) {
-  return Object.assign({ "Golongan":KATMAP[x.kat] ? KATMAP[x.kat].kib + " " + KATMAP[x.kat].nama : "", "Status":x.sip ? "SIPBMD" : "Tak tercatat", "Kode Aset":x.kode || "", "No Register":x.noreg || "", "No Registrasi Internal":x.reg || "", "Nama Aset":x.nama, "Merek/Pencipta":x.merek || "", "Spesifikasi":x.spes || "", "Tahun":x.th || "", "Tanggal Perolehan":x.tgl || "", "Nomor Dokumen":x.nodok || "", "Jumlah":x.jml || 1, "Nilai":itemNilai(x), "Kapitalisasi":x.kap || "", "Sumber Dana":x.sumber || "", "No SPJ":x.spj || "", "Diserahkan ke":x.pj || "", "NIP":x.nip || "", "Jabatan":x.jab || "", "Peruntukan":x.untuk || "", "Posisi":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "", "Kondisi":x.kond || "Belum dicek", "Tgl Cek":x.tcek || "", "Pemeriksa":x.cek || "", "Usul Hapus":usulHapus(x) ? (x.hapusNo || "Ya") : "", "Foto (tautan)":x.foto || "", "Foto diunggah":(x.fotos || []).length, "Catatan":x.cat || x.ket || "" }, x.extra || {});
+  return Object.assign({ "Golongan":KATMAP[x.kat] ? KATMAP[x.kat].kib + " " + KATMAP[x.kat].nama : "", "Status":x.sip ? "SIPBMD" : "Tak tercatat", "Kode Aset":x.kode || "", "No Register":x.noreg || "", "No Registrasi Internal":x.reg || "", "Nama Aset":x.nama, "Merek/Pencipta":x.merek || "", "Spesifikasi":x.spes || "", "Tahun":x.th || "", "Tanggal Perolehan":x.tgl || "", "Nomor Dokumen":x.nodok || "", "Jumlah":x.jml || 1, "Nilai":itemNilai(x), "Kapitalisasi":x.kap || "", "Sumber Dana":x.sumber || "", "No SPJ":x.spj || "", "No SP2D":x.sp2d || "", "Diserahkan ke":x.pj || "", "NIP":x.nip || "", "Jabatan":x.jab || "", "Peruntukan":x.untuk || "", "Posisi":x.lokasi || "", "No BAST":x.bast || "", "Tgl BAST":x.tbast || "", "Kondisi":x.kond || "Belum dicek", "Tgl Cek":x.tcek || "", "Pemeriksa":x.cek || "", "Usul Hapus":usulHapus(x) ? (x.hapusNo || "Ya") : "", "Foto (tautan)":x.foto || "", "Foto diunggah":(x.fotos || []).length, "Catatan":x.cat || x.ket || "" }, x.extra || {});
 }
 
 /* ================= drawer ================= */
@@ -2037,6 +2037,7 @@ function drawerItem(x) {
           <div class="full fgrid" id="d-sipf" ${x.sip ? "" : "hidden"}><label class="f">Kode aset SIPBMD<input id="d-kode" class="mono" value="${esc(x.kode || "")}" placeholder="mis. 1.3.2.10.01.02.002"></label><label class="f">No. register SIPBMD<input id="d-noreg" class="mono" value="${esc(x.noreg || "")}"></label></div>`}
           <label class="f">No. registrasi internal<input id="d-reg" class="mono" value="${esc(x.reg || "")}"></label>
           <label class="f">No. SPJ / kuitansi<input id="d-spj" value="${esc(x.spj || "")}"></label>
+          <label class="f">No. SP2D<input id="d-sp2d" value="${esc(x.sp2d || "")}" placeholder="mis. 01234/SP2D/LS/2025"></label>
           ${sumberField("d-sumber", x.sumber || "", "full")}
         </fieldset>
         <dl class="kv" style="margin-top:12px">
@@ -2058,7 +2059,7 @@ function drawerNew() {
     <label class="f">Merek / tipe<input id="n-merek"></label><label class="f">Spesifikasi / ukuran / luas<input id="n-spes"></label>
     <label class="f">Jumlah<input id="n-jml" type="number" min="1" value="1"></label><label class="f">Harga satuan (Rp)<input id="n-harga" type="number" min="0" value="0"></label>
     <label class="f">Tanggal perolehan<input id="n-tgl" type="date"></label>${sumberField("n-sumber", "")}
-    <label class="f">No. SPJ / kuitansi<input id="n-spj"></label><label class="f">No. registrasi internal<input id="n-reg" class="mono"></label>
+    <label class="f">No. SPJ / kuitansi<input id="n-spj"></label><label class="f">No. SP2D<input id="n-sp2d"></label><label class="f">No. registrasi internal<input id="n-reg" class="mono"></label>
     <label class="f full">Status pencatatan<select id="n-sip"><option value="0" ${sub === "tak" ? "selected" : ""}>Tidak tercatat di SIPBMD</option><option value="bospda" ${sub === "bospda" ? "selected" : ""}>BOSP Daerah oleh cabang dinas · menunggu SIPBMD</option><option value="1">Sudah tercatat di SIPBMD (isi kode dan no. register)</option></select></label>
     <label class="f">Kode aset SIPBMD<input id="n-kode" class="mono"></label><label class="f">No. register SIPBMD<input id="n-noreg" class="mono"></label>
     <label class="f full">Posisi / letak<input id="n-lok" list="dl-ruang"></label>
@@ -2742,7 +2743,7 @@ function vPersediaan() {
     const masuk = sub === "masuk";
     const exist = S.psdBarang.find(b => norm(b.nama) === norm(F.nama || ""));
     const stok = exist ? psdLedger(exist._id).qty : 0;
-    const rows = S.psdTrx.filter(t => t.jenis === sub && t.tgl >= f.dari && t.tgl <= f.sampai && matches(f.q, [barangOf(t.barang)?.nama, t.bukti, t.sumber, t.penyedia, t.penerima, t.unit, t.keperluan])).sort((a, b) => (b.tgl + b.dibuat).localeCompare(a.tgl + a.dibuat));
+    const rows = S.psdTrx.filter(t => t.jenis === sub && t.tgl >= f.dari && t.tgl <= f.sampai && matches(f.q, [barangOf(t.barang)?.nama, t.bukti, t.sp2d, t.sumber, t.penyedia, t.penerima, t.unit, t.keperluan])).sort((a, b) => (b.tgl + b.dibuat).localeCompare(a.tgl + a.dibuat));
     const tot = rows.reduce((t, r) => t + (masuk ? (+r.jml) * (+r.harga || 0) : (+r.nilai || 0)), 0);
     return `${psdStrip()}
     <div class="grid two">
@@ -2756,7 +2757,8 @@ function vPersediaan() {
             <label class="f">Jumlah<input id="pf-jml" type="number" min="0" step="any" value="${esc(F.jml || "")}"></label>
             <label class="f">Harga satuan (Rp)<input id="pf-harga" type="number" min="0" step="any" value="${esc(F.harga || "")}"></label>
             ${sumberField("pf-sumber", F.sumber || "")}
-            <label class="f">Penyedia / toko<input id="pf-penyedia" value="${esc(F.penyedia || "")}"></label>`
+            <label class="f">Penyedia / toko<input id="pf-penyedia" value="${esc(F.penyedia || "")}"></label>
+            <label class="f">No. SP2D<input id="pf-sp2d" value="${esc(F.sp2d || "")}" placeholder="bila dibayar lewat SP2D"></label>`
           : `<div class="full">${exist ? `<span class="pill ${stok > 0 ? "acc" : "bad"}">Stok saat ini: ${fmt(stok)} ${esc(exist.satuan)}</span>` : (F.nama ? '<span class="pill warn">Barang belum pernah dicatat masuk</span>' : "")}</div>
             <label class="f">Jumlah keluar<input id="pf-jml" type="number" min="0" step="any" value="${esc(F.jml || "")}"></label>
             <label class="f">Diterima oleh<input id="pf-penerima" list="dl-peg3" value="${esc(F.penerima || "")}"></label>
@@ -2773,7 +2775,7 @@ function vPersediaan() {
     </div>
     <div class="toolbar" style="margin-top:14px"><label class="f grow">Cari<input id="p-q" type="search" value="${esc(f.q)}" placeholder="barang, bukti, ${masuk ? "sumber dana, penyedia" : "penerima, unit, keperluan"}…"></label><span class="sp"></span><button id="p-xlsx">Unduh Excel</button></div>
     <div class="tablebox"><table><thead><tr><th>Tanggal</th><th>Barang</th><th class="num">Jumlah</th>${masuk ? '<th class="num">Harga</th><th class="num">Total</th><th class="hide-sm">Sumber · bukti</th>' : '<th class="num">Nilai (FIFO)</th><th class="hide-sm">Penerima · unit</th><th class="hide-sm">Keperluan</th>'}<th></th></tr></thead><tbody>
-      ${rows.map(t => { const b = barangOf(t.barang) || { nama:"(barang dihapus)", satuan:"" }; return `<tr><td>${esc(tglID(t.tgl))}</td><td><div class="nm">${esc(b.nama)}</div><div class="sm">${esc(t.bukti || "")}</div></td><td class="num">${fmt(t.jml)} ${esc(b.satuan)}</td>${masuk ? `<td class="num">${rp(t.harga)}</td><td class="num">${rp((+t.jml) * (+t.harga || 0))}</td><td class="hide-sm">${esc(t.sumber || "")}<div class="sm">${esc(t.penyedia || "")}</div>${t.bantuan ? '<span class="pill info">bantuan pihak luar</span>' : ""}${t.sikap ? '<span class="pill warn">SIKAP</span>' : ""}${t.spjKeu ? '<span class="pill info">dari SPJ Keuangan</span>' : ""}</td>` : `<td class="num">${rp(t.nilai)}</td><td class="hide-sm">${esc(t.penerima || "")}<div class="sm">${esc(t.unit || "")}</div>${t.minta ? '<span class="pill info">dari aplikasi permintaan</span>' : ""}</td><td class="hide-sm">${esc(t.keperluan || "")}</td>`}<td style="white-space:nowrap">${masuk ? "" : `<button class="ghost" data-psdpdf="${esc(t._id)}">PDF</button>`}${confirmPsd === t._id ? `<span class="confirm"><button class="danger" data-psddel="${esc(t._id)}">Ya, hapus</button><button data-psdcancel="1">Batal</button></span>` : `<button class="ghost" data-psdask="${esc(t._id)}">Hapus</button>`}</td></tr>`; }).join("") || `<tr><td colspan="7"><div class="empty"><b>Belum ada persediaan ${sub} di periode ini</b>Catat lewat formulir di atas.</div></td></tr>`}
+      ${rows.map(t => { const b = barangOf(t.barang) || { nama:"(barang dihapus)", satuan:"" }; return `<tr><td>${esc(tglID(t.tgl))}</td><td><div class="nm">${esc(b.nama)}</div><div class="sm">${esc([t.bukti, t.sp2d ? "SP2D " + t.sp2d : ""].filter(Boolean).join(" · "))}</div></td><td class="num">${fmt(t.jml)} ${esc(b.satuan)}</td>${masuk ? `<td class="num">${rp(t.harga)}</td><td class="num">${rp((+t.jml) * (+t.harga || 0))}</td><td class="hide-sm">${esc(t.sumber || "")}<div class="sm">${esc(t.penyedia || "")}</div>${t.bantuan ? '<span class="pill info">bantuan pihak luar</span>' : ""}${t.sikap ? '<span class="pill warn">SIKAP</span>' : ""}${t.spjKeu ? '<span class="pill info">dari SPJ Keuangan</span>' : ""}</td>` : `<td class="num">${rp(t.nilai)}</td><td class="hide-sm">${esc(t.penerima || "")}<div class="sm">${esc(t.unit || "")}</div>${t.minta ? '<span class="pill info">dari aplikasi permintaan</span>' : ""}</td><td class="hide-sm">${esc(t.keperluan || "")}</td>`}<td style="white-space:nowrap">${masuk ? "" : `<button class="ghost" data-psdpdf="${esc(t._id)}">PDF</button>`}${confirmPsd === t._id ? `<span class="confirm"><button class="danger" data-psddel="${esc(t._id)}">Ya, hapus</button><button data-psdcancel="1">Batal</button></span>` : `<button class="ghost" data-psdask="${esc(t._id)}">Hapus</button>`}</td></tr>`; }).join("") || `<tr><td colspan="7"><div class="empty"><b>Belum ada persediaan ${sub} di periode ini</b>Catat lewat formulir di atas.</div></td></tr>`}
     </tbody></table></div>`;
   }
   // mutasi
@@ -2801,8 +2803,8 @@ function drawerKartu(id) {
   const b = barangOf(id); if (!b) return "";
   const l = psdLedger(id);
   return `<div class="dh"><div><p class="sectionlabel" style="margin:0 0 2px">Kartu stok · ${esc(b.kategori || "persediaan")}</p><h3>${esc(b.nama)}</h3><div class="muted">Saldo ${fmt(l.qty)} ${esc(b.satuan)} · ${rp(l.nilai)}</div></div><button class="x" id="d-close">Tutup</button></div>
-  <div class="db">${catatanSection({ t:"barang", id:b._id, label:b.nama })}<div class="tablebox"><table><thead><tr><th>Tanggal</th><th>Uraian</th><th class="num">Masuk</th><th class="num">Keluar</th><th class="num">Saldo</th></tr></thead><tbody>
-  ${l.rows.map(r => `<tr><td>${esc(tglID(r.t.tgl))}</td><td>${r.t.jenis === "masuk" ? esc((r.t.penyedia || "Pembelian") + (r.t.bukti ? " · " + r.t.bukti : "")) : esc((r.t.penerima || r.t.unit || "Pengeluaran") + (r.t.keperluan ? " · " + r.t.keperluan : ""))}</td><td class="num">${r.qIn ? fmt(r.qIn) : ""}</td><td class="num">${r.qOut ? fmt(r.qOut) : ""}</td><td class="num">${fmt(r.sq)}<div class="sm">${rp(r.sv)}</div></td></tr>`).join("")}
+  <div class="db">${catatanSection({ t:"barang", id:b._id, label:b.nama }, true)}${can("catatan") ? `<div><button class="primary" id="psd-dsave">Simpan</button></div>` : ""}<div class="tablebox"><table><thead><tr><th>Tanggal</th><th>Uraian</th><th class="num">Masuk</th><th class="num">Keluar</th><th class="num">Saldo</th></tr></thead><tbody>
+  ${l.rows.map(r => `<tr><td>${esc(tglID(r.t.tgl))}</td><td>${r.t.jenis === "masuk" ? esc((r.t.penyedia || "Pembelian") + (r.t.bukti ? " · " + r.t.bukti : "") + (r.t.sp2d ? " · SP2D " + r.t.sp2d : "")) : esc((r.t.penerima || r.t.unit || "Pengeluaran") + (r.t.keperluan ? " · " + r.t.keperluan : ""))}</td><td class="num">${r.qIn ? fmt(r.qIn) : ""}</td><td class="num">${r.qOut ? fmt(r.qOut) : ""}</td><td class="num">${fmt(r.sq)}<div class="sm">${rp(r.sv)}</div></td></tr>`).join("")}
   </tbody></table></div></div>`;
 }
 async function psdSave() { const F = UI.psd.form; return W.group(`Persediaan ${sub} ${F.nama || ""} ${F.jml || ""}`.trim(), psdSave0); }
@@ -2819,11 +2821,11 @@ async function psdSave0() {
   try {
     if (!b) { if (!(F.satuan || "").trim()) { toast("Isi satuan barang baru."); return; } const id = uid("b"); await W.set("psd_barang/" + id, { nama, satuan:F.satuan.trim(), kategori:(F.kat || "").trim(), dibuat:new Date().toISOString() }); b = { _id:id, nama, satuan:F.satuan.trim() }; }
     const t = { jenis:sub, tgl:F.tgl || today(), barang:b._id, jml, bukti:F.bukti || "", ket:F.ket || "", dibuat:new Date().toISOString(), oleh:S.me || "" };
-    if (masuk) Object.assign(t, { harga:+F.harga || 0, sumber:F.sumber || "", penyedia:F.penyedia || "" });
+    if (masuk) Object.assign(t, { harga:+F.harga || 0, sumber:F.sumber || "", penyedia:F.penyedia || "", sp2d:F.sp2d || "" });
     else { const tmp = { _id:"tmp", ...t }; S.psdTrx.push(tmp); const l = psdLedger(b._id); S.psdTrx.pop(); const row = l.rows.find(r => r.t === tmp); Object.assign(t, { nilai:row ? Math.round(row.vOut) : 0, penerima:F.penerima || "", unit:F.unit || "", keperluan:F.keperluan || "" }); }
     await W.set("psd_trx/" + uid("p"), t);
     toast(masuk ? "Persediaan masuk tersimpan." : "Persediaan keluar tersimpan.");
-    UI.psd.form = { tgl:t.tgl, bukti:F.bukti, sumber:F.sumber, penyedia:F.penyedia, penerima:F.penerima, unit:F.unit };
+    UI.psd.form = { tgl:t.tgl, bukti:F.bukti, sumber:F.sumber, penyedia:F.penyedia, sp2d:F.sp2d, penerima:F.penerima, unit:F.unit };
     render();
   } catch (e) { writeErr(e); }
 }
@@ -4001,7 +4003,7 @@ function drawerRuang() {
       <details style="margin-top:10px" ${Object.values(d.rusak || {}).some(v => +v) ? "open" : ""}><summary class="muted">Persentase kerusakan per komponen (opsional)</summary>
         <div class="fgrid" style="grid-template-columns:repeat(auto-fill,minmax(130px,1fr));margin-top:8px">${KOMPONEN.map((k, i) => `<label class="f">${k} (%)<input id="rd-rk-${i}" type="number" min="0" max="100" value="${esc((d.rusak || {})[k] ?? "")}"></label>`).join("")}</div></details>
     </div>
-    ${d._id ? catatanSection({ t:"ruang", id:d._id, label:(d.kode ? d.kode + " · " : "") + d.nama }) : ""}
+    ${d._id ? catatanSection({ t:"ruang", id:d._id, label:(d.kode ? d.kode + " · " : "") + d.nama }, true) : ""}
     <div style="display:flex;gap:8px;flex-wrap:wrap;position:sticky;bottom:-16px;background:var(--surface);padding-block:10px;border-top:1px solid var(--line)">${can("ruang") ? '<button class="primary" id="rd-save">Simpan ruang</button>' : ""}${d._id && can("ruang") ? (drawer.askDel ? `<span class="confirm"><button class="danger" id="rd-del-yes">Ya, hapus ruang</button><button id="rd-del-no">Batal</button></span>` : '<button class="ghost" id="rd-del">Hapus ruang</button>') : ""}</div>
   </div>`;
 }
@@ -4020,8 +4022,8 @@ async function saveRuang0() {
   if (d.kond && !d.tcek) d.tcek = today();
   d.rusak = {}; KOMPONEN.forEach((k, i) => { const x = v("rd-rk-" + i); if (x !== "" && x !== undefined) d.rusak[k] = +x; });
   if (!d.nama) { toast("Isi nama ruang."); return; }
-  const id = d._id || uid("r");
-  try { await W.set("ruang/" + id, clean(Object.assign({}, d, { _id:undefined, diubah:new Date().toISOString() }))); toast("Ruang tersimpan."); closeDrawer(); } catch (e) { writeErr(e); }
+  const id = d._id || uid("r"), nt = d._id ? notesPending("ruang", d._id) : { edit:[], baru:null };
+  try { await W.set("ruang/" + id, clean(Object.assign({}, d, { _id:undefined, diubah:new Date().toISOString() }))); await notesSave(nt); toast(isMaster() ? "Ruang tersimpan." : "Perubahan ruang dikirim untuk validasi master."); closeDrawer(); } catch (e) { writeErr(e); }
 }
 async function uploadRuangFotos(files) {
   const d = drawer && drawer.draft; if (!d || !d._id || !assets) return;
@@ -4210,7 +4212,7 @@ async function kkSync(k) {
     }
     if (psd) await W.del("psd_trx/" + psd._id);
     const want = l.pecah ? Math.max(1, Math.round(+l.jml || 1)) : 1;
-    const shared = { kat, nama:l.nama, merek:l.merk || "", spes:l.spes || "", jml:l.pecah ? 1 : (+l.jml || 1), harga:+l.harga || 0, satuan:l.satuan || "", tgl:k.tbast || k.tgl || "", th:yearOf(k.tbast || k.tgl || k.tahun), sumber:k.sumber, spj:k.nomor || "", nodok:k.nomor || "", kap:BATAS[kat] && (+l.harga || 0) < BATAS[kat] ? "Ekstrakomptabel" : "Intrakomptabel", rek:l.rek || "",
+    const shared = { kat, nama:l.nama, merek:l.merk || "", spes:l.spes || "", jml:l.pecah ? 1 : (+l.jml || 1), harga:+l.harga || 0, satuan:l.satuan || "", tgl:k.tbast || k.tgl || "", th:yearOf(k.tbast || k.tgl || k.tahun), sumber:k.sumber, spj:k.nomor || "", sp2d:k.sp2d || "", nodok:k.nomor || "", kap:BATAS[kat] && (+l.harga || 0) < BATAS[kat] ? "Ekstrakomptabel" : "Intrakomptabel", rek:l.rek || "",
       extra:{ "Nama pekerjaan":k.nama, "SP2D":[k.sp2d, tglID(k.tsp2d)].filter(Boolean).join(" · "), "BAST/TTB":[k.bast, tglID(k.tbast)].filter(Boolean).join(" · "), "Penyedia":k.penyedia || "", "Kode rekening belanja":l.rek || "", "Keterangan kertas kerja":l.ket || "" } };
     for (let n = 0; n < want; n++) {
       const a = linked[n];
@@ -4736,7 +4738,7 @@ async function runLengkapi() {
       for (const r of lk) { await saveUpd(r.a.key, r.fill); I.done++; render(); }
       for (const r of ps) {
         const key = "S|" + r.it.k.split("#")[0], x = r.c, carry = {};
-        for (const f of ["reg", "pj", "nip", "jab", "untuk", "lokasi", "bast", "tbast", "spj", "kond", "tcek", "cek", "cat", "batas", "pl"]) if (x[f]) carry[f] = x[f];
+        for (const f of ["reg", "pj", "nip", "jab", "untuk", "lokasi", "bast", "tbast", "spj", "sp2d", "kond", "tcek", "cek", "cat", "batas", "pl"]) if (x[f]) carry[f] = x[f];
         if (lkKosong(r.it.sumber) && x.sumber) carry.sumber = x.sumber;
         if (x.fotos && x.fotos.length) carry.fotos = x.fotos;
         await saveUpd(x.key, { pair:key }); await saveUpd(key, Object.assign({ pair:x.key }, carry)); I.done++; render();
@@ -5310,20 +5312,21 @@ document.addEventListener("click", async e => {
   if (d.psdpdf) { const tx = S.psdTrx.find(x => x._id === d.psdpdf); if (tx) psdKeluarPdf(tx); return; }
   if (d.pair) {
     const x = allItems().byKey.get(drawer.key), a = allItems().byKey.get(d.pair); if (!x || !a) return;
-    const carry = {}; for (const f of ["reg", "pj", "nip", "jab", "lokasi", "bast", "tbast", "spj", "kond", "tcek", "cek"]) if (!a[f] && x[f]) carry[f] = x[f];
+    const carry = {}; for (const f of ["reg", "pj", "nip", "jab", "lokasi", "bast", "tbast", "spj", "sp2d", "kond", "tcek", "cek"]) if (!a[f] && x[f]) carry[f] = x[f];
     if (x.fotos && x.fotos.length) carry.fotos = [...(a.fotos || []), ...x.fotos];
     if (await W.group(`Pasangkan ${x.nama} ke SIPBMD ${a.kode} No. ${a.noreg}`, async () => (await saveUpd(x.key, { pair:a.key })) && saveUpd(a.key, Object.assign({ pair:x.key }, carry)))) { toast("Dipasangkan ke " + a.kode + " No. " + a.noreg); drawer = { mode:"item", key:a.key, fresh:true }; renderDrawer(); }
     return;
   }
   switch (t.id) {
     case "d-close": case "d-scrim": closeDrawer(); break;
+    case "psd-dsave": { const nt = notesPending("barang", drawer.id); if (!nt.edit.length && !nt.baru) { closeDrawer(); break; } t.disabled = true; const n = await notesSave(nt); closeDrawer(); if (n && !nt.baru) toast("Tersimpan."); break; }
     case "d-unpair": { const x = allItems().byKey.get(drawer.key); if (x && x.pair) { const o = x.pair; await W.group("Lepas padanan SIPBMD " + x.nama, async () => { if (await saveUpd(x.key, { pair:"" })) await saveUpd(o, { pair:"" }); }); toast("Pasangan dilepas."); } break; }
     case "d-save": {
       const x = allItems().byKey.get(drawer.key); if (!x) break;
       const seg = $("#d-kondseg"), pressed = seg && seg.querySelector('[aria-pressed="true"]');
       const kond = pressed ? pressed.dataset.k : (x.kond && !KOND.includes(x.kond) ? x.kond : "");
       const pj = val("d-pj"), peg = findPeg(pj);
-      const patch = { pj, untuk:val("d-untuk"), lokasi:val("d-lok"), kond, tcek:val("d-tcek"), cek:val("d-cek"), cat:val("d-cat"), reg:val("d-reg"), spj:val("d-spj"), sumber:val("d-sumber") };
+      const patch = { pj, untuk:val("d-untuk"), lokasi:val("d-lok"), kond, tcek:val("d-tcek"), cek:val("d-cek"), cat:val("d-cat"), reg:val("d-reg"), spj:val("d-spj"), sp2d:val("d-sp2d"), sumber:val("d-sumber") };
       if (document.getElementById("d-batas")) patch.batas = pj ? val("d-batas") : "";
       if (peg) { patch.nip = peg.nip || ""; patch.jab = peg.jab || ""; } else if (!pj) { patch.nip = ""; patch.jab = ""; }
       if (kond && kond !== x.kond && !patch.tcek) patch.tcek = today();
@@ -5337,15 +5340,13 @@ document.addEventListener("click", async e => {
       }
       // only the fields this account may change are sent
       if (can("aset_ubah")) { const hp = hargaPatch(x); if (hp) Object.assign(patch, hp); const kp = kibPatch(x); if (kp) patch.kib = kp; }
-      const allow = new Set([...(can("aset_ubah") ? ["pj", "nip", "jab", "untuk", "lokasi", "reg", "spj", "sumber", "sip", "grp", "kode", "noreg", "kat", "kib", "harga", "jml", "hargaAsli", "nilai"] : []), ...(can("aset_ubah") || can("bast") ? ["batas"] : []), ...(can("aset_kondisi") ? ["kond", "tcek", "cek", "cat"] : []), ...(can("hapus") ? ["hapusNo", "rehab"] : [])]);
+      const allow = new Set([...(can("aset_ubah") ? ["pj", "nip", "jab", "untuk", "lokasi", "reg", "spj", "sp2d", "sumber", "sip", "grp", "kode", "noreg", "kat", "kib", "harga", "jml", "hargaAsli", "nilai"] : []), ...(can("aset_ubah") || can("bast") ? ["batas"] : []), ...(can("aset_kondisi") ? ["kond", "tcek", "cek", "cat"] : []), ...(can("hapus") ? ["hapusNo", "rehab"] : [])]);
       for (const f of Object.keys(patch)) if (!allow.has(f)) delete patch[f];
       t.disabled = true;
       // catatan temuan (status/tindak lanjut yang diubah, dan catatan baru) ikut tersimpan
-      const ntEdit = can("catatan") ? notesFor("aset", x.key).filter(c => document.getElementById("nts-" + c._id) && (val("nts-" + c._id) !== (c.st || "Terbuka") || val("ntl-" + c._id) !== (c.tl || ""))) : [];
-      const ntBaru = can("catatan") && val("ntd-teks") ? $("#ntd-add") : null;
+      const nt = notesPending("aset", x.key);
       if (!(await saveUpd(x.key, patch))) { t.disabled = false; break; }
-      try { for (const c of ntEdit) await db.doc("catatan/" + c._id).update({ st:val("nts-" + c._id), tl:val("ntl-" + c._id), tlBy:S.me || "", tlAt:new Date().toISOString() }); } catch (err) { writeErr(err); }
-      if (ntBaru) await addNote(ntBaru);
+      await notesSave(nt);
       closeDrawer();
       toast(!isMaster() ? "Perubahan dikirim untuk validasi master." : (kond === "Rusak Berat" || kond === "Hilang") && !patch.rehab ? "Tersimpan. Aset masuk usulan penghapusan." : "Tersimpan.");
       break;
@@ -5362,7 +5363,7 @@ document.addEventListener("click", async e => {
       if (!db) { toast("Data belum terhubung."); break; }
       const nama = val("n-nama"); if (!nama) { toast("Isi nama aset."); break; }
       const id = uid("n"), kat = val("n-kat");
-      const doc = { kat, nama, merek:val("n-merek"), spes:val("n-spes"), jml:Math.max(1, +val("n-jml") || 1), harga:+val("n-harga") || 0, tgl:val("n-tgl"), th:yearOf(val("n-tgl")), sumber:val("n-sumber"), spj:val("n-spj"), reg:val("n-reg"), sip:val("n-sip") === "1", grp:val("n-sip") === "bospda" ? "bospda" : "", sumber:val("n-sip") === "bospda" && !val("n-sumber") ? "BOSP Daerah" : val("n-sumber"), kode:val("n-kode"), noreg:val("n-noreg"), lokasi:val("n-lok"), dibuat:new Date().toISOString(), oleh:S.me || "" };
+      const doc = { kat, nama, merek:val("n-merek"), spes:val("n-spes"), jml:Math.max(1, +val("n-jml") || 1), harga:+val("n-harga") || 0, tgl:val("n-tgl"), th:yearOf(val("n-tgl")), sumber:val("n-sumber"), spj:val("n-spj"), sp2d:val("n-sp2d"), reg:val("n-reg"), sip:val("n-sip") === "1", grp:val("n-sip") === "bospda" ? "bospda" : "", sumber:val("n-sip") === "bospda" && !val("n-sumber") ? "BOSP Daerah" : val("n-sumber"), kode:val("n-kode"), noreg:val("n-noreg"), lokasi:val("n-lok"), dibuat:new Date().toISOString(), oleh:S.me || "" };
       try { await W.set("aset_baru/" + id, doc); toast("Aset ditambahkan."); if (isMaster()) drawer = { mode:"item", key:"N|" + id, fresh:true }; else closeDrawer(); { const dest = doc.grp === "bospda" ? "bospda" : !doc.sip ? "tak" : kat; if (dest !== sub) location.hash = "aset-" + dest; } } catch (err) { writeErr(err); }
       break;
     }
@@ -5394,7 +5395,7 @@ document.addEventListener("click", async e => {
     case "pf-save": psdSave(); break;
     case "p-xlsx": {
       const masuk = sub === "masuk", rows = S.psdTrx.filter(x => x.jenis === sub && x.tgl >= UI.psd.dari && x.tgl <= UI.psd.sampai).sort((a, b) => a.tgl.localeCompare(b.tgl));
-      xlsxSave(`Persediaan ${masuk ? "Masuk" : "Keluar"} ${UI.psd.dari} sd ${UI.psd.sampai}.xlsx`, [[masuk ? "Masuk" : "Keluar", rows.map((x, n) => { const b = barangOf(x.barang) || {}; return masuk ? { "No":n + 1, "Tanggal":x.tgl, "Nama Barang":b.nama, "Kategori":b.kategori || "", "Jumlah":x.jml, "Satuan":b.satuan, "Harga Satuan":x.harga, "Total":(+x.jml) * (+x.harga || 0), "Sumber Dana":x.sumber, "No Bukti/SPJ":x.bukti, "Penyedia":x.penyedia, "Keterangan":x.ket } : { "No":n + 1, "Tanggal":x.tgl, "Nama Barang":b.nama, "Kategori":b.kategori || "", "Jumlah":x.jml, "Satuan":b.satuan, "Nilai (FIFO)":x.nilai, "Penerima":x.penerima, "Unit":x.unit, "Keperluan":x.keperluan, "No Bukti":x.bukti, "Keterangan":x.ket }; })]]);
+      xlsxSave(`Persediaan ${masuk ? "Masuk" : "Keluar"} ${UI.psd.dari} sd ${UI.psd.sampai}.xlsx`, [[masuk ? "Masuk" : "Keluar", rows.map((x, n) => { const b = barangOf(x.barang) || {}; return masuk ? { "No":n + 1, "Tanggal":x.tgl, "Nama Barang":b.nama, "Kategori":b.kategori || "", "Jumlah":x.jml, "Satuan":b.satuan, "Harga Satuan":x.harga, "Total":(+x.jml) * (+x.harga || 0), "Sumber Dana":x.sumber, "No Bukti/SPJ":x.bukti, "No SP2D":x.sp2d || "", "Penyedia":x.penyedia, "Keterangan":x.ket } : { "No":n + 1, "Tanggal":x.tgl, "Nama Barang":b.nama, "Kategori":b.kategori || "", "Jumlah":x.jml, "Satuan":b.satuan, "Nilai (FIFO)":x.nilai, "Penerima":x.penerima, "Unit":x.unit, "Keperluan":x.keperluan, "No Bukti":x.bukti, "Keterangan":x.ket }; })]]);
       break;
     }
     case "p-mxlsx": {
@@ -5819,7 +5820,19 @@ function noteForm(prefix, target, one) {
       <label class="f">Foto (opsional)<input id="${prefix}-file" type="file" accept="image/*" multiple><span class="hint">${nf ? nf + " foto dipilih" : ""}</span></label></div>
     <div ${one ? "hidden" : ""}><button class="primary" id="${prefix}-add" data-ntadd="${prefix}" data-ntt="${esc(target.t)}" data-ntid="${esc(target.id || "")}" data-ntlabel="${esc(target.label || "")}">Simpan catatan</button></div></div>`;
 }
-// one = di panel edit aset: tidak ada tombol simpan sendiri, ikut tombol Simpan utama
+// one = di panel edit: tidak ada tombol simpan sendiri, ikut tombol Simpan utama panel itu
+// catatan temuan yang belum disimpan di panel (status/tindak lanjut diubah, catatan baru ditulis)
+function notesPending(t, id) {
+  if (!can("catatan")) return { edit:[], baru:null };
+  const edit = notesFor(t, id).filter(c => document.getElementById("nts-" + c._id) && (val("nts-" + c._id) !== (c.st || "Terbuka") || val("ntl-" + c._id) !== (c.tl || "")))
+    .map(c => ({ id:c._id, st:val("nts-" + c._id), tl:val("ntl-" + c._id) }));
+  return { edit, baru:val("ntd-teks") ? $("#ntd-add") : null };
+}
+async function notesSave(nt) {
+  try { for (const c of nt.edit) await db.doc("catatan/" + c.id).update({ st:c.st, tl:c.tl, tlBy:S.me || "", tlAt:new Date().toISOString() }); } catch (err) { writeErr(err); }
+  if (nt.baru) await addNote(nt.baru);
+  return nt.edit.length + (nt.baru ? 1 : 0);
+}
 function catatanSection(target, one) {
   const list = notesFor(target.t, target.id);
   return `<div><p class="sectionlabel">Catatan temuan (${list.length})</p><div style="display:flex;flex-direction:column;gap:8px">${list.map(c => noteCard(c, false, one)).join("")}${noteForm("ntd", target, one)}</div>${!list.length && !can("catatan") ? '<p class="muted" style="margin:0">Belum ada catatan.</p>' : ""}</div>`;
