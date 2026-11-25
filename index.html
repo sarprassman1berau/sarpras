@@ -4565,11 +4565,12 @@ function vImpor0() {
     <div style="display:flex;flex-direction:column;gap:8px">
       <label class="ck full"><input type="radio" name="imp-mode" id="imp-mode-merge" value="merge" ${I.mode === "merge" ? "checked" : ""}> <span><b>Tambah & perbarui</b>: aset baru ditambahkan; ${fmt(upd)} aset dengan kode + no. register yang sama diperbarui datanya. Aset lama yang tidak ada di file tetap disimpan.</span></label>
       <label class="ck full"><input type="radio" name="imp-mode" id="imp-mode-lengkapi" value="lengkapi" ${I.mode === "lengkapi" ? "checked" : ""}> <span><b>Lengkapi data yang masih kosong saja</b>: tidak menimpa isian yang sudah ada dan tidak menggandakan aset. Merek, tipe, sumber dana, satuan, keterangan, nomor dokumen, dan lainnya hanya diisi pada aset yang kolomnya masih kosong. Barang yang belum ada di aplikasi bisa ditambahkan.</span></label>
+      <label class="ck full"><input type="radio" name="imp-mode" id="imp-mode-batal" value="batal" ${I.mode === "batal" ? "checked" : ""}> <span><b>Batalkan isian yang pernah dimasukkan dari file ini</b>: menghapus kembali merek, tipe, sumber dana, keterangan, dan isian lain yang dulu diisi dari file yang sama (mode Lengkapi), serta melepas pasangan aset tak tercatat/BOSP Daerah. Isian yang sudah Ibu ubah sendiri sesudahnya tidak disentuh. Barang yang ditambahkan dihapus lewat tombol Hapus di Riwayat impor.</span></label>
       <label class="ck full"><input type="radio" name="imp-mode" id="imp-mode-replace" value="replace" ${I.mode === "replace" ? "checked" : ""}> <span><b>Ganti semua data SIPBMD</b>: ${fmt(nAset)} aset SIPBMD yang tersimpan sekarang diganti isi file ini. Catatan pemegang, kondisi, dan foto tetap tersimpan untuk aset yang kode + register-nya sama.</span></label>
     </div>
-    ${I.mode === "lengkapi" ? lkPanel(items) : ""}
+    ${I.mode === "lengkapi" ? lkPanel(items) : I.mode === "batal" ? btlPanel(items) : ""}
     ${I.busy ? `<div style="margin-top:12px"><div class="bar"><i style="width:${I.total ? Math.round(I.done / I.total * 100) : 0}%"></i></div><p class="hint">Menyimpan bagian ${I.done} dari ${I.total}… jangan tutup halaman ini.</p></div>` : ""}
-    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="primary" id="imp-go" ${I.busy || !items.length || sheets.some(s => s.map.kode < 0 || s.map.nama < 0) ? "disabled" : ""}>Impor ${fmt(items.length)} aset</button><button class="ghost" id="imp-reset" ${I.busy ? "disabled" : ""}>Batal</button></div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="primary" id="imp-go" ${I.busy || !items.length || sheets.some(s => s.map.kode < 0 || s.map.nama < 0) ? "disabled" : ""}>${I.mode === "batal" ? "Batalkan isian dari file ini" : "Impor " + fmt(items.length) + " aset"}</button><button class="ghost" id="imp-reset" ${I.busy ? "disabled" : ""}>Batal</button></div>
   </section>` : ""}`;
 }
 function chunkItems(items, limit = 220000) {
@@ -4646,6 +4647,46 @@ async function runLengkapi() {
     toast(`${fmt(lk.length)} aset dilengkapi${ps.length ? ", " + fmt(ps.length) + " dipasangkan" : ""}${br.length ? ", " + fmt(br.length) + " ditambahkan" : ""}.`);
     UI.imp = { file:"", sheets:[], mode:"merge", busy:false, done:0, total:0, ask:null, err:"" }; location.hash = "aset-pm"; render();
   } catch (e) { I.busy = false; writeErr(e); I.err = "Proses berhenti. Jalankan lagi dengan file yang sama: yang sudah terisi tidak akan diubah lagi."; render(); }
+}
+/* ===== batalkan isian dari file (untuk impor "Lengkapi" yang terlanjur dijalankan) =====
+   isian hanya dihapus bila nilainya masih sama dengan file DAN data SIPBMD aslinya memang kosong */
+function btlPlan(items) {
+  const seed = new Map(S.seed.aset.map(a => [a.k, a])), all = allItems().list, out = [];
+  const eq = (a, b) => norm(String(a ?? "")).replace(/\s+/g, " ") === norm(String(b ?? "")).replace(/\s+/g, " ");
+  for (const it of items) {
+    const k = it.k.split("#")[0], key = "S|" + k, base = seed.get(k), u = S.upd[did(key)] || {}, clear = {};
+    for (const [f] of LK_F) if (!lkKosong(u[f]) && !lkKosong(it[f]) && eq(u[f], it[f]) && lkKosong(base ? base[f] : "")) clear[f] = "";
+    if (clear.tipe && !lkKosong(u.spes) && eq(u.spes, it.tipe)) clear.spes = "";
+    if (u.nilai && it.nilai && +u.nilai === +it.nilai && base && !base.nilai) clear.nilai = 0;
+    const lepas = all.filter(x => x.pair === key && (x.src === "I" || x.src === "N"));
+    out.push({ it, key, base, clear, lepas, st:Object.keys(clear).length || lepas.length ? "batal" : "tidak" });
+  }
+  return out;
+}
+function btlPanel(items) {
+  const P = btlPlan(items), n = P.filter(r => r.st === "batal"), nf = n.reduce((t, r) => t + Object.keys(r.clear).filter(f => f !== "spes").length, 0), np = n.reduce((t, r) => t + r.lepas.length, 0);
+  const rec = S.impor.filter(r => /barang yang belum ada|lengkapi/i.test(r.file + " " + (r.mode || "")) || String(r.file).startsWith(UI.imp.file));
+  return `<div class="note info" style="margin-top:12px"><b>Rencana pembatalan:</b> ${fmt(nf)} isian pada ${fmt(n.filter(r => Object.keys(r.clear).length).length)} aset dikosongkan kembali · ${fmt(np)} pasangan aset tak tercatat/BOSP Daerah dilepas (catatan lamanya muncul lagi di menunya) · ${fmt(P.length - n.length)} baris tidak ada yang perlu dibatalkan.</div>
+    ${rec.length ? `<div class="note warn" style="margin-top:8px">Barang yang dulu <b>ditambahkan</b> dari file ini dihapus terpisah: di kotak <b>Riwayat impor</b> di atas, tekan <b>Hapus</b> pada ${rec.map(r => `"${esc(r.file)}" (${fmt(r.rows)} baris, ${esc(tglID(String(r.tgl).slice(0, 10)))})`).join(", ")}.</div>` : ""}
+    <div class="tablebox" style="max-height:340px;overflow:auto;margin-top:8px"><table><thead><tr><th>Aset di file</th><th>Yang dibatalkan</th></tr></thead><tbody>
+    ${n.map(r => `<tr><td>${esc(r.it.nama)} <span class="mono sm">${esc(r.it.kode)} No. ${esc(r.it.noreg || "-")}</span></td><td class="sm">${[...Object.keys(r.clear).filter(f => f !== "spes").map(f => `<b>${esc(f === "nilai" ? "Nilai" : (LK_F.find(x => x[0] === f) || [, f])[1])}</b> dikosongkan`), ...r.lepas.map(x => `lepas pasangan <b>${esc(itemNama(x))}</b>`)].join(" · ")}</td></tr>`).join("") || `<tr><td colspan="2"><div class="empty"><b>Tidak ada isian dari file ini yang perlu dibatalkan</b>Kemungkinan file dimasukkan dengan mode Tambah & perbarui; cukup tekan Hapus pada baris file itu di Riwayat impor.</div></td></tr>`}
+    </tbody></table></div>`;
+}
+async function runBatal() {
+  const I = UI.imp, { items } = importItems(), P = btlPlan(items).filter(r => r.st === "batal");
+  if (!P.length) { toast("Tidak ada yang perlu dibatalkan dari file ini."); return; }
+  I.busy = true; I.done = 0; I.total = P.length; render();
+  try {
+    await W.group(`Batalkan isian impor SIPBMD dari ${I.file}`, async () => {
+      for (const r of P) {
+        if (Object.keys(r.clear).length) await saveUpd(r.key, r.clear);
+        for (const x of r.lepas) { await saveUpd(x.key, { pair:"" }); if (S.upd[did(r.key)] && S.upd[did(r.key)].pair) await saveUpd(r.key, { pair:"" }); }
+        I.done++; if (I.done % 5 === 0) render();
+      }
+    });
+    toast(`Isian dari ${I.file} dibatalkan pada ${fmt(P.length)} aset. Bisa dikembalikan dari Riwayat & Urungkan.`);
+    I.busy = false; render();
+  } catch (e) { I.busy = false; writeErr(e); render(); }
 }
 async function runImport() {
   const I = UI.imp; if (!db) { toast("Data belum terhubung. Periksa koneksi lalu muat ulang."); return; }
@@ -5262,7 +5303,7 @@ document.addEventListener("click", async e => {
       try { await W.set("surat/" + uid("s"), { tgl:val("sn-tgl"), nomor:val("sn-nomor"), hal:val("sn-hal"), ke:val("sn-ke"), ket:val("sn-ket"), reg:"", dibuat:new Date().toISOString() }); toast("Surat dicatat."); } catch (err) { writeErr(err); }
       break;
     }
-    case "imp-go": if (UI.imp.mode === "lengkapi") runLengkapi(); else runImport(); break;
+    case "imp-go": if (UI.imp.mode === "lengkapi") runLengkapi(); else if (UI.imp.mode === "batal") runBatal(); else runImport(); break;
     case "kk-new": openKK(null); break;
     case "v-all": UI.val.askAll = true; render(); break;
     case "v-all-no": UI.val.askAll = false; render(); break;
