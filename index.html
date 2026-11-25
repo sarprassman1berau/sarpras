@@ -1239,7 +1239,7 @@ function hargaCard(x) {
       ${jmlOk ? `<label class="f">Jumlah<input id="d-hjml" type="number" min="1" step="1" value="${esc(j)}"></label>` : ""}
       <label class="f">Harga satuan (Rp)<input id="d-hrg" type="number" min="0" step="any" value="${esc(h)}"></label>
       <div><span class="f">Nilai perolehan</span><div id="d-hnilai" style="font-weight:600;padding:8px 0">${rp(h * j)}</div></div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><button id="d-hrg-save">${isMaster() ? "Simpan harga" : "Kirim koreksi harga"}</button>${asal ? `<span class="sm">${asal}</span><button class="link" id="d-hrg-reset">Kembalikan</button>` : ""}</div>
+      ${asal ? `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px"><span class="sm">${asal}</span><button class="link" id="d-hrg-reset">Kembalikan</button></div>` : ""}
       ${x.sip ? '<p class="hint" style="margin:6px 0 0">Koreksi disimpan sebagai isian sekolah dan dipakai di semua menu dan laporan aplikasi. Nilai di SIPBMD BPKAD tidak berubah; perbarui juga di SIPBMD bila memang salah di sana.</p>' : ""}`
     : `<p style="margin:0">${j > 1 ? fmt(j) + " × " + rp(h) + " = " : ""}<b>${rp(h * j)}</b>${asal ? ` <span class="sm">· ${asal}</span>` : ""}</p>`}</div>`;
 }
@@ -1256,13 +1256,23 @@ document.addEventListener("input", e => {
     const docs = aiDocs(), el = $("#ai-sum"); if (el) el.innerHTML = `<b>${fmt(UI.ai.rows.length)}</b> baris barang terbaca → <b>${fmt(docs.length)}</b> catatan aset · nilai ${rp(docs.reduce((s2, d) => s2 + (d.harga || 0) * (d.jml || 1), 0))}`;
     const sub2 = t.closest("tr") && t.closest("tr").querySelector("[data-aisub]"); if (sub2) sub2.textContent = rp(r.harga * r.jml); }
 });
-document.addEventListener("click", async e => {
-  const b = e.target.closest("#d-hrg-save, #d-hrg-reset"); if (!b || !drawer || drawer.mode !== "item") return;
+// "Kembalikan" mengisi harga semula ke kolom; disimpan bersama tombol Simpan
+document.addEventListener("click", e => {
+  const b = e.target.closest("#d-hrg-reset"); if (!b || !drawer || drawer.mode !== "item") return;
   const x = allItems().byKey.get(drawer.key); if (!x) return;
-  const reset = b.id === "d-hrg-reset", h = +($("#d-hrg") || {}).value || 0, j = Math.max(1, Math.round(+(($("#d-hjml") || {}).value || x.jml || 1)));
-  b.disabled = true;
-  if (await hargaSave(x, h, j, reset)) { drawer.hrgSaved = true; toast(isMaster() ? (reset ? "Harga dikembalikan." : "Harga tersimpan: " + rp(h * j)) : "Koreksi harga dikirim untuk validasi master."); drawer.fresh = true; renderDrawer(); render(); } else b.disabled = false;
+  const j = x.src === "N" ? Math.max(1, +(($("#d-hjml") || {}).value || x.jml || 1)) : (x.jml || 1), h = x.src === "N" ? +x.hargaAsli || 0 : Math.round((x.nilaiAsli || 0) / (x.jml || 1));
+  const i = $("#d-hrg"); if (i) i.value = h; const el = $("#d-hnilai"); if (el) el.textContent = rp(h * j);
+  drawer.hrgReset = true; toast("Harga semula diisi. Tekan Simpan untuk menyimpan.");
 });
+// perubahan harga dari kolom detail aset → patch (null bila tidak berubah)
+function hargaPatch(x) {
+  const hi = $("#d-hrg"); if (!hi) return null;
+  const h = Math.max(0, +hi.value || 0), j = Math.max(1, Math.round(+(($("#d-hjml") || {}).value || x.jml || 1)));
+  if (h === hargaSatuan(x) && j === (x.jml || 1)) return null;
+  if (x.src === "N") return { harga:h, jml:j, hargaAsli:x.hargaAsli != null ? x.hargaAsli : (+x.harga || 0) };
+  if (drawer.hrgReset && x.nilaiAsli != null && Math.round(h * j) === x.nilaiAsli) return { nilai:x.nilaiAsli, harga:"" };
+  return Object.assign({ nilai:Math.round(h * j), harga:h }, x.src !== "S" ? { jml:j } : {});
+}
 function kibCard(x) {
   const f = KIB_FMT[x.kat]; if (!f) return "";
   const edit = drawer && drawer.kibEdit && can("aset_ubah"); let n = 0, kosong = 0, beda = 0;
@@ -1273,7 +1283,7 @@ function kibCard(x) {
     const v = kibFmtVal(r.v, u);
     return `<dt>${esc(l)}</dt><dd>${v ? esc(v) : '<span class="faint">belum tercatat</span>'}${r.isi && x.sip ? (r.beda ? ` <span class="pill warn" title="Isian sekolah berbeda dari SIPBMD">beda dari SIPBMD</span><div class="sm muted">SIPBMD: ${esc(kibFmtVal(r.sip, u))}</div>` : ' <span class="pill info" title="Kosong di SIPBMD, dilengkapi di aplikasi ini">diisi sekolah</span>') : ""}</dd>`;
   }).join("")}</dl></div>`).join("");
-  const tools = !can("aset_ubah") ? "" : edit ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="primary" id="kib-save">${isMaster() ? "Simpan" : "Kirim untuk validasi"}</button><button id="kib-cancel">Batal</button><span class="hint" style="align-self:center">${x.sip ? "Isian disimpan sebagai isian sekolah; data asli SIPBMD tetap tersimpan dan ditampilkan sebagai pembanding." : ""}${isMaster() ? "" : " Isian baru berlaku setelah divalidasi master."}</span></div>`
+  const tools = !can("aset_ubah") ? "" : edit ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center"><button class="ghost" id="kib-cancel">Batal ubah data KIB</button><span class="hint">Disimpan dengan tombol <b>Simpan</b> di bawah.${x.sip ? " Data asli SIPBMD tetap tersimpan sebagai pembanding." : ""}</span></div>`
     : `<div style="margin-top:10px"><button id="kib-edit">${kosong ? `Lengkapi data (${kosong} isian belum tercatat)` : "Koreksi data"}</button></div>`;
   return `<div><p class="sectionlabel">${esc(f.judul)}${x.sip ? "" : " · tidak tercatat di SIPBMD"}</p>${beda && x.sip ? `<div class="note warn" style="margin-bottom:8px">${beda} isian sekolah berbeda dari data SIPBMD. Perbarui SIPBMD bila isian sekolah yang benar.</div>` : ""}<div class="kibcard">${body}</div>${tools}</div>`;
 }
@@ -1918,15 +1928,17 @@ let pairQ = "", confirmFoto = null, uploading = 0;
 function openItem(key) { drawer = { mode:"item", key, fresh:true }; pairQ = ""; confirmFoto = null; renderDrawer(); }
 function closeDrawer() { drawer = null; $("#drawerRoot").innerHTML = ""; }
 document.addEventListener("click", async e => {
-  const b = e.target.closest("#kib-edit, #kib-cancel, #kib-save"); if (!b || !drawer || drawer.mode !== "item") return;
-  if (b.id === "kib-edit") { drawer.kibEdit = true; drawer.fresh = true; renderDrawer(); const i = document.getElementById("kib-0"); if (i) i.focus(); return; }
-  if (b.id === "kib-cancel") { drawer.kibEdit = false; drawer.fresh = true; renderDrawer(); return; }
-  const x = allItems().byKey.get(drawer.key); if (!x) return;
-  const kib = Object.assign({}, x.kib || {});
-  for (const el of document.querySelectorAll("[data-kibl]")) { const v = el.value.trim(), sip = el.dataset.kibsip || ""; if (v && norm(v) !== norm(sip) && !(el.type === "date" && parseTgl(sip) === v)) kib[el.dataset.kibl] = v; else delete kib[el.dataset.kibl]; }
-  b.disabled = true;
-  if (await saveUpd(x.key, { kib })) { drawer.kibEdit = false; drawer.fresh = true; renderDrawer(); toast(isMaster() ? "Kelengkapan data tersimpan." : "Kelengkapan data dikirim untuk validasi master."); } else b.disabled = false;
+  const b = e.target.closest("#kib-edit, #kib-cancel"); if (!b || !drawer || drawer.mode !== "item") return;
+  if (b.id === "kib-edit") { drawer.kibEdit = true; renderDrawer(); const i = document.getElementById("kib-0"); if (i) i.focus(); return; }
+  if (b.id === "kib-cancel") { drawer.kibEdit = false; renderDrawer(); return; }
 });
+// isian kartu KIB yang sedang dibuka → objek kib baru (null bila tidak dibuka / tidak berubah)
+function kibPatch(x) {
+  const els = document.querySelectorAll("[data-kibl]"); if (!els.length) return null;
+  const kib = Object.assign({}, x.kib || {});
+  for (const el of els) { const v = el.value.trim(), sip = el.dataset.kibsip || ""; if (v && norm(v) !== norm(sip) && !(el.type === "date" && parseTgl(sip) === v)) kib[el.dataset.kibl] = v; else delete kib[el.dataset.kibl]; }
+  return JSON.stringify(kib) === JSON.stringify(x.kib || {}) ? null : kib;
+}
 function syncSipSeg() {
   const h = document.getElementById("d-sip"), seg = document.getElementById("d-sipseg"); if (!h || !seg) return;
   for (const b of seg.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.sipv === h.value));
@@ -1987,7 +1999,7 @@ function drawerItem(x) {
       ${x.kat === "pm" || x.kat === "atl" || !x.sip ? `<div class="dsum"><span>Diserahkan ke: <b>${x.pj ? esc(x.pj) : '<span style="color:var(--warn)">belum diserahkan</span>'}</b>${x.jab ? ` <span class="muted">(${esc(x.jab)})</span>` : ""}${x.pj && isoDate(x.batas) ? ` · batas penggunaan s.d. <b>${esc(tglID(x.batas))}</b> ${masaLabel(x)}` : ""}</span><span>Lokasi: <b>${x.lokasi ? esc(x.lokasi) : '<span style="color:var(--warn)">belum diisi</span>'}</b></span></div>` : ""}</div><button class="x" id="d-close">Tutup</button></div>
     <div class="db">
       ${x.kond ? "" : '<div class="note bad"><b>Kondisi belum dikonfirmasi.</b> Lakukan cek fisik lalu pilih kondisinya di bagian Kondisi.</div>'}
-      ${catatanSection({ t:"aset", id:x.key, label:itemNama(x) })}
+      ${catatanSection({ t:"aset", id:x.key, label:itemNama(x) }, true)}
       ${(() => { drawerItem.canU = can("aset_ubah"); drawerItem.canK = can("aset_kondisi"); drawerItem.canH = can("hapus"); return (drawerItem.canU || drawerItem.canK || drawerItem.canH) ? "" : '<div class="note info">Akun Anda hanya bisa melihat data aset ini.</div>'; })()}
       <div><p class="sectionlabel">Foto aset (${fotos.length})</p>
         <div class="photos">${fotos.map(id => `<figure><a href="#foto" data-fotoopen="${esc(id)}"><img src="${fotoSrc(id)}" data-foto="${esc(id)}" alt="Foto ${esc(x.nama)}" loading="lazy"></a>${!drawerItem.canK ? "" : confirmFoto === id ? `<span class="confirm" style="position:absolute;right:4px;bottom:4px"><button class="danger" data-delfoto="${esc(id)}">Hapus</button><button data-cancelfoto="1">Batal</button></span>` : `<button data-askfoto="${esc(id)}" aria-label="Hapus foto">Hapus</button>`}</figure>`).join("")}
@@ -5324,10 +5336,18 @@ document.addEventListener("click", async e => {
         if (patch.sip && !x.sip && can("aset_ubah") && (!patch.kode || !patch.noreg)) { toast("Isi kode aset dan no. register SIPBMD untuk mengubah status menjadi tercatat."); break; }
       }
       // only the fields this account may change are sent
-      const allow = new Set([...(can("aset_ubah") ? ["pj", "nip", "jab", "untuk", "lokasi", "reg", "spj", "sumber", "sip", "grp", "kode", "noreg", "kat"] : []), ...(can("aset_ubah") || can("bast") ? ["batas"] : []), ...(can("aset_kondisi") ? ["kond", "tcek", "cek", "cat"] : []), ...(can("hapus") ? ["hapusNo", "rehab"] : [])]);
+      if (can("aset_ubah")) { const hp = hargaPatch(x); if (hp) Object.assign(patch, hp); const kp = kibPatch(x); if (kp) patch.kib = kp; }
+      const allow = new Set([...(can("aset_ubah") ? ["pj", "nip", "jab", "untuk", "lokasi", "reg", "spj", "sumber", "sip", "grp", "kode", "noreg", "kat", "kib", "harga", "jml", "hargaAsli", "nilai"] : []), ...(can("aset_ubah") || can("bast") ? ["batas"] : []), ...(can("aset_kondisi") ? ["kond", "tcek", "cek", "cat"] : []), ...(can("hapus") ? ["hapusNo", "rehab"] : [])]);
       for (const f of Object.keys(patch)) if (!allow.has(f)) delete patch[f];
-      if (await saveUpd(x.key, patch)) { drawer.fresh = true; renderDrawer(); } else break;
-      toast((kond === "Rusak Berat" || kond === "Hilang") && !patch.rehab ? "Tersimpan. Aset masuk usulan penghapusan." : "Tersimpan.");
+      t.disabled = true;
+      // catatan temuan (status/tindak lanjut yang diubah, dan catatan baru) ikut tersimpan
+      const ntEdit = can("catatan") ? notesFor("aset", x.key).filter(c => document.getElementById("nts-" + c._id) && (val("nts-" + c._id) !== (c.st || "Terbuka") || val("ntl-" + c._id) !== (c.tl || ""))) : [];
+      const ntBaru = can("catatan") && val("ntd-teks") ? $("#ntd-add") : null;
+      if (!(await saveUpd(x.key, patch))) { t.disabled = false; break; }
+      try { for (const c of ntEdit) await db.doc("catatan/" + c._id).update({ st:val("nts-" + c._id), tl:val("ntl-" + c._id), tlBy:S.me || "", tlAt:new Date().toISOString() }); } catch (err) { writeErr(err); }
+      if (ntBaru) await addNote(ntBaru);
+      closeDrawer();
+      toast(!isMaster() ? "Perubahan dikirim untuk validasi master." : (kond === "Rusak Berat" || kond === "Hilang") && !patch.rehab ? "Tersimpan. Aset masuk usulan penghapusan." : "Tersimpan.");
       break;
     }
     case "d-bast-serah": case "d-bast-tarik": {
@@ -5777,7 +5797,7 @@ const ntPill = st => `<span class="pill ${st === "Selesai" ? "ok" : st === "Diti
 const NT_JENIS = { aset:"Aset", ruang:"Ruang", barang:"Barang persediaan", umum:"Umum" };
 let ntFiles = {};
 function notesFor(t, id) { return S.catatan.filter(c => c.target && c.target.t === t && c.target.id === id); }
-function noteCard(c, withTarget) {
+function noteCard(c, withTarget, one) {
   const tgt = c.target || {};
   return `<div style="border:1px solid var(--line);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:6px;background:var(--surface)">
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${ctOk(c) ? "" : '<span class="pill bad" title="Belum masuk rekap sampai divalidasi master">menunggu validasi</span>'}${ntPill(c.st)}<span class="pill">${esc(c.kat || "Lainnya")}</span><span class="sm muted">${esc(tglJam(c.at))} · ${esc(nameOf(c.by))}</span></div>
@@ -5787,21 +5807,22 @@ function noteCard(c, withTarget) {
     ${(c.fotos || []).length ? `<div class="photos" style="grid-template-columns:repeat(auto-fill,minmax(72px,1fr))">${c.fotos.map(f => `<figure><a href="#foto" data-fotoopen="${esc(f)}"><img src="${fotoSrc(f)}" data-foto="${esc(f)}" alt="Foto temuan"></a></figure>`).join("")}</div>` : ""}
     ${c.tl ? `<div class="sm" style="border-left:3px solid var(--info);padding-left:8px">Tindak lanjut: ${esc(c.tl)} <span class="muted">· ${esc(nameOf(c.tlBy))} ${esc(tglJam(c.tlAt))}</span></div>` : ""}
     ${can("catatan") ? `<details><summary class="sm">Ubah status / tindak lanjut</summary><div class="fgrid" style="margin-top:6px"><label class="f">Status<select id="nts-${esc(c._id)}">${NST.map(o => `<option ${o === (c.st || "Terbuka") ? "selected" : ""}>${o}</option>`).join("")}</select></label><label class="f">Tindak lanjut<input id="ntl-${esc(c._id)}" value="${esc(c.tl || "")}" placeholder="mis. sudah diganti charger baru"></label></div>
-      <div style="display:flex;gap:8px;margin-top:6px"><button data-ntsave="${esc(c._id)}">Simpan</button>${isMaster() ? `<button class="ghost danger" data-ntdel="${esc(c._id)}">Hapus catatan</button>` : ""}</div></details>` : ""}
+      <div style="display:flex;gap:8px;margin-top:6px">${one ? "" : `<button data-ntsave="${esc(c._id)}">Simpan</button>`}${isMaster() ? `<button class="ghost danger" data-ntdel="${esc(c._id)}">Hapus catatan</button>` : ""}</div></details>` : ""}
   </div>`;
 }
-function noteForm(prefix, target) {
+function noteForm(prefix, target, one) {
   if (!can("catatan")) return "";
   const nf = (ntFiles[prefix] || []).length;
   return `<div style="border:1px dashed var(--line-strong);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px">
     <label class="f">Catatan temuan baru<textarea id="${prefix}-teks" placeholder="mis. charger laptop rusak, kunci pintu ruang macet"></textarea></label>
     <div class="fgrid"><label class="f">Kategori<select id="${prefix}-kat">${NKAT.map(o => `<option>${o}</option>`).join("")}</select></label>
       <label class="f">Foto (opsional)<input id="${prefix}-file" type="file" accept="image/*" multiple><span class="hint">${nf ? nf + " foto dipilih" : ""}</span></label></div>
-    <div><button class="primary" data-ntadd="${prefix}" data-ntt="${esc(target.t)}" data-ntid="${esc(target.id || "")}" data-ntlabel="${esc(target.label || "")}">Simpan catatan</button></div></div>`;
+    <div ${one ? "hidden" : ""}><button class="primary" id="${prefix}-add" data-ntadd="${prefix}" data-ntt="${esc(target.t)}" data-ntid="${esc(target.id || "")}" data-ntlabel="${esc(target.label || "")}">Simpan catatan</button></div></div>`;
 }
-function catatanSection(target) {
+// one = di panel edit aset: tidak ada tombol simpan sendiri, ikut tombol Simpan utama
+function catatanSection(target, one) {
   const list = notesFor(target.t, target.id);
-  return `<div><p class="sectionlabel">Catatan temuan (${list.length})</p><div style="display:flex;flex-direction:column;gap:8px">${list.map(c => noteCard(c, false)).join("")}${noteForm("ntd", target)}</div>${!list.length && !can("catatan") ? '<p class="muted" style="margin:0">Belum ada catatan.</p>' : ""}</div>`;
+  return `<div><p class="sectionlabel">Catatan temuan (${list.length})</p><div style="display:flex;flex-direction:column;gap:8px">${list.map(c => noteCard(c, false, one)).join("")}${noteForm("ntd", target, one)}</div>${!list.length && !can("catatan") ? '<p class="muted" style="margin:0">Belum ada catatan.</p>' : ""}</div>`;
 }
 UI.ct = { st:"open", kat:"", jenis:"", q:"", tq:"", target:null };
 function ctTargets(q) {

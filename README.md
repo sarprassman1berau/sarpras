@@ -91,6 +91,10 @@ Semua tempat unggah foto (detail aset, catatan temuan, foto ruang, BAST, BAST ba
 - **BAST Penarikan** wajib mengisi **kondisi terkini** dan **alasan penarikan** setiap barang (alasan umum dipakai bila alasan per barang kosong); keduanya tercetak di tabel BAST.
 - Saat BAST penarikan disimpan, kondisi terkini langsung menjadi kondisi barang (tanggal cek = tanggal BAST, pemeriksa = Pihak Kedua, catatan = alasan), sehingga ikut ke Rekap, Pemeliharaan & Perbaikan (Rusak Sedang), Usulan Penghapusan (Rusak Berat/Hilang), Unduh KIB, Buku Induk, dan Per Pemegang. Dari akun operator perubahan ini menunggu validasi master seperti biasa.
 
+### Panel edit aset: satu tombol Simpan
+- Panel detail aset hanya punya satu tombol **Simpan** (`d-save`) yang menyimpan sekaligus: pencatatan & penempatan, kondisi, harga & nilai (`hargaPatch`), kelengkapan data KIB bila kartunya dibuka (`kibPatch`), serta catatan temuan baru dan perubahan status/tindak lanjut catatan (`catatanSection(target, true)` menyembunyikan tombol simpan masing-masing). Semua isian aset masuk satu `saveUpd` → satu baris di Riwayat & Urungkan.
+- Setelah berhasil tersimpan, panel tertutup otomatis. Membuka/menutup kartu KIB tidak lagi menghapus isian yang belum disimpan. "Kembalikan" harga hanya mengisi harga semula ke kolom.
+
 ### Koreksi harga / nilai perolehan
 - **Detail aset** → bagian *Harga & nilai perolehan* (`hargaCard`, `hargaSave`): jumlah (kecuali data SIPBMD, selalu 1), harga satuan, nilai dihitung langsung. Aset isian/impor (`aset_baru`) mengubah `harga`/`jml` dan menyimpan `hargaAsli`; data SIPBMD/catatan internal/pustaka menyimpan `nilai` (+`harga`) di `upd`, nilai aslinya tampil sebagai `nilaiAsli` ("Nilai SIPBMD: …") dengan tautan **Kembalikan**. Nilai di SIPBMD BPKAD tidak berubah.
 - **Isi sekaligus**: kolom *Harga satuan (Rp)* → nilai = harga × jumlah untuk tiap aset terpilih.
