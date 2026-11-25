@@ -91,6 +91,12 @@ Semua tempat unggah foto (detail aset, catatan temuan, foto ruang, BAST, BAST ba
 - **BAST Penarikan** wajib mengisi **kondisi terkini** dan **alasan penarikan** setiap barang (alasan umum dipakai bila alasan per barang kosong); keduanya tercetak di tabel BAST.
 - Saat BAST penarikan disimpan, kondisi terkini langsung menjadi kondisi barang (tanggal cek = tanggal BAST, pemeriksa = Pihak Kedua, catatan = alasan), sehingga ikut ke Rekap, Pemeliharaan & Perbaikan (Rusak Sedang), Usulan Penghapusan (Rusak Berat/Hilang), Unduh KIB, Buku Induk, dan Per Pemegang. Dari akun operator perubahan ini menunggu validasi master seperti biasa.
 
+### Koreksi harga / nilai perolehan
+- **Detail aset** → bagian *Harga & nilai perolehan* (`hargaCard`, `hargaSave`): jumlah (kecuali data SIPBMD, selalu 1), harga satuan, nilai dihitung langsung. Aset isian/impor (`aset_baru`) mengubah `harga`/`jml` dan menyimpan `hargaAsli`; data SIPBMD/catatan internal/pustaka menyimpan `nilai` (+`harga`) di `upd`, nilai aslinya tampil sebagai `nilaiAsli` ("Nilai SIPBMD: …") dengan tautan **Kembalikan**. Nilai di SIPBMD BPKAD tidak berubah.
+- **Isi sekaligus**: kolom *Harga satuan (Rp)* → nilai = harga × jumlah untuk tiap aset terpilih.
+- **Pratinjau Import Excel aset**: kolom Jumlah dan Harga satuan bisa diedit langsung sebelum disimpan (subtotal dan total ikut berubah).
+- Semua koreksi lewat lapisan validasi (operator → usulan) dan tercatat di Riwayat & Urungkan.
+
 ### Hapus massal aset (khusus master)
 - Di daftar aset mana pun: centang aset (atau *Pilih semua hasil filter*), lalu tombol merah **Hapus N aset** di bilah pilihan → panel konfirmasi (rincian jenis data, nilai, contoh nama) → **Ya, hapus**.
 - `bulkDelete`: aset isian sekolah/impor Excel (`aset_baru`) dihapus dokumennya; data SIPBMD, catatan internal lama, dan pustaka dikeluarkan dari potongan `seed` tempatnya tersimpan (`S.seedRaw`, `seedKeyOf`); isian `upd` aset itu ikut dibersihkan; pasangan aset lain dilepas sehingga tampil lagi.

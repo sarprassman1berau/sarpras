@@ -380,7 +380,7 @@ let db = null, downloads = null, assets = null, userCap = null, cache = null;
 
 function buildItems() {
   const out = [];
-  const push = (base) => { const o = Object.assign(base, S.upd[did(base.key)] || {}); if (o.fotos && !Array.isArray(o.fotos)) o.fotos = []; out.push(o); };
+  const push = (base) => { const up = S.upd[did(base.key)] || {}, n0 = base.nilai; const o = Object.assign(base, up); if (up.nilai != null && up.nilai !== "") { o.nilai = +up.nilai || 0; if (o.nilai !== (+n0 || 0)) o.nilaiAsli = +n0 || 0; } if (o.fotos && !Array.isArray(o.fotos)) o.fotos = []; out.push(o); };
   for (const a of S.seed.aset) push({ key:"S|" + a.k, src:"S", kat:katFromKode(a.kode) || "pm", sip:true, kode:a.kode, noreg:a.noreg, nama:a.judul || a.nama, merek:a.merek || a.pencipta, tipe:a.tipe, spes:[a.judul ? a.nama : "", a.tipe, a.bahan, a.ukuran].filter(Boolean).join(" · "), ksip:a.ksip, extra:a.extra, sn:a.sn, th:a.th || yearOf(a.tgl), tgl:isoDate(a.tgl) || a.tgl, nilai:a.nilai || 0, jml:1, nodok:a.nodok, asal:a.asal, kap:a.kap, ket:a.ket, sumber:a.sumber, reg:a.reg, pj:a.pj, stpj:a.stpj, jab:a.jab, nip:a.nip, bast:a.bast, tbast:a.tbast, foto:a.foto, kond:a.kond, cek:a.cek, tcek:a.tcek, cat:a.cat, hapusNo:a.hapus, lokasi:a.alih || "", satuan:a.satuan });
   S.seed.pustaka.forEach(p => push({ key:"P|" + hash(p.kode + "|" + p.noreg + "|" + (p.judul || "") + "|" + p.tgl), src:"P", kat:katFromKode(p.kode) || "atl", sip:true, kode:p.kode, noreg:p.noreg, nama:p.judul || p.nama, merek:p.pencipta || "", spes:p.nama, th:yearOf(p.tgl), tgl:p.tgl, nilai:p.total || 0, harga:p.harga, jml:p.n, nodok:p.nodok, kap:p.kap, ket:p.ket, kond:"" }));
   if (false) for (const g of S.seed.gedung) push({ key:"G|" + g.id, src:"G", kat:"gedung", sip:false, kode:"", noreg:"", reg:g.kr, nama:g.nama, spes:"Gedung " + g.g.replace(/^G\./, "") , gedung:g.g, lokasi:(g.kr || "") + " · " + g.nama, kond:g.kond, ket:g.ket, jml:1, nilai:0 });
@@ -1229,6 +1229,40 @@ function kibFmtVal(v, unit) {
 }
 // keys of x.extra that the structured card already shows
 function kibUsedKeys(x) { const f = KIB_FMT[x.kat]; if (!f) return new Set(); const u = new Set(); for (const [, fs] of f.grup) for (const [, src] of fs) { const r = kibVal(x, src); if (r.key) u.add(r.key); } return u; }
+/* ================= koreksi harga / nilai perolehan (detail aset, isi sekaligus, pratinjau impor) ================= */
+const hargaSatuan = x => x.src === "N" ? (+x.harga || 0) : Math.round(itemNilai(x) / (x.jml || 1));
+function hargaCard(x) {
+  const ed = can("aset_ubah"), j = x.jml || 1, h = hargaSatuan(x), jmlOk = x.src !== "S";
+  const asal = x.src === "N" ? (x.hargaAsli != null && +x.hargaAsli !== h ? `Harga saat input/impor: <b>${rp(+x.hargaAsli)}</b>` : "") : (x.nilaiAsli != null ? `Nilai ${x.sip ? "SIPBMD" : "awal"}: <b>${rp(x.nilaiAsli)}</b>` : "");
+  return `<div><p class="sectionlabel">Harga & nilai perolehan</p>
+    ${ed ? `<div class="fgrid" style="grid-template-columns:${jmlOk ? "90px " : ""}1fr 1fr;gap:10px;align-items:end">
+      ${jmlOk ? `<label class="f">Jumlah<input id="d-hjml" type="number" min="1" step="1" value="${esc(j)}"></label>` : ""}
+      <label class="f">Harga satuan (Rp)<input id="d-hrg" type="number" min="0" step="any" value="${esc(h)}"></label>
+      <div><span class="f">Nilai perolehan</span><div id="d-hnilai" style="font-weight:600;padding:8px 0">${rp(h * j)}</div></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><button id="d-hrg-save">${isMaster() ? "Simpan harga" : "Kirim koreksi harga"}</button>${asal ? `<span class="sm">${asal}</span><button class="link" id="d-hrg-reset">Kembalikan</button>` : ""}</div>
+      ${x.sip ? '<p class="hint" style="margin:6px 0 0">Koreksi disimpan sebagai isian sekolah dan dipakai di semua menu dan laporan aplikasi. Nilai di SIPBMD BPKAD tidak berubah; perbarui juga di SIPBMD bila memang salah di sana.</p>' : ""}`
+    : `<p style="margin:0">${j > 1 ? fmt(j) + " × " + rp(h) + " = " : ""}<b>${rp(h * j)}</b>${asal ? ` <span class="sm">· ${asal}</span>` : ""}</p>`}</div>`;
+}
+async function hargaSave(x, h, j, reset) {
+  let patch;
+  if (x.src === "N") patch = reset ? { harga:+x.hargaAsli || 0 } : { harga:h, jml:j, hargaAsli:x.hargaAsli != null ? x.hargaAsli : (+x.harga || 0) };
+  else patch = reset ? { nilai:x.nilaiAsli, harga:"" } : Object.assign({ nilai:Math.round(h * j), harga:h }, x.src !== "S" ? { jml:j } : {});
+  return saveUpd(x.key, patch);
+}
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.id === "d-hrg" || t.id === "d-hjml") { if (drawer) drawer.hrgSaved = false; const h = +($("#d-hrg") || {}).value || 0, j = Math.max(1, +(($("#d-hjml") || {}).value || 1)), el = $("#d-hnilai"); if (el) el.textContent = rp(h * j); }
+  if (t.dataset && t.dataset.aih) { const [i, k] = t.dataset.aih.split(":"), r = (UI.ai.rows || [])[+i]; if (!r) return; r[k] = k === "jml" ? Math.max(1, Math.round(+t.value || 1)) : Math.max(0, +t.value || 0); r.hEdit = true;
+    const docs = aiDocs(), el = $("#ai-sum"); if (el) el.innerHTML = `<b>${fmt(UI.ai.rows.length)}</b> baris barang terbaca → <b>${fmt(docs.length)}</b> catatan aset · nilai ${rp(docs.reduce((s2, d) => s2 + (d.harga || 0) * (d.jml || 1), 0))}`;
+    const sub2 = t.closest("tr") && t.closest("tr").querySelector("[data-aisub]"); if (sub2) sub2.textContent = rp(r.harga * r.jml); }
+});
+document.addEventListener("click", async e => {
+  const b = e.target.closest("#d-hrg-save, #d-hrg-reset"); if (!b || !drawer || drawer.mode !== "item") return;
+  const x = allItems().byKey.get(drawer.key); if (!x) return;
+  const reset = b.id === "d-hrg-reset", h = +($("#d-hrg") || {}).value || 0, j = Math.max(1, Math.round(+(($("#d-hjml") || {}).value || x.jml || 1)));
+  b.disabled = true;
+  if (await hargaSave(x, h, j, reset)) { drawer.hrgSaved = true; toast(isMaster() ? (reset ? "Harga dikembalikan." : "Harga tersimpan: " + rp(h * j)) : "Koreksi harga dikirim untuk validasi master."); drawer.fresh = true; renderDrawer(); render(); } else b.disabled = false;
+});
 function kibCard(x) {
   const f = KIB_FMT[x.kat]; if (!f) return "";
   const edit = drawer && drawer.kibEdit && can("aset_ubah"); let n = 0, kosong = 0, beda = 0;
@@ -1318,7 +1352,8 @@ function bulkPanel() {
       ${inp("bk-lok", "Posisi / lokasi", "text", 'list="dl-ruangbk"')}<datalist id="dl-ruangbk">${ruangList().map(r => `<option value="${esc(r)}">`).join("")}</datalist>
       ${inp("bk-untuk", "Peruntukan", "text", 'list="dl-untuk"')}${untukList()}
       <label class="f">Sumber dana<input id="bk-sumber" data-bk="1" list="dl-sumberbk" value="${bkv("bk-sumber")}" placeholder="kosong = tidak diubah"><datalist id="dl-sumberbk">${SUMBER_DANA.map(o => `<option value="${esc(o)}">`).join("")}</datalist></label>
-      ${inp("bk-spj", "No. SPJ / kuitansi")}</div>` : ""}
+      ${inp("bk-spj", "No. SPJ / kuitansi")}
+      ${inp("bk-harga", "Harga satuan (Rp)", "number", 'min="0" step="any"')}</div>${(UI.bulk.v || {})["bk-harga"] ? `<p class="hint" style="margin:4px 0 0">Harga satuan ${rp(+(UI.bulk.v || {})["bk-harga"])} diterapkan ke semua aset terpilih; nilai perolehan = harga satuan × jumlah tiap aset.</p>` : ""}` : ""}
     ${canU && items.every(x => x.src !== "S" && x.src !== "P") ? `<p class="sectionlabel" style="margin-top:12px">Migrasi / pindahkan aset</p><div class="fgrid">
       <label class="f">Pindahkan ke<select id="bk-mig" data-bk="1"><option value="">— tidak dipindah —</option><option value="tak" ${(UI.bulk.v || {})["bk-mig"] === "tak" ? "selected" : ""}>Aset tidak tercatat di SIPBMD</option><option value="bospda" ${(UI.bulk.v || {})["bk-mig"] === "bospda" ? "selected" : ""}>Aset BOSP Daerah (menunggu SIPBMD)</option><option value="sip" ${(UI.bulk.v || {})["bk-mig"] === "sip" ? "selected" : ""}>Sudah tercatat di SIPBMD (menu golongan KIB)</option></select></label>
       <label class="f">Golongan<select id="bk-kat" data-bk="1"><option value="">— tidak diubah —</option>${KAT.map(k => `<option value="${k.id}" ${(UI.bulk.v || {})["bk-kat"] === k.id ? "selected" : ""}>${k.kib} · ${k.nama}</option>`).join("")}</select></label>
@@ -1341,14 +1376,16 @@ async function bulkApply() {
   if (mig === "sip") { migKode = val("bk-kode") || ""; migNo = parseInt(val("bk-noreg")) || 0; if (!migKode || !migNo) { toast("Isi kode aset SIPBMD dan no. register awal."); return; } }
   if (mig === "tak") Object.assign(common, { sip:false, grp:"" }); else if (mig === "bospda") Object.assign(common, { sip:false, grp:"bospda" }); else if (mig === "sip") Object.assign(common, { sip:true, grp:"", kode:migKode, kat:katFromKode(migKode) || katN || undefined });
   if (katN && mig !== "sip") common.kat = katN;
+  const hrgN = canU && val("bk-harga") !== "" ? Math.max(0, +val("bk-harga") || 0) : null;
   for (const k of Object.keys(common)) if (common[k] === undefined) delete common[k];
-  if (!Object.keys(kib).length && !Object.keys(common).length) { toast("Isi minimal satu kolom yang ingin diterapkan."); return; }
+  if (!Object.keys(kib).length && !Object.keys(common).length && hrgN == null) { toast("Isi minimal satu kolom yang ingin diterapkan."); return; }
   const same = (a, b) => JSON.stringify(a ?? "") === JSON.stringify(b ?? "");
   const work = [];
   for (const x of items) {
     const patch = {};
     for (const [k, v] of Object.entries(common)) if (!same(x[k], v)) patch[k] = v;
     if (mig === "sip") patch.noreg = String(migNo + items.indexOf(x));
+    if (hrgN != null && hargaSatuan(x) !== hrgN) { if (x.src === "N") Object.assign(patch, { harga:hrgN, hargaAsli:x.hargaAsli != null ? x.hargaAsli : (+x.harga || 0) }); else Object.assign(patch, { nilai:Math.round(hrgN * (x.jml || 1)), harga:hrgN }); }
     if (canU && Object.keys(kib).length && KIB_FMT[x.kat]) {
       const nk = Object.assign({}, x.kib || {});
       for (const f of kibFields(x.kat)) { if (!(f.l in kib) || f.ro) continue; const sip = kibVal(x, f.src, null).v, v = kib[f.l]; if (!kibEmpty(sip) && (norm(String(sip)) === norm(v) || (f.u === "tgl" && parseTgl(String(sip)) === v))) delete nk[f.l]; else nk[f.l] = v; }
@@ -1359,7 +1396,7 @@ async function bulkApply() {
   if (!work.length) { toast("Semua aset terpilih sudah berisi data tersebut."); return; }
   UI.bulk.busy = true; render();
   try {
-    await W.group(`Isi sekaligus ${work.length} aset: ${[...Object.keys(common).map(f => FIELD_LABEL[f] || f), ...(Object.keys(kib).length ? ["kelengkapan data KIB (" + Object.keys(kib).join(", ") + ")"] : [])].join(", ")}`, async () => { for (const [x, patch] of work) { const ok = await saveUpd(x.key, patch); if (!ok) throw new Error("gagal menyimpan " + itemNama(x)); } });
+    await W.group(`Isi sekaligus ${work.length} aset: ${[...Object.keys(common).map(f => FIELD_LABEL[f] || f), ...(Object.keys(kib).length ? ["kelengkapan data KIB (" + Object.keys(kib).join(", ") + ")"] : []), ...(hrgN != null ? ["harga satuan " + rp(hrgN)] : [])].join(", ")}`, async () => { for (const [x, patch] of work) { const ok = await saveUpd(x.key, patch); if (!ok) throw new Error("gagal menyimpan " + itemNama(x)); } });
     toast(isMaster() ? `${work.length} aset diperbarui sekaligus.` : `Usulan untuk ${work.length} aset dikirim ke akun master.`);
     UI.sel = new Set(); UI.bulk = { open:false, busy:false, v:{} }; render();
   } catch (e) { UI.bulk.busy = false; render(); writeErr(e); }
@@ -1466,8 +1503,8 @@ function aiPanel() {
       <div><label class="f">Golongan (bila file tidak punya kolom golongan)<select id="ai-kat">${KAT.map(k => `<option value="${k.id}" ${A.kat === k.id ? "selected" : ""}>${k.kib} · ${k.nama}</option>`).join("")}</select></label>
       <label class="ck" style="margin-top:8px"><input type="checkbox" id="ai-pecah" ${A.pecah ? "checked" : ""}><span>Pecah per unit<br><span class="hint">Barang berjumlah 10 menjadi 10 catatan, supaya pemegang, lokasi, kondisi, dan foto bisa diisi per unit. Matikan untuk menyimpan satu catatan dengan jumlahnya.</span></span></label></div></div>
     ${A.err ? `<div class="note bad" style="margin-top:8px">${esc(A.err)}</div>` : ""}
-    ${A.rows ? `<p style="margin:10px 0 6px"><b>${fmt(A.rows.length)}</b> baris barang terbaca → <b>${fmt(docs.length)}</b> catatan aset · nilai ${rp(tot)}</p>
-      <div class="tablebox" style="max-height:280px;overflow:auto"><table><thead><tr><th>Nama barang</th><th>Spesifikasi</th><th>Tahun</th><th class="num">Jml</th><th class="num">Harga satuan</th><th>Sumber</th><th>Keterangan</th></tr></thead><tbody>${A.rows.map(r => `<tr><td>${esc(r.nama)}${r.merek ? `<div class="sm">${esc(r.merek)}</div>` : ""}</td><td class="sm">${esc(r.spes)}</td><td>${esc(r.th || "-")}</td><td class="num">${fmt(r.jml)}</td><td class="num">${rp(r.harga)}</td><td class="sm">${esc(r.sumber || (bos ? "BOSP Daerah" : ""))}</td><td class="sm">${esc(r.ket)}</td></tr>`).join("")}</tbody></table></div>
+    ${A.rows ? `<p style="margin:10px 0 6px" id="ai-sum"><b>${fmt(A.rows.length)}</b> baris barang terbaca → <b>${fmt(docs.length)}</b> catatan aset · nilai ${rp(tot)}</p><p class="hint" style="margin:0 0 6px">Jumlah dan harga satuan bisa dikoreksi langsung di tabel sebelum diimport.</p>
+      <div class="tablebox" style="max-height:280px;overflow:auto"><table><thead><tr><th>Nama barang</th><th>Spesifikasi</th><th>Tahun</th><th class="num">Jml</th><th class="num">Harga satuan (Rp)</th><th class="num">Subtotal</th><th>Sumber</th><th>Keterangan</th></tr></thead><tbody>${A.rows.map((r, i) => `<tr><td>${esc(r.nama)}${r.merek ? `<div class="sm">${esc(r.merek)}</div>` : ""}</td><td class="sm">${esc(r.spes)}</td><td>${esc(r.th || "-")}</td><td class="num"><input data-aih="${i}:jml" type="number" min="1" step="1" value="${esc(r.jml)}" style="width:70px;text-align:right"></td><td class="num"><input data-aih="${i}:harga" type="number" min="0" step="any" value="${esc(Math.round(r.harga || 0))}" style="width:130px;text-align:right${r.hEdit ? ";border-color:var(--accent)" : ""}"></td><td class="num" data-aisub="1">${rp((r.harga || 0) * (r.jml || 1))}</td><td class="sm">${esc(r.sumber || (bos ? "BOSP Daerah" : ""))}</td><td class="sm">${esc(r.ket)}</td></tr>`).join("")}</tbody></table></div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap"><button class="primary" id="ai-go" ${A.busy ? "disabled" : ""}>${A.busy ? `Menyimpan ${A.done}/${docs.length}…` : isMaster() ? `Import ${fmt(docs.length)} aset` : `Kirim usulan ${fmt(docs.length)} aset`}</button><span class="hint">${isMaster() ? "" : "Aset baru berlaku setelah divalidasi master."}</span></div>` : ""}
   </section>`;
 }
@@ -1907,7 +1944,7 @@ function renderDrawer() {
   // keep what the person has typed but not saved yet when live data re-renders the drawer
   const keep = {}; let keepKond = null;
   if (!drawer.fresh && root.querySelector("aside")) {
-    root.querySelectorAll("aside input[id], aside textarea[id], aside select[id]").forEach(el => { if (el.type !== "file") keep[el.id] = el.type === "checkbox" ? el.checked : el.value; });
+    root.querySelectorAll("aside input[id], aside textarea[id], aside select[id]").forEach(el => { if (el.type === "file" || (drawer.hrgSaved && (el.id === "d-hrg" || el.id === "d-hjml"))) return; keep[el.id] = el.type === "checkbox" ? el.checked : el.value; });
     const seg = root.querySelector("#d-kondseg"); if (seg) { const p = seg.querySelector('[aria-pressed="true"]'); keepKond = p ? p.dataset.k : ""; }
   }
   drawer.fresh = false;
@@ -1977,6 +2014,7 @@ function drawerItem(x) {
             <label class="ck" style="align-self:end"><input id="d-rehab" type="checkbox" ${x.rehab ? "checked" : ""}> Jangan usulkan hapus (akan diperbaiki/direhabilitasi)</label></fieldset></div>` : ""}
         </div>
       </div>
+      ${hargaCard(x)}
       ${kibCard(x)}
       <div><p class="sectionlabel">Pencatatan</p>
         <fieldset class="fgrid fs" ${drawerItem.canU ? "" : "disabled"}>
