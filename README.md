@@ -91,6 +91,11 @@ Semua tempat unggah foto (detail aset, catatan temuan, foto ruang, BAST, BAST ba
 - **BAST Penarikan** wajib mengisi **kondisi terkini** dan **alasan penarikan** setiap barang (alasan umum dipakai bila alasan per barang kosong); keduanya tercetak di tabel BAST.
 - Saat BAST penarikan disimpan, kondisi terkini langsung menjadi kondisi barang (tanggal cek = tanggal BAST, pemeriksa = Pihak Kedua, catatan = alasan), sehingga ikut ke Rekap, Pemeliharaan & Perbaikan (Rusak Sedang), Usulan Penghapusan (Rusak Berat/Hilang), Unduh KIB, Buku Induk, dan Per Pemegang. Dari akun operator perubahan ini menunggu validasi master seperti biasa.
 
+### Hapus massal aset (khusus master)
+- Di daftar aset mana pun: centang aset (atau *Pilih semua hasil filter*), lalu tombol merah **Hapus N aset** di bilah pilihan → panel konfirmasi (rincian jenis data, nilai, contoh nama) → **Ya, hapus**.
+- `bulkDelete`: aset isian sekolah/impor Excel (`aset_baru`) dihapus dokumennya; data SIPBMD, catatan internal lama, dan pustaka dikeluarkan dari potongan `seed` tempatnya tersimpan (`S.seedRaw`, `seedKeyOf`); isian `upd` aset itu ikut dibersihkan; pasangan aset lain dilepas sehingga tampil lagi.
+- Semuanya dalam satu `W.group`, jadi tercatat di Riwayat & Urungkan dan bisa dikembalikan dengan satu kali **↶ Urungkan**. Data SIPBMD hanya hilang dari aplikasi, bukan dari SIPBMD BPKAD; untuk barang rusak berat/hilang tetap pakai Usulan Penghapusan.
+
 ### Riwayat & Urungkan (undo / redo)
 - Menu `#riwayat` (khusus master, grup Validasi & pengaturan) + tombol **↶ Urungkan / ↷ Ulangi** di bilah atas dan **Ctrl+Z / Ctrl+Y** (di luar kotak isian) untuk perubahan paling akhir.
 - `applyOp` kini mencatat keadaan sebelum (`b`) dan sesudah (`a`) setiap dokumen; `W.group` (master) dan persetujuan Validasi menyimpannya lewat `saveRiwayat`: ringkasan di `riwayat/{id}` (judul, oleh, waktu, jumlah, status `aktif`/`diurungkan`, info impor) dan isi di `riwayat_isi/{id}_{n}` (dipecah < 600 KB). Hanya akun master yang berlangganan `riwayat` (150 terakhir).

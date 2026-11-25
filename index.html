@@ -463,6 +463,7 @@ async function boot() {
     const seed = { aset:[], internal:[], pustaka:[], surat:[], pegawai:[], gedung:[] };
     const docs = snap.docs.slice().sort((a, b) => a.id.localeCompare(b.id));
     S.seedDocs = docs.map(d => ({ id:d.id, kind:(d.data() || {}).kind || "", n:((d.data() || {}).items || []).length }));
+    S.seedRaw = Object.fromEntries(docs.map(d => [d.id, d.data()]));
     for (const d of docs) {
       const v = d.data(); if (!v) continue;
       if (d.id === "ref_pegawai") seed.pegawai = v.items || [];
@@ -1256,7 +1257,52 @@ function selBar(rows) {
   const n = UI.sel.size, canU = can("aset_ubah"), canK = can("aset_kondisi");
   if (!canU && !canK) return "";
   if (!n) return `<p class="hint" style="margin:0 0 8px">Centang beberapa aset untuk mengisi kelengkapan data yang sama sekaligus. <button class="link" id="sel-all">Pilih semua hasil filter (${fmt(rows.length)})</button></p>`;
-  return `<div class="selbar"><b>${fmt(n)} aset dipilih · ${rp(selItems().reduce((t, x) => t + itemNilai(x), 0))}</b><button class="link" id="sel-all">Pilih semua hasil filter (${fmt(rows.length)})</button><button class="link" id="sel-none">Batal pilih</button><span class="sp"></span><button class="primary" id="bulk-open">Isi sekaligus untuk ${fmt(n)} aset</button></div>${UI.bulk.open ? bulkPanel() : ""}`;
+  return `<div class="selbar"><b>${fmt(n)} aset dipilih · ${rp(selItems().reduce((t, x) => t + itemNilai(x), 0))}</b><button class="link" id="sel-all">Pilih semua hasil filter (${fmt(rows.length)})</button><button class="link" id="sel-none">Batal pilih</button><span class="sp"></span>${isMaster() ? `<button class="danger" id="bdel-ask">Hapus ${fmt(n)} aset</button>` : ""}<button class="primary" id="bulk-open">Isi sekaligus untuk ${fmt(n)} aset</button></div>${UI.bdel.ask ? bdelPanel() : ""}${UI.bulk.open ? bulkPanel() : ""}`;
+}
+/* ================= hapus massal (khusus master; tercatat di Riwayat & Urungkan) =================
+   aset isian sekolah (aset_baru) dihapus dokumennya; data SIPBMD/catatan internal/pustaka dikeluarkan dari
+   potongan data "seed" tempatnya tersimpan; isian sekolah untuk aset itu (upd) ikut dibersihkan */
+UI.bdel = { ask:false, busy:false, done:0, total:0 };
+const seedKeyOf = (kind, a) => kind === "aset" ? "S|" + a.k : kind === "internal" ? "I|" + a.id : kind === "pustaka" ? "P|" + hash(a.kode + "|" + a.noreg + "|" + (a.judul || "") + "|" + a.tgl) : null;
+function bdelPlan() {
+  const items = selItems(), del = new Set(items.map(x => x.key)), chunks = [];
+  for (const [id, v] of Object.entries(S.seedRaw || {})) {
+    if (!v || !Array.isArray(v.items) || !["aset", "internal", "pustaka"].includes(v.kind)) continue;
+    const keep = v.items.filter(a => !del.has(seedKeyOf(v.kind, a)));
+    if (keep.length !== v.items.length) chunks.push({ id, v, keep, n:v.items.length - keep.length });
+  }
+  const by = k => items.filter(x => x.src === k);
+  return { items, chunks, baru:by("N"), sip:by("S"), intl:by("I"), pus:by("P"), upd:items.filter(x => S.upd[did(x.key)]), paired:items.filter(x => x.pair) };
+}
+function bdelPanel() {
+  const P = bdelPlan(), B = UI.bdel, nil = P.items.reduce((t, x) => t + itemNilai(x), 0);
+  const part = [[P.baru, "isian sekolah / impor Excel"], [P.sip, "data SIPBMD"], [P.intl, "catatan internal lama"], [P.pus, "data pustaka SIPBMD"]].filter(([a]) => a.length).map(([a, l]) => `${fmt(a.length)} ${l}`).join(" · ");
+  return `<section class="panel" style="margin-bottom:14px;border-color:var(--bad)"><h3 style="margin:0 0 6px;color:var(--bad)">Hapus ${fmt(P.items.length)} aset dari aplikasi?</h3>
+    <p class="sm" style="margin:0 0 8px">${esc(part)} · nilai ${rp(nil)}</p>
+    <ul class="sm" style="margin:0 0 10px;padding-left:18px"><li>Aset hilang dari semua menu (daftar aset, KIB, Buku Induk, BAST, rekap). Hasil cek fisik, pemegang, dan foto aset itu ikut terhapus.</li>
+    ${P.sip.length ? `<li>${fmt(P.sip.length)} data SIPBMD hanya dihapus dari aplikasi ini, <b>tidak</b> dari SIPBMD BPKAD. Jika file SIPBMD diimpor lagi, aset itu akan muncul kembali.</li>` : ""}
+    ${P.paired.length ? `<li>${fmt(P.paired.length)} aset punya pasangan; pasangannya tetap ada dan tampil lagi di menunya.</li>` : ""}
+    <li>Bukan untuk usulan penghapusan BMD (barang rusak berat/hilang); gunakan menu <a href="#hapus">Usulan Penghapusan</a> untuk itu. Fitur ini untuk membersihkan data yang salah masuk atau terdobel.</li>
+    <li>Tercatat di <a href="#riwayat">Riwayat & Urungkan</a>: jika keliru, tekan <b>↶ Urungkan</b> dan semuanya kembali.</li></ul>
+    ${P.items.slice(0, 8).map(x => `<span class="pill line" style="margin:0 4px 4px 0">${esc(itemNama(x))}</span>`).join("")}${P.items.length > 8 ? `<span class="sm">… dan ${fmt(P.items.length - 8)} lainnya</span>` : ""}
+    ${B.busy ? `<div style="margin-top:10px"><div class="bar"><i style="width:${B.total ? Math.round(B.done / B.total * 100) : 0}%"></i></div><p class="hint">Menghapus ${B.done} dari ${B.total}… jangan tutup halaman ini.</p></div>` : ""}
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="danger" id="bdel-go" ${B.busy ? "disabled" : ""}>Ya, hapus ${fmt(P.items.length)} aset</button><button id="bdel-no" ${B.busy ? "disabled" : ""}>Batal</button></div></section>`;
+}
+async function bulkDelete() {
+  if (!isMaster()) { toast("Hapus massal hanya untuk akun master."); return; }
+  const P = bdelPlan(), B = UI.bdel; if (!P.items.length || B.busy) return;
+  B.busy = true; B.done = 0; B.total = P.baru.length + P.chunks.length + P.upd.length; render();
+  try {
+    await W.group(`Hapus massal ${fmt(P.items.length)} aset (${P.items.slice(0, 3).map(itemNama).join(", ")}${P.items.length > 3 ? ", …" : ""})`, async () => {
+      for (const x of P.baru) { await W.del("aset_baru/" + x.key.slice(2)); B.done++; if (B.done % 10 === 0) render(); }
+      for (const c of P.chunks) { const d = Object.assign({}, c.v, { items:c.keep }); for (const k of ["_by", "_ok", "_at"]) delete d[k]; await W.set("seed/" + c.id, d); B.done++; render(); }
+      for (const x of P.upd) if (x.src !== "N") { await W.del("upd/" + did(x.key)); B.done++; if (B.done % 10 === 0) render(); }
+      for (const x of P.paired) { const o = allItems().byKey.get(x.pair); if (o && !UI.sel.has(o.key) && o.src !== "N") await W.merge("upd/" + did(o.key), { _key:o.key, pair:"" }); else if (o && o.src === "N" && !UI.sel.has(o.key)) await W.update("aset_baru/" + o.key.slice(2), { pair:"" }); }
+    });
+    toast(`${fmt(P.items.length)} aset dihapus. Bisa dikembalikan lewat ↶ Urungkan.`);
+    UI.sel = new Set(); B.ask = false;
+  } catch (e) { writeErr(e); }
+  B.busy = false; render();
 }
 function bulkPanel() {
   const items = selItems(), kats = [...new Set(items.map(x => x.kat))], kat = kats.length === 1 ? kats[0] : null, canU = can("aset_ubah"), canK = can("aset_kondisi");
@@ -1329,7 +1375,10 @@ document.addEventListener("change", e => {
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.id === "sel-all") { for (const x of filterAset()) UI.sel.add(x.key); render(); }
-  if (b.id === "sel-none") { UI.sel = new Set(); UI.bulk.open = false; render(); }
+  if (b.id === "sel-none") { UI.sel = new Set(); UI.bulk.open = false; UI.bdel.ask = false; render(); }
+  if (b.id === "bdel-ask") { UI.bdel.ask = !UI.bdel.ask; UI.bulk.open = false; render(); }
+  if (b.id === "bdel-no") { UI.bdel.ask = false; render(); }
+  if (b.id === "bdel-go") bulkDelete();
   if (b.id === "bulk-open") { UI.bulk.open = !UI.bulk.open; render(); }
   if (b.id === "bulk-close") { UI.bulk.open = false; render(); }
   if (b.id === "bulk-go") bulkApply();
